@@ -53,21 +53,23 @@ public class LoginResponseDTO {
         private String email;
         private UserType roleType;  // Usage of UserType
         private LocalDateTime loginTimestamp;
-
         private String encryptionKey;
+        private String entity;
 
         // Add a constructor to accept these parameters
+
 
         public Payload(String userId, String userName,
                        String email, UserType roleType,
                        LocalDateTime loginTimestamp,
-                       String encryptionKey) {
+                       String encryptionKey, String entity) {
             this.userId = userId;
             this.userName = userName;
             this.email = email;
             this.roleType = roleType;
             this.loginTimestamp = loginTimestamp;
             this.encryptionKey = encryptionKey;
+            this.entity = entity;
         }
     }
     @Data

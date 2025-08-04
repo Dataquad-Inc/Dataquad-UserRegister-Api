@@ -27,6 +27,7 @@ public class UserMapper {
         user.setGender(userDto.getGender());
         user.setJoiningDate(userDto.getJoiningDate());
         user.setStatus(userDto.getStatus());
+        user.setEntity(userDto.getEntity());
 
 
         return user;

@@ -147,7 +147,6 @@ public class UserController {
 //        if (employeeRoles == null || employeeRoles.isEmpty()) {
 //            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 //        }
-//
 //        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
 //    }
 
@@ -238,4 +237,11 @@ public class UserController {
         }
         return new ResponseEntity<>(bdmEmployees, HttpStatus.OK);
     }
+
+    @PostMapping("/changeUserId")
+    public String changeUserId(){
+
+      return userService.changeUserId();
+    }
+
 }
