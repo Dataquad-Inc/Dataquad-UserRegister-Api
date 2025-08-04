@@ -109,9 +109,10 @@ public class UserService {
 //
 //    }
 
-    public ResponseEntity<ResponseBean<UserResponse>> registerUser(UserDto userDto) throws ValidationException {
+    public ResponseEntity<ResponseBean<UserResponse>> registerUser(UserDto userDto)  {
         Map<String, String> errors = new HashMap<>();
 
+        logger.info("New User Registering ...{}",userDto.getUserId());
         // Check if email or userId already exists
         if (userDao.findByEmail(userDto.getEmail()) != null) {
             errors.put("errormessage", userDto.getEmail()+" is already in use");
@@ -788,7 +789,22 @@ public class UserService {
         }).collect(Collectors.toList());
     }
 
+   public String changeUserId(){
 
+    List<UserDetails> users=userDao.findAll();
+
+    for(UserDetails user:users){
+
+        String userId=user.getUserId();
+
+        String updatedUserId=userId.replaceFirst("DQIND","ADRT");
+
+        user.setUserId(updatedUserId);
+
+        userDao.save(user);
+    }
+    return "success";
+   }
 }
 
 

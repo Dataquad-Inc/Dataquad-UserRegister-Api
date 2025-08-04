@@ -83,7 +83,8 @@ public class LoginService {
                 userDetails.getEmail(),
                 roleType,
                 userDetails.getLastLoginTime(),
-                encoded
+                encoded,
+                userDetails.getEntity()
         );
 
         // Return successful login response

@@ -15,16 +15,16 @@ import java.util.Set;
 public class UserDto {
 
         @Id
-        @Size( max = 8, message = "User ID must be between 5 and 20 characters")
+//        @Size( max = 8, message = "User ID must be between 5 and 20 characters")
         private String userId;
 
         @NotEmpty( message="userName can not be empty")
-        @Size(min = 8, max = 20, message = "User name must be between 2 and 50 characters")
+        //@Size(min = 8, max = 20, message = "User name must be between 2 and 50 characters")
         private String userName;
 
 
         @NotEmpty(message = "Password must not be empty")
-        @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters")
+        //@Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters")
         private String password;
 
         @NotEmpty
@@ -37,13 +37,13 @@ public class UserDto {
         @Email
         @Column(unique = true, nullable = false)
         @NotEmpty(message = "Email must not be empty")
-        @Size(min = 20, max = 50, message = "email must be between 20 and 50 characters")
+        //@Size(min = 20, max = 50, message = "email must be between 20 and 50 characters")
         private String email;
 
         @Email
         @Column(unique = true, nullable = false)
         @NotEmpty(message = "Email must not be empty")
-        @Size(min = 20, max = 50, message = "email must be between 20 and 50 characters")
+        //@Size(min = 20, max = 50, message = "email must be between 20 and 50 characters")
         private String personalemail;
 
         @NotEmpty
@@ -73,64 +73,74 @@ public class UserDto {
         private Set<UserType> roles;
 
     private String status;
+    private String entity;
+
+    public String getEntity() {
+        return entity;
+    }
+
+    public void setEntity(String entity) {
+        this.entity = entity;
+    }
 
     public UserDto() {
         this.status = "ACTIVE";  // Default value for status
     }
 
-    public @Size(max = 8, message = "User ID must be between 5 and 20 characters") String getUserId() {
+
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(@Size(max = 8, message = "User ID must be between 5 and 20 characters") String userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 
-    public @NotEmpty(message = "userName can not be empty") @Size(min = 8, max = 20, message = "User name must be between 2 and 50 characters") String getUserName() {
+    public String getUserName() {
         return userName;
     }
 
-    public void setUserName(@NotEmpty(message = "userName can not be empty") @Size(min = 8, max = 20, message = "User name must be between 2 and 50 characters") String userName) {
+    public void setUserName(String userName) {
         this.userName = userName;
     }
 
-    public @NotEmpty(message = "Password must not be empty") @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters") String getPassword() {
+    public String getPassword() {
         return password;
     }
 
-    public void setPassword(@NotEmpty(message = "Password must not be empty") @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters") String password) {
+    public void setPassword(String password) {
         this.password = password;
     }
 
-    public @NotEmpty @NotEmpty(message = "Password must not be empty") @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters") String getConfirmPassword() {
+    public String getConfirmPassword() {
         return confirmPassword;
     }
 
-    public void setConfirmPassword(@NotEmpty @NotEmpty(message = "Password must not be empty") @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters") String confirmPassword) {
+    public void setConfirmPassword(String confirmPassword) {
         this.confirmPassword = confirmPassword;
     }
 
-    public @Email @NotEmpty(message = "Email must not be empty") @Size(min = 20, max = 50, message = "email must be between 20 and 50 characters") String getEmail() {
+    public String getEmail() {
         return email;
     }
 
-    public void setEmail(@Email @NotEmpty(message = "Email must not be empty") @Size(min = 20, max = 50, message = "email must be between 20 and 50 characters") String email) {
+    public void setEmail(String email) {
         this.email = email;
     }
 
-    public @Email @NotEmpty(message = "Email must not be empty") @Size(min = 20, max = 50, message = "email must be between 20 and 50 characters") String getPersonalemail() {
+    public String getPersonalemail() {
         return personalemail;
     }
 
-    public void setPersonalemail(@Email @NotEmpty(message = "Email must not be empty") @Size(min = 20, max = 50, message = "email must be between 20 and 50 characters") String personalemail) {
+    public void setPersonalemail(String personalemail) {
         this.personalemail = personalemail;
     }
 
-    public @NotEmpty @Pattern(regexp = "^[0-9]{10}$", message = "Invalid phone number") String getPhoneNumber() {
+    public String getPhoneNumber() {
         return phoneNumber;
     }
 
-    public void setPhoneNumber(@NotEmpty @Pattern(regexp = "^[0-9]{10}$", message = "Invalid phone number") String phoneNumber) {
+    public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
     }
 
@@ -142,30 +152,27 @@ public class UserDto {
         this.dob = dob;
     }
 
-    public @NotNull LocalDate getJoiningDate() {
-        return joiningDate;
-    }
-
-    public void setJoiningDate(@NotNull LocalDate joiningDate) {
-        this.joiningDate = joiningDate;
-    }
-
-    public @Pattern(regexp = "Male|Female", message = "Gender must be Male, Female") String getGender() {
+    public String getGender() {
         return gender;
     }
 
-    public void setGender(@Pattern(regexp = "Male|Female", message = "Gender must be Male, Female") String gender) {
+    public void setGender(String gender) {
         this.gender = gender;
     }
 
-
-    public @NotEmpty String getDesignation() {
-
-        return designation;
-
+    public LocalDate getJoiningDate() {
+        return joiningDate;
     }
 
-    public void setDesignation(@NotEmpty String designation) {
+    public void setJoiningDate(LocalDate joiningDate) {
+        this.joiningDate = joiningDate;
+    }
+
+    public String getDesignation() {
+        return designation;
+    }
+
+    public void setDesignation(String designation) {
         this.designation = designation;
     }
 
@@ -177,12 +184,11 @@ public class UserDto {
         this.roles = roles;
     }
 
-
     public String getStatus() {
         return status;
     }
 
     public void setStatus(String status) {
-        this.status = status.toUpperCase();
+        this.status = status;
     }
 }
