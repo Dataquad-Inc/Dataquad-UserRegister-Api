@@ -16,48 +16,27 @@ import java.util.Set;
 public class UserDetails {
 
     @Id
-    @Column(unique = true,nullable = false)
-
-    private String userId; // This is set manually from the frontend
-
+    private String userId;
 
     private String userName;
-
-
-
 
     @Column(nullable = false)
     private String password;
 
-
-    @Column(nullable=false)
     private String confirmPassword;
 
 
     @Column(unique = true, nullable = false)
-
     private String email;
-
-
-    @Column(unique = true, nullable = false)
 
     private String personalemail;
 
-    @NotEmpty
-
     private String phoneNumber;
 
-
-    @Column(name = "dob", nullable = false)
     private String dob;
 
-
-
-    @Column(name = "gender", nullable = false)
     private String gender;
 
-
-    @Column(name = "joining_date", nullable = false)
     private LocalDate joiningDate;
 
     @NotEmpty
