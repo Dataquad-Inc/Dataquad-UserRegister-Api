@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -148,4 +149,13 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
+    @ExceptionHandler(NoSuchUserException.class)
+    public ResponseEntity<ErrorResponse> handleNoSuchUserException(NoSuchUserException e) {
+        ErrorDto error=new ErrorDto(404,e.getMessage());
+        ErrorResponse errorResponse=new ErrorResponse(
+                false,"User Not Found",new ArrayList<>(),error);
+
+        return new ResponseEntity<>(errorResponse,HttpStatus.NOT_FOUND);
+    }
+
 }

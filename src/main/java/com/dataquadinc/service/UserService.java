@@ -3,6 +3,7 @@ package com.dataquadinc.service;
 
 import com.dataquadinc.dto.*;
 import com.dataquadinc.exceptions.DateRangeValidationException;
+import com.dataquadinc.exceptions.NoSuchUserException;
 import com.dataquadinc.exceptions.UserNotFoundException;
 import com.dataquadinc.exceptions.ValidationException;
 import com.dataquadinc.mapper.UserMapper;
@@ -12,6 +13,7 @@ import com.dataquadinc.model.UserType;
 import com.dataquadinc.repository.RolesDao;
 import com.dataquadinc.repository.UserDao;
 
+import org.apache.catalina.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -405,6 +407,7 @@ public class UserService {
     }
 
 
+
 //    public ResponseEntity<ResponseBean<UserResponse>> updateUser(String userId, UserDto userDto) {
 //        Map<String, String> errors = new HashMap<>();
 //
@@ -789,22 +792,51 @@ public class UserService {
         }).collect(Collectors.toList());
     }
 
-   public String changeUserId(){
+    public static UserDto convertEntityToDto(UserDetails user) {
+        UserDto dto = new UserDto();
 
-    List<UserDetails> users=userDao.findAll();
+        dto.setUserId(user.getUserId());
+        dto.setUserName(user.getUserName());
+        dto.setPassword(user.getPassword());
+        dto.setConfirmPassword(user.getConfirmPassword());
+        dto.setEmail(user.getEmail());
+        dto.setPersonalemail(user.getPersonalemail());
+        dto.setPhoneNumber(user.getPhoneNumber());
+        dto.setDob(user.getDob());
+        dto.setGender(user.getGender());
+        dto.setJoiningDate(user.getJoiningDate());
+        dto.setDesignation(user.getDesignation());
+        dto.setStatus(user.getStatus());
+        dto.setEntity(user.getEntity());
+        // Convert Set<Roles> to Set<UserType>
+        Set<UserType> userTypes = user.getRoles()
+                .stream()
+                .map(Roles::getName) // assuming getName() returns UserType
+                .collect(Collectors.toSet());
 
-    for(UserDetails user:users){
+        dto.setRoles(userTypes);
 
-        String userId=user.getUserId();
-
-        String updatedUserId=userId.replaceFirst("DQIND","ADRT");
-
-        user.setUserId(updatedUserId);
-
-        userDao.save(user);
+        return dto;
     }
-    return "success";
-   }
+
+    public List<UserDto> getAllUsers(){
+      List<UserDetails> users=userDao.findAll();
+
+        List<UserDto> employees =users.stream()
+             .map(UserService::convertEntityToDto)
+             .collect(Collectors.toList());
+
+     return employees;
+    }
+    public UserDto getUserByUserId(String userId){
+
+        UserDetails userDetails=userDao.findByUserId(userId);
+        if(userDetails==null){
+            throw new NoSuchUserException("No User Found With ID :"+userId);
+        }
+        UserDto userDto=convertEntityToDto(userDetails);
+        return userDto;
+    }
 }
 
 

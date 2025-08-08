@@ -240,10 +240,4 @@ public class UserController {
         return new ResponseEntity<>(bdmEmployees, HttpStatus.OK);
     }
 
-    @PostMapping("/changeUserId")
-    public String changeUserId(){
-
-      return userService.changeUserId();
-    }
-
 }
