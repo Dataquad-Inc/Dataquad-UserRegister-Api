@@ -239,5 +239,21 @@ public class UserController {
         }
         return new ResponseEntity<>(bdmEmployees, HttpStatus.OK);
     }
+    @GetMapping("/allUsers")
+    public ResponseEntity<ApiResponse<List<UserDto>>> getAllUsers(){
+        List<UserDto> users=userService.getAllUsers();
+        ApiResponse<List<UserDto>> apiResponse=new ApiResponse<>(true,"Data Fetched",users,null);
+
+        return new ResponseEntity<>(apiResponse,HttpStatus.OK);
+    }
+
+    @GetMapping("/user/{userId}")
+    ResponseEntity<ApiResponse<UserDto>> getUserByUserID(@PathVariable String userId){
+        UserDto userDto=userService.getUserByUserId(userId);
+        ApiResponse<UserDto> apiResponse=new ApiResponse<>(true,"Data Fetched",userDto,null);
+
+        return new ResponseEntity<>(apiResponse,HttpStatus.OK);
+    }
+
 
 }
