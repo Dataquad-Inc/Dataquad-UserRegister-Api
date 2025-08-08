@@ -6,6 +6,7 @@ import com.dataquadinc.exceptions.UserNotFoundException;
 import com.dataquadinc.model.Roles;
 
 import com.dataquadinc.model.UserDetails;
+import com.dataquadinc.repository.UserDao;
 import com.dataquadinc.service.UserService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -31,13 +32,16 @@ import java.util.Set;
 
 
 @CrossOrigin(origins = {"http://35.188.150.92", "http://192.168.0.140:3000", "http://192.168.0.139:3000","https://mymulya.com","http://localhost:3000","http://192.168.0.135:8080","http://192.168.0.135",
-        "http://182.18.177.16"})
+        "http://182.18.177.16","http://192.168.1.151:3000"})
 @Slf4j
 @RestController
 @RequestMapping("/users")
 public class UserController {
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private UserDao userDao;
 
     @PostMapping("/register")
     public ResponseEntity<ResponseBean<UserResponse>> registerUser(@Valid  @RequestBody UserDto userDto) throws RoleNotFoundException {
@@ -238,10 +242,18 @@ public class UserController {
         return new ResponseEntity<>(bdmEmployees, HttpStatus.OK);
     }
 
-    @PostMapping("/changeUserId")
-    public String changeUserId(){
+    @GetMapping("/allUsers")
+    public ResponseEntity<ApiResponse<List<UserDto>>> getEmployeesWithRole(){
 
-      return userService.changeUserId();
+        ApiResponse<List<UserDto>> apiResponse=new ApiResponse<>(true,"Employee Data Fetched",userService.getAllUsers(),null);
+        return new ResponseEntity<>(apiResponse,HttpStatus.OK);
+    }
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<ApiResponse<UserDto>> getUserByUserId(@PathVariable String userId){
+
+        UserDto userDto=userService.getUserByUserId(userId);
+        ApiResponse<UserDto> apiResponse=new ApiResponse<>(true,"User Data Fetched",userDto,null);
+        return new ResponseEntity<>(apiResponse,HttpStatus.OK);
     }
 
 }
