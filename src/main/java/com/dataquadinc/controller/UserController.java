@@ -160,7 +160,7 @@ public class UserController {
             @RequestParam(required = false) String entity) {
 
         ResponseEntity<List<EmployeeWithRole>> responseEntity =
-                userService.getEmployeesWithFlexibleRoleFilter(userId, roleName, excludeRoleName,entity);
+                userService.getEmployeesWithFlexibleRoleFilter(userId, roleName, excludeRoleName);
 
         List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
 

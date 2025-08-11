@@ -13,56 +13,40 @@ import java.util.List;
 @Repository
 public interface UserDao extends JpaRepository<UserDetails, Integer> {
 
-    @Query("SELECT u FROM UserDetails u WHERE u.status = 'ACTIVE' AND u.designation <> 'testuser'")
+    @Query("SELECT u FROM UserDetails u " +
+            "WHERE u.entity = 'IN' " +
+            "AND u.status = 'ACTIVE' AND u.designation <> 'testuser'")
     List<UserDetails> findAllActiveNonTestUsers();
 
 
     UserDetails findByEmail(String email);
     UserDetails findByUserId(String userId);
-    @Query("SELECT u FROM UserDetails u JOIN u.roles r " +
+    @Query("SELECT DISTINCT u FROM UserDetails u JOIN u.roles r " +
             "WHERE (:userId IS NULL OR u.userId = :userId) " +
-            "AND (:roleEnum IS NULL OR r.name = :roleEnum)" +
+            "AND (:roleEnum IS NULL OR r.name = :roleEnum) " +
+            "AND u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' AND u.designation <> 'testuser'")
     List<UserDetails> findByUserIdAndRole(@Param("userId") String userId,
                                           @Param("roleEnum") UserType roleEnum);
 
-
-    @Query("SELECT DISTINCT u FROM UserDetails u JOIN u.roles r " +
+    @Query("SELECT DISTINCT u FROM UserDetails u " +
             "WHERE (:userId IS NULL OR u.userId = :userId) " +
-            "AND (:excludeRole IS NULL OR r.name <> :excludeRole)" +
-            "AND u.status = 'ACTIVE' AND u.designation <> 'testuser'")
+            "AND u.entity = 'IN' " +
+            "AND u.status = 'ACTIVE' AND u.designation <> 'testuser' " +
+            "AND (:excludeRole IS NULL OR NOT EXISTS (" +
+            "   SELECT 1 FROM u.roles r2 WHERE r2.name = :excludeRole" +
+            "))")
     List<UserDetails> findByUserIdAndRoleNot(@Param("userId") String userId,
                                              @Param("excludeRole") UserType excludeRole);
+
+
+
 
     // ✅ Fetch only BDM employees
     @Query("SELECT u FROM UserDetails u JOIN u.roles r WHERE r.name = 'BDM'")
     List<UserDetails> findBdmEmployees();
 
 
-    // Include role + entity filter
-    List<UserDetails> findByUserIdAndRoles_NameAndEntity(
-            String userId,
-            UserType role,
-            String entity
-    );
-
-    // Exclude role + entity filter
-    List<UserDetails> findByUserIdAndRoles_NameNotAndEntity(
-            String userId,
-            UserType role,
-            String entity
-    );
-
-    // All active users excluding 'testuser' filtered by entity
-    @Query("SELECT u FROM UserDetails u " +
-            "WHERE u.status = 'ACTIVE' " +
-            "AND u.designation <> 'testuser' " +
-            "AND u.entity = :entity")
-    List<UserDetails> findAllActiveNonTestUsersByEntity(@Param("entity") String entity);
-
-    // Without entity filters
-    List<UserDetails> findByUserIdAndRoles_Name(String userId, UserType role);
-    List<UserDetails> findByUserIdAndRoles_NameNot(String userId, UserType role);
 
     // Count ALL submissions across all job IDs and clients (across all users)
     @Query(value = """
