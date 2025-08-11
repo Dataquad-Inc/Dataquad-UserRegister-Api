@@ -267,16 +267,12 @@ public class UserService {
 
 
     public ResponseEntity<List<EmployeeWithRole>> getEmployeesWithFlexibleRoleFilter(
-            String userId, String roleName, String excludeRoleName, String entity) {
-
-        // ✅ default entity to "IN" if not specified
-        if (entity == null || entity.isBlank()) {
-            entity = "IN";
-        }
+            String userId, String roleName, String excludeRoleName) {
 
         UserType includeRole = null;
         UserType excludeRole = null;
 
+        // Parse roleName
         if (roleName != null && !roleName.isBlank()) {
             try {
                 includeRole = UserType.valueOf(roleName.toUpperCase());
@@ -286,6 +282,7 @@ public class UserService {
             }
         }
 
+        // Parse excludeRoleName
         if (excludeRoleName != null && !excludeRoleName.isBlank()) {
             try {
                 excludeRole = UserType.valueOf(excludeRoleName.toUpperCase());
@@ -297,17 +294,26 @@ public class UserService {
 
         List<UserDetails> users;
 
-        // ✅ Always apply entity in DB query
         if (excludeRole != null) {
-            users = userDao.findByUserIdAndRoles_NameNotAndEntity(userId, excludeRole, entity);
+            // ✅ Proper "NOT EXISTS" exclusion, also applies entity='IN'
+            users = userDao.findByUserIdAndRoleNot(userId, excludeRole);
+            logger.info("Fetched {} users with userId={} excluding role={}, entity='IN'",
+                    users.size(), userId, excludeRole);
 
         } else if (includeRole != null) {
-            users = userDao.findByUserIdAndRoles_NameAndEntity(userId, includeRole, entity);
+            // ✅ Include specific role, entity='IN'
+            users = userDao.findByUserIdAndRole(userId, includeRole);
+            logger.info("Fetched {} users with userId={} and role={}, entity='IN'",
+                    users.size(), userId, includeRole);
 
         } else {
+            // ✅ No role filter, still entity='IN'
             users = (userId == null || userId.isBlank())
-                    ? userDao.findAllActiveNonTestUsersByEntity(entity)
-                    : userDao.findByUserIdAndRoles_NameAndEntity(userId, null, entity);
+                    ? userDao.findAllActiveNonTestUsers()
+                    : userDao.findByUserIdAndRole(userId, null);
+
+            logger.info("Fetched {} users with userId={}, no role filter, entity='IN'",
+                    users.size(), userId);
         }
 
         if (users.isEmpty()) {
@@ -320,6 +326,7 @@ public class UserService {
                     String rolesString = user.getRoles().stream()
                             .map(role -> role.getName().name())
                             .collect(Collectors.joining(", "));
+
                     return new EmployeeWithRole(
                             user.getUserId(),
                             user.getUserName(),
@@ -339,7 +346,6 @@ public class UserService {
         logger.info("Returning {} employee records in response", employeeRoles.size());
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
-
 
 //    public ResponseEntity<ResponseBean<UserResponse>> updateUser(String userId, UserDto userDto) {
 //        Map<String, String> errors = new HashMap<>();
