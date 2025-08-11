@@ -156,10 +156,11 @@ public class UserController {
     public ResponseEntity<List<EmployeeWithRole>> getAllEmployees(
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String roleName,
-            @RequestParam(required = false) String excludeRoleName) {
+            @RequestParam(required = false) String excludeRoleName,
+            @RequestParam(required = false) String entity) {
 
         ResponseEntity<List<EmployeeWithRole>> responseEntity =
-                userService.getEmployeesWithFlexibleRoleFilter(userId, roleName, excludeRoleName);
+                userService.getEmployeesWithFlexibleRoleFilter(userId, roleName, excludeRoleName,entity);
 
         List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
 
