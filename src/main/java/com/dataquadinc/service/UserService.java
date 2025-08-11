@@ -13,7 +13,6 @@ import com.dataquadinc.model.UserType;
 import com.dataquadinc.repository.RolesDao;
 import com.dataquadinc.repository.UserDao;
 
-import org.apache.catalina.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +24,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -266,73 +264,19 @@ public class UserService {
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
 
-    public ResponseEntity<List<EmployeeWithRole>> getEmployeesByUserIdAndRole(String userId, String roleName) {
-        UserType roleEnum = null;
-        if (roleName != null && !roleName.isBlank()) {
-            try {
-                roleEnum = UserType.valueOf(roleName.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                logger.warn("Invalid role name provided: {}", roleName);
-                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-            }
+
+
+    public ResponseEntity<List<EmployeeWithRole>> getEmployeesWithFlexibleRoleFilter(
+            String userId, String roleName, String excludeRoleName, String entity) {
+
+        // ✅ default entity to "IN" if not specified
+        if (entity == null || entity.isBlank()) {
+            entity = "IN";
         }
 
-        List<UserDetails> users;
-
-        if ((userId == null || userId.isBlank()) && roleEnum == null) {
-            users = userDao.findAll();
-            logger.info("Fetching all users. Total: {}", users.size());
-        } else {
-            users = userDao.findByUserIdAndRole(userId, roleEnum);
-            logger.info("Fetching users by filters - userId: {}, role: {}. Total found: {}",
-                    userId, roleEnum != null ? roleEnum.name() : "ANY", users.size());
-        }
-
-        if (users.isEmpty()) {
-            logger.info("No users found for the given criteria.");
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        }
-
-        List<EmployeeWithRole> employeeRoles = users.stream()
-                .map(user -> {
-                    String rolesString = user.getRoles().stream()
-                            .map(role -> role.getName().name())
-                            .collect(Collectors.joining(", "));
-
-                    return new EmployeeWithRole(
-                            user.getUserId(),
-                            user.getUserName(),
-                            rolesString,
-                            user.getEmail(),
-                            user.getDesignation(),
-                            user.getJoiningDate(),
-                            user.getGender(),
-                            user.getDob(),
-                            user.getPhoneNumber(),
-                            user.getPersonalemail(),
-                            user.getStatus()
-                    );
-                })
-                .collect(Collectors.toList());
-
-        // 🔍 Log how many users belong to each role
-        Map<String, Long> roleCounts = users.stream()
-                .flatMap(u -> u.getRoles().stream())
-                .map(role -> role.getName().name())
-                .collect(Collectors.groupingBy(roleNameStr -> roleNameStr, Collectors.counting()));
-
-        roleCounts.forEach((role, count) ->
-                logger.info("Role: {} - User count: {}", role, count));
-
-        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
-    }
-
-
-    public ResponseEntity<List<EmployeeWithRole>> getEmployeesWithFlexibleRoleFilter(String userId, String roleName, String excludeRoleName) {
         UserType includeRole = null;
         UserType excludeRole = null;
 
-        // Parse roleName
         if (roleName != null && !roleName.isBlank()) {
             try {
                 includeRole = UserType.valueOf(roleName.toUpperCase());
@@ -342,7 +286,6 @@ public class UserService {
             }
         }
 
-        // Parse excludeRoleName
         if (excludeRoleName != null && !excludeRoleName.isBlank()) {
             try {
                 excludeRole = UserType.valueOf(excludeRoleName.toUpperCase());
@@ -354,24 +297,17 @@ public class UserService {
 
         List<UserDetails> users;
 
+        // ✅ Always apply entity in DB query
         if (excludeRole != null) {
-            users = userDao.findByUserIdAndRoleNot(userId, excludeRole);
-
-            logger.info("Fetched {} users with userId={} excluding role={}, status='ACTIVE' and designation<>'testuser'",
-                    users.size(), userId, excludeRole);
+            users = userDao.findByUserIdAndRoles_NameNotAndEntity(userId, excludeRole, entity);
 
         } else if (includeRole != null) {
-            users = userDao.findByUserIdAndRole(userId, includeRole);
-
-            logger.info("Fetched {} users with userId={} and role={}, status='ACTIVE' and designation<>'testuser'",
-                    users.size(), userId, includeRole);
+            users = userDao.findByUserIdAndRoles_NameAndEntity(userId, includeRole, entity);
 
         } else {
-            users = (userId == null || userId.isBlank()) ? userDao.findAllActiveNonTestUsers() : userDao.findByUserIdAndRole(userId, null);
-
-            logger.info("Fetched {} users with userId={}, no role filter, status='ACTIVE' and designation<>'testuser'",
-                    users.size(), userId);
-
+            users = (userId == null || userId.isBlank())
+                    ? userDao.findAllActiveNonTestUsersByEntity(entity)
+                    : userDao.findByUserIdAndRoles_NameAndEntity(userId, null, entity);
         }
 
         if (users.isEmpty()) {
@@ -384,7 +320,6 @@ public class UserService {
                     String rolesString = user.getRoles().stream()
                             .map(role -> role.getName().name())
                             .collect(Collectors.joining(", "));
-
                     return new EmployeeWithRole(
                             user.getUserId(),
                             user.getUserName(),
@@ -402,10 +337,8 @@ public class UserService {
                 .collect(Collectors.toList());
 
         logger.info("Returning {} employee records in response", employeeRoles.size());
-
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
-
 
 
 //    public ResponseEntity<ResponseBean<UserResponse>> updateUser(String userId, UserDto userDto) {

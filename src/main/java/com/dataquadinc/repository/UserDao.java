@@ -38,21 +38,31 @@ public interface UserDao extends JpaRepository<UserDetails, Integer> {
     @Query("SELECT u FROM UserDetails u JOIN u.roles r WHERE r.name = 'BDM'")
     List<UserDetails> findBdmEmployees();
 
-    // ✅ Count Clients based on User ID
-    @Query(value = """
-        SELECT COUNT(*) 
-        FROM bdm_client 
-        WHERE on_boarded_by = (SELECT user_name FROM user_details WHERE user_id = :userId)
-    """, nativeQuery = true)
-    long countClientsByUserId(@Param("userId") String userId);
 
-    // ✅ Fetch client names for a specific BDM (based on userId)
-    @Query(value = """
-        SELECT client_name 
-        FROM bdm_client 
-        WHERE on_boarded_by = (SELECT user_name FROM user_details WHERE user_id = :userId)
-    """, nativeQuery = true)
-    List<String> findClientNamesByUserId(@Param("userId") String userId);
+    // Include role + entity filter
+    List<UserDetails> findByUserIdAndRoles_NameAndEntity(
+            String userId,
+            UserType role,
+            String entity
+    );
+
+    // Exclude role + entity filter
+    List<UserDetails> findByUserIdAndRoles_NameNotAndEntity(
+            String userId,
+            UserType role,
+            String entity
+    );
+
+    // All active users excluding 'testuser' filtered by entity
+    @Query("SELECT u FROM UserDetails u " +
+            "WHERE u.status = 'ACTIVE' " +
+            "AND u.designation <> 'testuser' " +
+            "AND u.entity = :entity")
+    List<UserDetails> findAllActiveNonTestUsersByEntity(@Param("entity") String entity);
+
+    // Without entity filters
+    List<UserDetails> findByUserIdAndRoles_Name(String userId, UserType role);
+    List<UserDetails> findByUserIdAndRoles_NameNot(String userId, UserType role);
 
     // Count ALL submissions across all job IDs and clients (across all users)
     @Query(value = """
