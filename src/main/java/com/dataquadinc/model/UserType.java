@@ -12,5 +12,6 @@ public enum UserType {
     COORDINATOR,
     EXTERNALEMPLOYEE,
     ACCOUNTS,
-    RECRUITER
+    RECRUITER,
+    SALESEXECUTIVE
 }
