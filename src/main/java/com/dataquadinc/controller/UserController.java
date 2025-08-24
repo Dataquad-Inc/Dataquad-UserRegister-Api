@@ -137,10 +137,10 @@ public class UserController {
         return   userService.registerUser(userDto);
 
     }
-    @GetMapping("/roles/{userId}")
-    public ResponseEntity<Set<Roles>> getRolesByUserId(@PathVariable String userId ) {
-        return userService.getRolesByUserId(userId);
-    }
+//    @GetMapping("/roles/{userId}")
+//    public ResponseEntity<Set<Roles>> getRolesByUserId(@PathVariable String userId ) {
+//        return userService.getRolesByUserId(userId);
+//    }
 
 //    @GetMapping("/employee")
 //    public ResponseEntity<List<EmployeeWithRole>> getAllEmployees() {

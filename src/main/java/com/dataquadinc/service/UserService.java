@@ -33,7 +33,7 @@ public class UserService {
     private UserDao userDao;
 
     @Autowired
-    private JavaMailSender mailSender;
+    private EmailService emailService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -47,98 +47,44 @@ public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
 
-//    public ResponseEntity<ResponseBean<UserResponse>> registerUser(UserDto userDto) throws ValidationException {
-//
-//        Map<String,String> errors = new HashMap<>();
-//
-//
-////        if (userDao.findByUserName(userDto.getUserName()) != null) {
-////
-////            errors.put("userName","userName already exists");
-////        }
-//
-//        if (userDao.findByEmail(userDto.getEmail())!=null) {
-//            errors.put("errormessage","email is already in use");
-//        }
-//        if (userDao.findByUserId(userDto.getUserId())!=null) {
-//            errors.put("errorMessage","userId already exists");
-//        }
-//
-//        if( !errors.isEmpty()) {
-//            throw new ValidationException(errors);
-//        }
-//
-//
-//        // Encrypt the password
-//        userDto.setPassword(passwordEncoder.encode(userDto.getPassword()));
-//        userDto.setConfirmPassword(passwordEncoder.encode(userDto.getConfirmPassword()));
-//
-//        // Convert DTO to entity
-//        UserDetails user = userMapper.toEntity(userDto);
-//
-//        Set<Roles> roles = userDto.getRoles().stream()
-//                .map(role -> {
-//                    try {
-//                        return rolesDao.findByName(role) // Find Role by its name from RolesDao
-//                                .orElseThrow(() -> new ValidationException(Map.of("role","roleNotFound")));
-//                    } catch (ValidationException e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                })
-//                .collect(Collectors.toSet());
-//
-//        user.setRoles(roles);
-//
-//        // Save the user to the database
-//        UserDetails dbUser = userDao.save(user);
-//
-//        UserResponse res=new UserResponse();
-//        res.setUserName(dbUser.getUserName());
-//        res.setUserId(dbUser.getUserId());
-//        res.setEmail(dbUser.getEmail());
-//        // Set success to true
-//
-//
-//        ResponseBean<UserResponse> resp = new ResponseBean<UserResponse>();
-//        resp.setSuccess(true);
-//        resp.setMessage(" Created Sucessfully");
-//        resp.setData(res);
-//        resp.setError(null);
-//
-//        return new ResponseEntity<ResponseBean<UserResponse>>(resp,HttpStatus.CREATED);
-//
-//    }
-
     public ResponseEntity<ResponseBean<UserResponse>> registerUser(UserDto userDto)  {
         Map<String, String> errors = new HashMap<>();
 
-        logger.info("New User Registering ...{}",userDto.getUserId());
-        // Check if email or userId already exists
+        logger.info("New User Registering ...{}", userDto.getUserId());
+
+        // Check for existing email
         if (userDao.findByEmail(userDto.getEmail()) != null) {
-            errors.put("errormessage", userDto.getEmail()+" is already in use");
+            logger.warn("Email {} is already in use", userDto.getEmail());
+            errors.put("errormessage", userDto.getEmail() + " is already in use");
         }
+
+        // Check for existing userId
         if (userDao.findByUserId(userDto.getUserId()) != null) {
+            logger.warn("UserId {} already exists", userDto.getUserId());
             errors.put("errorMessage", userDto.getUserId() + " already exists. Please log in");
         }
 
         if (!errors.isEmpty()) {
+            logger.error("User registration errors: {}", errors);
             throw new ValidationException(errors);
         }
 
-        // Encrypt the password
-        userDto.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        // Save plain password before encoding for email
+        String plainPassword = userDto.getPassword();
+
+        // Encrypt passwords
+        userDto.setPassword(passwordEncoder.encode(plainPassword));
         userDto.setConfirmPassword(passwordEncoder.encode(userDto.getConfirmPassword()));
 
-        // Convert DTO to entity
+        // Map DTO to entity
         UserDetails user = userMapper.toEntity(userDto);
         user.setEncryptionKey("MyMulya@1234");
         user.setPrimarySuperAdmin(false);
 
-        // Map roles to the user
         Set<Roles> roles = userDto.getRoles().stream()
                 .map(role -> {
                     try {
-                        return rolesDao.findByName(role) // Find Role by its name from RolesDao
+                        return rolesDao.findByName(role)
                                 .orElseThrow(() -> new ValidationException(Map.of("role", "roleNotFound")));
                     } catch (ValidationException e) {
                         throw new RuntimeException(e);
@@ -148,19 +94,31 @@ public class UserService {
 
         user.setRoles(roles);
 
-        // Save the user to the database
         UserDetails dbUser = userDao.save(user);
+        logger.info("User {} saved successfully", dbUser.getUserId());
 
-        // Create a response object
         UserResponse res = new UserResponse();
         res.setUserName(dbUser.getUserName());
         res.setUserId(dbUser.getUserId());
         res.setEmail(dbUser.getEmail());
 
-        // Create and send registration success email
-        sendRegistrationConfirmationEmail(dbUser.getEmail());
+        // Check and send email for EMPLOYEE role only
+        boolean onlyEmployee = roles.size() == 1 && roles.stream()
+                .allMatch(r ->UserType.EMPLOYEE.name().equalsIgnoreCase(r.getName().name()));
 
-        // Prepare the response bean
+        if (onlyEmployee) {
+            try {
+                logger.info("Sending credentials email to {}", dbUser.getEmail());
+                emailService.sendPasswordEmailHtml(dbUser.getEmail(), dbUser.getUserName(), plainPassword);
+                logger.info("Email sent successfully to {}", dbUser.getEmail());
+            } catch (Exception e) {
+                logger.error("Failed to send email to {}: {}", dbUser.getEmail(), e.getMessage(), e);
+                // Optionally: handle or rethrow exception as needed
+            }
+        } else {
+            logger.info("Not sending email; user role is not EMPLOYEE only");
+        }
+
         ResponseBean<UserResponse> resp = new ResponseBean<>();
         resp.setSuccess(true);
         resp.setMessage("Created Successfully");
@@ -169,102 +127,6 @@ public class UserService {
 
         return new ResponseEntity<>(resp, HttpStatus.CREATED);
     }
-
-    // Method to send the registration confirmation email
-    private void sendRegistrationConfirmationEmail(String email) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
-        message.setSubject("Registration Successful");
-        message.setText("Your registration has been successfully completed. Welcome to our platform!");
-
-        try {
-            mailSender.send(message);
-            System.out.println("Registration confirmation email sent to " + email);
-        } catch (Exception e) {
-            System.out.println("Error sending registration confirmation email to " + email);
-            e.printStackTrace();
-            throw new RuntimeException("Error sending registration confirmation email: " + e.getMessage());
-        }
-    }
-    public ResponseEntity<Set<Roles>> getRolesByUserId(String UserId ) {
-        UserDetails user = userDao.findByUserId(UserId);
-        Set<Roles> roles = user.getRoles();
-        return  ResponseEntity.ok(roles);
-
-    }
-
-//    public List<EmployeeWithRole> getRolesId(long id) {
-//        List<UserDetails> list = userDao.findByRolesId(id);
-//
-//        if (list.isEmpty()) {
-//            return Collections.emptyList();
-//        }
-//
-//        return list.stream()
-//                .map(e -> new EmployeeWithRole(e.getUserId(), e.getUserName(),e.getRoles()))
-//                .collect(Collectors.toList());
-//    }
-//
-//    public ResponseEntity<List<EmployeeWithRole>> getAllEmployeesWithRoles() {
-//        List<UserDetails> users = userDao.findAll();
-//        if (users.isEmpty()) {
-//            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-//        }
-//
-//        List<EmployeeWithRole> employeeRoles = users.stream()
-//                .map(user -> new EmployeeWithRole(
-//                        user.getUserId(),
-//                        user.getUserName(),
-//                        user.getRoles()
-//                ))
-//                .collect(Collectors.toList());
-//
-//        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
-//    }
-
-
-    public ResponseEntity<List<EmployeeWithRole>> getAllEmployeesWithRoles() {
-        // Fetch all users from the database
-        List<UserDetails> users = userDao.findAll();
-
-        // If no users are found, return a No Content response
-        if (users.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        }
-
-        // Map each UserDetails to an EmployeeWithRole, flattening the roles into a single string
-        List<EmployeeWithRole> employeeRoles = users.stream()
-                .map(user -> {
-                    // Ensure that user.getRoles() returns a valid Set<Roles> and handle empty roles correctly
-                    String roleName = Optional.ofNullable(user.getRoles())  // Null check for user roles
-                            .flatMap(roles -> roles.stream()
-                                    .map(role -> role.getName().name())  // Access enum name as String
-                                    .findFirst())  // Get the first role name if present
-                            .orElse("No Role");  // Default to "No Role" if no roles are found or empty
-
-                    // Create and return the EmployeeWithRole object
-                    return new EmployeeWithRole(
-                            user.getUserId(),       // Set user ID
-                            user.getUserName(),
-                            // Set user name
-                            roleName  ,
-                            user.getEmail(),
-                            user.getDesignation(),
-                            user.getJoiningDate(),
-                            user.getGender(),
-                            user.getDob(),
-                            user.getPhoneNumber(),
-                            user.getPersonalemail(),
-                            user.getStatus()// Set role/ Set role name as a simple string
-                    );
-                })
-                .collect(Collectors.toList());
-
-        // Return the list of EmployeeWithRole objects with an OK response status
-        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
-    }
-
-
 
     public ResponseEntity<List<EmployeeWithRole>> getEmployeesWithFlexibleRoleFilter(
             String userId, String roleName, String excludeRoleName) {
