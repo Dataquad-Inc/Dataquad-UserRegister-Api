@@ -48,7 +48,7 @@ public class leaveCalenderService {
                 "User name:"+dto.getUserName();
 
 // Send the email
-        emailService.sendEmail(managerEmailArray, subject, body);
+//        emailService.sendEmail(managerEmailArray, subject, body);
 
         return savedLeave;
     }
