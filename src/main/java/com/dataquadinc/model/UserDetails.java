@@ -69,7 +69,27 @@ public class UserDetails {
 
     private boolean primarySuperAdmin;
 
+    private String associatedTeamLeadId;
+
     private String entity;
+
+    private String teamName;
+
+    public String getTeamName() {
+        return teamName;
+    }
+
+    public void setTeamName(String teamName) {
+        this.teamName = teamName;
+    }
+
+    public String getAssociatedTeamLeadId() {
+        return associatedTeamLeadId;
+    }
+
+    public void setAssociatedTeamLeadId(String associatedTeamLeadId) {
+        this.associatedTeamLeadId = associatedTeamLeadId;
+    }
 
     public String getEntity() {
         return entity;

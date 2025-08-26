@@ -616,6 +616,8 @@ public class UserService {
                 .collect(Collectors.toSet());
 
         dto.setRoles(userTypes);
+        dto.setAssociatedTeamLeadId(user.getAssociatedTeamLeadId());
+        dto.setTeamName(user.getTeamName());
 
         return dto;
     }
