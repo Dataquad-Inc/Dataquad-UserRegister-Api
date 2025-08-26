@@ -108,8 +108,7 @@ public class TeamService {
     public List<AssociatedToTeamLeadResponse> getAllUsersAssociatedToTeamLead(){
 
         List<AssociatedToTeamLeadResponse> result=new ArrayList<>();
-        List<AssociatedUser> salesExecutives=new ArrayList<>();
-        List<AssociatedUser> recruiters=new ArrayList<>();
+
        List<String> teamLeads=userDao.findAll().
                stream().
                filter(userDetails -> userDetails.getEntity().equalsIgnoreCase("US")).
@@ -122,6 +121,8 @@ public class TeamService {
           UserDetails teamLeadUser=userDao.findByUserId(teamLead);
            String teamName=teamLeadUser.getTeamName();
            List<UserDetails> associatedUsers=userDao.findByAssociatedTeamLeadId(teamLead);
+           List<AssociatedUser> salesExecutives=new ArrayList<>();
+           List<AssociatedUser> recruiters=new ArrayList<>();
            for (UserDetails user:associatedUsers){
                Set<UserType> roles=user.getRoles().stream().map(Roles::getName)
                        .collect(Collectors.toSet());
@@ -136,6 +137,8 @@ public class TeamService {
            response.setRecruiters(recruiters);
            response.setSalesExecutives(salesExecutives);
            result.add(response);
+           recruiters=new ArrayList<>();
+           salesExecutives=new ArrayList<>();
        }
              return result;
     }
