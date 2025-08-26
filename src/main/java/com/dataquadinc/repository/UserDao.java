@@ -213,4 +213,7 @@ public interface UserDao extends JpaRepository<UserDetails, Integer> {
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    List<UserDetails> findByAssociatedTeamLeadId(String teamLeadId);
+
 }

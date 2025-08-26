@@ -28,6 +28,24 @@ public class UserDto {
         private Set<UserType> roles;
          private String status;
          private String entity;
+        private String associatedTeamLeadId;
+        private String teamName;
+
+    public String getAssociatedTeamLeadId() {
+        return associatedTeamLeadId;
+    }
+
+    public void setAssociatedTeamLeadId(String associatedTeamLeadId) {
+        this.associatedTeamLeadId = associatedTeamLeadId;
+    }
+
+    public String getTeamName() {
+        return teamName;
+    }
+
+    public void setTeamName(String teamName) {
+        this.teamName = teamName;
+    }
 
     public String getEntity() {
         return entity;
