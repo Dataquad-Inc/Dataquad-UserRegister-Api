@@ -3,6 +3,8 @@ package com.dataquadinc.dto;
 
 import com.dataquadinc.exceptions.ErrorDto;
 
+import java.util.List;
+
 public class ApiResponse<T> {
 
     private boolean success;
@@ -20,14 +22,14 @@ public class ApiResponse<T> {
         this.error = error;
     }
 
-    // Getters and Setters
-    public boolean isSuccess() {
-        return success;
+    public static <T> ApiResponse<T> success(String message, T data) {
+        return new ApiResponse<>(true, message, data, null);
     }
 
-    public void setSuccess(boolean success) {
-        this.success = success;
-    }
+
+    // Getters and Setters
+    public boolean isSuccess() { return success; }
+    public void setSuccess(boolean success) { this.success = success; }
 
     public String getMessage() {
         return message;

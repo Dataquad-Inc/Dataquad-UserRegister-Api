@@ -48,6 +48,8 @@ public class UserController {
 
     }
 
+
+
     @GetMapping("/{userId}/email")
     public ResponseEntity<String> getRecruiterEmail(@PathVariable String userId) {
         try {
@@ -137,21 +139,21 @@ public class UserController {
         return   userService.registerUser(userDto);
 
     }
-//    @GetMapping("/roles/{userId}")
-//    public ResponseEntity<Set<Roles>> getRolesByUserId(@PathVariable String userId ) {
-//        return userService.getRolesByUserId(userId);
-//    }
 
-//    @GetMapping("/employee")
-//    public ResponseEntity<List<EmployeeWithRole>> getAllEmployees() {
-//        ResponseEntity<List<EmployeeWithRole>> responseEntity = userService.getAllEmployeesWithRoles();
-//        List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
-//        if (employeeRoles == null || employeeRoles.isEmpty()) {
-//            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-//        }
-//        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
-//    }
+    @GetMapping("/{userId}/login-status")
+    public ResponseEntity<ApiResponse<UserLoginStatusDTO>> getLoginStatusByUserId(@PathVariable String userId) {
+        UserLoginStatusDTO loginStatus = userService.getLoginStatusByUserId(userId);
+        return ResponseEntity.ok(ApiResponse.success("Login status fetched", loginStatus));
+    }
 
+
+    @GetMapping("/email")
+    public ResponseEntity<ApiResponse<UserDetailsDTO>> getUserByEmail(@RequestParam String email) {
+        UserDetailsDTO user = userService.getUserByEmail(email);
+        return ResponseEntity.ok(ApiResponse.success("User fetched by email", user));
+    }
+
+    
     @GetMapping("/employee")
     public ResponseEntity<List<EmployeeWithRole>> getAllEmployees(
             @RequestParam(required = false) String userId,

@@ -640,6 +640,34 @@ public class UserService {
         UserDto userDto=convertEntityToDto(userDetails);
         return userDto;
     }
+
+
+    public UserDetailsDTO getUserByEmail(String email) {
+        UserDetails user = userDao.findByEmail(email);
+        if(user==null){
+            throw new NoSuchUserException("No User Found With Email ID : " + email);
+        }        return convertToDto(user);
+    }
+
+    public UserLoginStatusDTO getLoginStatusByUserId(String userId) {
+        UserDetails user = userDao.findByUserId(userId);
+        if(user==null){
+            throw new NoSuchUserException("No User Found With ID : "+ userId);
+        }
+        UserLoginStatusDTO dto = new UserLoginStatusDTO();
+        dto.setUserId(user.getUserId());
+        dto.setLastLoginTime(user.getLastLoginTime());
+        return dto;
+    }
+
+    private UserDetailsDTO convertToDto(UserDetails user) {
+        UserDetailsDTO dto = new UserDetailsDTO();
+        dto.setUserId(user.getUserId());
+        dto.setUserName(user.getUserName());
+        dto.setEmail(user.getEmail());
+        dto.setLastLoginTime(user.getLastLoginTime());
+        return dto;
+    }
 }
 
 
