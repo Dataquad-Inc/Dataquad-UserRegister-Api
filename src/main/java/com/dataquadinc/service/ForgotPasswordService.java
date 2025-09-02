@@ -311,7 +311,7 @@ public class ForgotPasswordService {
             // Set recipient, subject, and sender
             helper.setTo(email);
             helper.setSubject("Your OTP for password reset");
-            helper.setFrom("notifications@dataqinc.com");
+            helper.setFrom("notifications@adroitinnovative.com"); // 👈 force sender
 
             // Build the HTML content
             String emailContent = "<html>" +
