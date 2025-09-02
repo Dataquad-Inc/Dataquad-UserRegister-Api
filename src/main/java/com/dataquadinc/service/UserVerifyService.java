@@ -118,7 +118,7 @@ public class UserVerifyService {
             // Set the recipient, subject, and sender
             helper.setTo(email);
             helper.setSubject("Your OTP Code For Registration");
-            helper.setFrom("notifications@dataqinc.com");
+            helper.setFrom("notifications@adroitinnovative.com"); // 👈 force sender
 
             // Build the HTML content
             String emailContent = "<html>" +
