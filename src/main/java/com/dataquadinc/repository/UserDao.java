@@ -1,5 +1,6 @@
 package com.dataquadinc.repository;
 
+import com.dataquadinc.dto.UserDto;
 import com.dataquadinc.model.UserDetails;
 import com.dataquadinc.model.UserType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -216,4 +217,5 @@ public interface UserDao extends JpaRepository<UserDetails, Integer> {
 
     List<UserDetails> findByAssociatedTeamLeadId(String teamLeadId);
 
+    List<UserDetails> findByUserIdIn(List<String> userIds);
 }

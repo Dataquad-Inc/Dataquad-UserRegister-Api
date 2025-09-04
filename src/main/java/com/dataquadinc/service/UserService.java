@@ -22,6 +22,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -667,6 +668,19 @@ public class UserService {
         dto.setEmail(user.getEmail());
         dto.setLastLoginTime(user.getLastLoginTime());
         return dto;
+    }
+
+    public List<UserAssignment> getUserIdsAndUserNames(List<String> userIds){
+
+        List<UserDetails> users=userDao.findByUserIdIn(userIds);
+        List<UserAssignment> userAssignments=users.stream()
+                .map(userDetails -> {
+                    UserAssignment userAssignment=new UserAssignment();
+                    userAssignment.setUserId(userDetails.getUserId());
+                    userAssignment.setUserName(userDetails.getUserName());
+                    return userAssignment;
+                }).collect(Collectors.toList());
+        return userAssignments;
     }
 }
 
