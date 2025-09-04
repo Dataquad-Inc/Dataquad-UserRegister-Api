@@ -378,16 +378,20 @@ public class ForgotPasswordService {
     }
 
     private void sendPasswordUpdateConfirmationEmail(String email) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        helper.setFrom("notifications@adroitinnovative.com"); // 👈 force sender
-        message.setTo(email);
-        message.setSubject("Password Updated Successfully");
-        message.setText("Your password has been updated. If this wasn't you, contact support.");
+    try {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+        helper.setTo(email);
+        helper.setSubject("Password Updated Successfully");
+        helper.setFrom("notifications@adroitinnovative.com");
+        helper.setText(
+            "<p>Your password has been updated.</p><p>If this wasn't you, please contact support immediately.</p>",
+            true // HTML content
+        );
 
-        try {
-            mailSender.send(message);
-        } catch (Exception e) {
-            throw new RuntimeException("Error sending confirmation email: " + e.getMessage());
-        }
+        mailSender.send(message);
+    } catch (Exception e) {
+        throw new RuntimeException("Error sending confirmation email: " + e.getMessage());
     }
+}
 }
