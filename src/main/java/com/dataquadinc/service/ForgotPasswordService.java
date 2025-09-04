@@ -379,6 +379,7 @@ public class ForgotPasswordService {
 
     private void sendPasswordUpdateConfirmationEmail(String email) {
         SimpleMailMessage message = new SimpleMailMessage();
+        helper.setFrom("notifications@adroitinnovative.com"); // 👈 force sender
         message.setTo(email);
         message.setSubject("Password Updated Successfully");
         message.setText("Your password has been updated. If this wasn't you, contact support.");
