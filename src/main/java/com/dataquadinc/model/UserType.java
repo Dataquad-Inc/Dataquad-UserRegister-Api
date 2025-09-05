@@ -9,5 +9,6 @@ public enum UserType {
     BDM,
     PARTNER,
     PAYROLLADMIN,
-    COORDINATOR
+    COORDINATOR,
+    EXTERNALEMPLOYEE
 }
