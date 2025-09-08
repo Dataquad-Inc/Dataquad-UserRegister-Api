@@ -264,4 +264,11 @@ public class UserController {
     ){
         return new ResponseEntity<>(userService.getUserIdsAndUserNames(userIds),HttpStatus.OK);
     }
+
+    @GetMapping("/users-dropdown")
+    public ResponseEntity<ApiResponse<List<UserAssignment>>> getUsersDropdown(){
+
+        ApiResponse<List<UserAssignment>> apiResponse=new ApiResponse<>(true,"Users Data Fetched Successful",userService.getUsersDropdown(),null);
+        return new ResponseEntity<>(apiResponse,HttpStatus.OK);
+    }
 }

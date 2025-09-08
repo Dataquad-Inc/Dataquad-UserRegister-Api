@@ -682,6 +682,22 @@ public class UserService {
                 }).collect(Collectors.toList());
         return userAssignments;
     }
+
+    public List<UserAssignment> getUsersDropdown(){
+        List<UserAssignment> usersDropDown=new ArrayList<>();
+        userDao.findAll().stream()
+                .filter(userDetails ->
+                        userDetails.getRoles().stream().anyMatch(roles -> roles.getName()==UserType.SUPERADMIN) ||
+                                userDetails.getEntity().equalsIgnoreCase("US"))
+                .forEach(userDetails ->{
+                    UserAssignment userAssignment=new UserAssignment();
+                    userAssignment.setUserId(userDetails.getUserId());
+                    userAssignment.setUserName(userDetails.getUserName());
+                    usersDropDown.add(userAssignment);
+                });
+
+        return usersDropDown;
+    }
 }
 
 
