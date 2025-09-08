@@ -258,7 +258,7 @@ public class UserController {
         return new ResponseEntity<>(apiResponse,HttpStatus.OK);
     }
 
-    @GetMapping("/user/userId-userName")
+    @PostMapping("/user/userId-userName")
     public ResponseEntity<List<UserAssignment>> getUserIdsAndUserNames(
             @RequestBody List<String> userIds
     ){
