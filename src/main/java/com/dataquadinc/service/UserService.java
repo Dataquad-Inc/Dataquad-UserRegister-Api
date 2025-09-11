@@ -619,6 +619,7 @@ public class UserService {
         dto.setRoles(userTypes);
         dto.setAssociatedTeamLeadId(user.getAssociatedTeamLeadId());
         dto.setTeamName(user.getTeamName());
+        dto.setTeamAssignments(user.getTeamAssignments());
 
         return dto;
     }

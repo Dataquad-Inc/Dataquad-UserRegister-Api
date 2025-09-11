@@ -3,6 +3,7 @@ package com.dataquadinc.service;
 import com.dataquadinc.dto.AssignTeamLead;
 import com.dataquadinc.dto.AssociatedToTeamLeadResponse;
 import com.dataquadinc.dto.AssociatedUser;
+import com.dataquadinc.dto.TeamAssignment;
 import com.dataquadinc.exceptions.UserNotFoundException;
 import com.dataquadinc.model.Roles;
 import com.dataquadinc.model.UserDetails;
@@ -24,122 +25,192 @@ public class TeamService {
     UserDao userDao;
 
     @Transactional
-    public String assignTeamLead(String userId,AssignTeamLead assignTeamLeadDto){
+    public String assignTeamLead(String userId, AssignTeamLead assignTeamLeadDto) {
 
-            UserDetails userDetails = userDao.findByUserId(userId);
-            if (userDetails == null) throw new UserNotFoundException("No User Found With Id :" + userId);
-            boolean isSuperAdmin = userDetails.getRoles().stream()
-                    .anyMatch(role -> role.getName() == UserType.SUPERADMIN);
-        UserDetails teamLeadUser=userDao.findByUserId(assignTeamLeadDto.getTeamLead());
-        if(teamLeadUser==null) throw new UserNotFoundException("No User Found with ID :"+assignTeamLeadDto.getTeamLead());
+        UserDetails userDetails = userDao.findByUserId(userId);
+        if (userDetails == null) {
+            throw new UserNotFoundException("No User Found With Id :" + userId);
+        }
+
+        boolean isSuperAdmin = userDetails.getRoles().stream()
+                .anyMatch(role -> role.getName() == UserType.SUPERADMIN);
+
+        UserDetails teamLeadUser = userDao.findByUserId(assignTeamLeadDto.getTeamLead());
+        if (teamLeadUser == null) {
+            throw new UserNotFoundException("No User Found with ID :" + assignTeamLeadDto.getTeamLead());
+        }
+
         boolean isTeamLead = teamLeadUser.getRoles().stream()
                 .anyMatch(role -> role.getName() == UserType.TEAMLEAD);
-        if(!isTeamLead){
-            log.error("No User Found with ID :"+assignTeamLeadDto.getTeamLead());
-            throw new UserNotFoundException("User "+teamLeadUser.getUserId()+" Not A TEAMLEAD");
+
+        if (!isTeamLead) {
+            log.error("User {} Not A TEAMLEAD", assignTeamLeadDto.getTeamLead());
+            throw new UserNotFoundException("User " + teamLeadUser.getUserId() + " Not A TEAMLEAD");
         }
-        if(isSuperAdmin && isTeamLead){
-             teamLeadUser.setAssociatedTeamLeadId(userId);
-             teamLeadUser.setTeamName(assignTeamLeadDto.getTeamName());
+
+        // SuperAdmin assigning teamLead
+        if (isSuperAdmin && isTeamLead) {
+            teamLeadUser.addTeamAssignmentIfNotExists(
+                    new TeamAssignment(userId, assignTeamLeadDto.getTeamName())
+            );
+            userDao.save(teamLeadUser);
         }
-        if(!assignTeamLeadDto.getSalesExecutives().isEmpty()) {
+
+        //Assign Sales Executives
+        if (!assignTeamLeadDto.getSalesExecutives().isEmpty()) {
             for (String salesExecutiveId : assignTeamLeadDto.getSalesExecutives()) {
                 UserDetails salesUser = userDao.findByUserId(salesExecutiveId);
-                if (salesUser == null)
-                    throw new UserNotFoundException("No User Found With ID " + salesUser.getUserId());
+                if (salesUser == null) {
+                    throw new UserNotFoundException("No User Found With ID " + salesExecutiveId);
+                }
+
                 boolean isSalesExecutive = salesUser.getRoles().stream()
                         .anyMatch(role -> role.getName() == UserType.SALESEXECUTIVE);
-                if(!isSalesExecutive){
-                    log.error("No User Found with ID :"+assignTeamLeadDto.getTeamLead());
-                    throw new UserNotFoundException("User "+teamLeadUser.getUserId()+" Not A SALESEXECUTIVE");
+                if (!isSalesExecutive) {
+                    throw new UserNotFoundException("User " + salesUser.getUserId() + " Not A SALESEXECUTIVE");
                 }
-                salesUser.setAssociatedTeamLeadId(assignTeamLeadDto.getTeamLead());
-                salesUser.setTeamName(assignTeamLeadDto.getTeamName());
+
+                salesUser.addTeamAssignmentIfNotExists(
+                        new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
+                );
+
                 userDao.save(salesUser);
             }
         }
+
+        // Assign Recruiters
         if (!assignTeamLeadDto.getRecruiters().isEmpty()) {
             for (String recruiterId : assignTeamLeadDto.getRecruiters()) {
                 UserDetails recruiterUser = userDao.findByUserId(recruiterId);
-                if (recruiterUser == null)
-                    throw new UserNotFoundException("No User Found With ID " + recruiterUser.getUserId());
-                boolean isSalesExecutive = recruiterUser.getRoles().stream()
-                        .anyMatch(role -> role.getName() == UserType.RECRUITER);
-                if(!isSalesExecutive){
-                    log.error("No User Found with ID :"+assignTeamLeadDto.getTeamLead());
-                    throw new UserNotFoundException("User "+teamLeadUser.getUserId()+" Not A RECRUITER");
+                if (recruiterUser == null) {
+                    throw new UserNotFoundException("No User Found With ID " + recruiterId);
                 }
-                recruiterUser.setAssociatedTeamLeadId(assignTeamLeadDto.getTeamLead());
-                recruiterUser.setTeamName(assignTeamLeadDto.getTeamName());
+
+                boolean isRecruiter = recruiterUser.getRoles().stream()
+                        .anyMatch(role -> role.getName() == UserType.RECRUITER);
+                if (!isRecruiter) {
+                    throw new UserNotFoundException("User " + recruiterUser.getUserId() + " Not A RECRUITER");
+                }
+
+                recruiterUser.addTeamAssignmentIfNotExists(
+                        new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
+                );
+
                 userDao.save(recruiterUser);
             }
         }
-
-        return "Assigned Recruiters And SalesExecutives To TEAMLEAD "+assignTeamLeadDto.getTeamLead();
+        return "Assigned Recruiters and SalesExecutives to TEAMLEAD " + assignTeamLeadDto.getTeamLead();
     }
 
-    public AssociatedToTeamLeadResponse getUsersAssociatedToTeamLead(String teamLeadId){
 
-        List<AssociatedUser> salesExecutives=new ArrayList<>();
-        List<AssociatedUser> recruiters=new ArrayList<>();
-        UserDetails teamlead=userDao.findByUserId(teamLeadId);
-        if(teamlead==null){
-            throw new UserNotFoundException("No User Found With ID "+teamLeadId);
+    public AssociatedToTeamLeadResponse getUsersAssociatedToTeamLead(String teamLeadId) {
+        List<AssociatedUser> salesExecutives = new ArrayList<>();
+        List<AssociatedUser> recruiters = new ArrayList<>();
+
+        // Validate team lead exists
+        UserDetails teamLead = userDao.findByUserId(teamLeadId);
+        if (teamLead == null) {
+            throw new UserNotFoundException("No User Found With ID " + teamLeadId);
         }
-        String teamName=teamlead.getTeamName();
-        List<UserDetails> associatedUsers=userDao.findByAssociatedTeamLeadId(teamLeadId);
 
-       for (UserDetails user:associatedUsers){
-          Set<UserType> roles=user.getRoles().stream().map(Roles::getName)
-                   .collect(Collectors.toSet());
+        // Iterate all users and check if they belong to this team lead
+        List<UserDetails> allUsers = userDao.findAll();
+        for (UserDetails user : allUsers) {
+            if (user.getTeamAssignments() != null) {
+                boolean assignedToThisLead = user.getTeamAssignments().stream()
+                        .anyMatch(t -> t.getTeamLeadId().equals(teamLeadId));
+                if (assignedToThisLead) {
+                    Set<UserType> roles = user.getRoles().stream()
+                            .map(Roles::getName)
+                            .collect(Collectors.toSet());
 
-           if (roles.contains(UserType.SALESEXECUTIVE))   salesExecutives.add(new AssociatedUser(user.getUserId(), user.getUserName()));
-           if(roles.contains(UserType.RECRUITER))   recruiters.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                    if (roles.contains(UserType.SALESEXECUTIVE)) {
+                        salesExecutives.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                    }
+                    if (roles.contains(UserType.RECRUITER)) {
+                        recruiters.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                    }
+                }
+            }
+        }
 
-       }
-        AssociatedToTeamLeadResponse response=new AssociatedToTeamLeadResponse();
-        response.setTeamName(teamName);
-        response.setTeamLeadId(teamlead.getUserId());
-        response.setTeamLeadName(teamlead.getUserName());
+        AssociatedToTeamLeadResponse response = new AssociatedToTeamLeadResponse();
+        response.setTeamLeadId(teamLead.getUserId());
+        response.setTeamLeadName(teamLead.getUserName());
+
+        response.setTeamName(teamLead.getTeamName());
         response.setRecruiters(recruiters);
         response.setSalesExecutives(salesExecutives);
         return response;
     }
-    public List<AssociatedToTeamLeadResponse> getAllUsersAssociatedToTeamLead(){
 
-        List<AssociatedToTeamLeadResponse> result=new ArrayList<>();
+    public List<AssociatedToTeamLeadResponse> getAllUsersAssociatedToTeamLead() {
+        List<AssociatedToTeamLeadResponse> result = new ArrayList<>();
 
-       List<String> teamLeads=userDao.findAll().
-               stream().
-               filter(userDetails -> userDetails.getEntity().equalsIgnoreCase("US")).
-               filter(userDetails -> userDetails.getRoles().
-                       stream().anyMatch(roles -> roles.getName().equals(UserType.TEAMLEAD)))
-               .map(UserDetails::getUserId)
-               .collect(Collectors.toList());
+        // Get all team leads in US entity
+        List<UserDetails> teamLeads = userDao.findAll().stream()
+                .filter(userDetails -> "US".equalsIgnoreCase(userDetails.getEntity()))
+                .filter(userDetails -> userDetails.getRoles().stream()
+                        .anyMatch(role -> role.getName().equals(UserType.TEAMLEAD)))
+                .toList();
 
-       for(String teamLead:teamLeads){
-          UserDetails teamLeadUser=userDao.findByUserId(teamLead);
-           String teamName=teamLeadUser.getTeamName();
-           List<UserDetails> associatedUsers=userDao.findByAssociatedTeamLeadId(teamLead);
-           List<AssociatedUser> salesExecutives=new ArrayList<>();
-           List<AssociatedUser> recruiters=new ArrayList<>();
-           for (UserDetails user:associatedUsers){
-               Set<UserType> roles=user.getRoles().stream().map(Roles::getName)
-                       .collect(Collectors.toSet());
-               if (roles.contains(UserType.SALESEXECUTIVE))   salesExecutives.add(new AssociatedUser(user.getUserId(), user.getUserName()));
-               if(roles.contains(UserType.RECRUITER))   recruiters.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+        List<UserDetails> allUsers = userDao.findAll();
 
-           }
-           AssociatedToTeamLeadResponse response=new AssociatedToTeamLeadResponse();
-           response.setTeamName(teamName);
-           response.setTeamLeadId(teamLeadUser.getUserId());
-           response.setTeamLeadName(teamLeadUser.getUserName());
-           response.setRecruiters(recruiters);
-           response.setSalesExecutives(salesExecutives);
-           result.add(response);
-           recruiters=new ArrayList<>();
-           salesExecutives=new ArrayList<>();
-       }
-             return result;
+        for (UserDetails teamLeadUser : teamLeads) {
+            List<AssociatedUser> salesExecutives = new ArrayList<>();
+            List<AssociatedUser> recruiters = new ArrayList<>();
+
+            for (UserDetails user : allUsers) {
+                if (user.getTeamAssignments() != null) {
+                    boolean assignedToThisLead = user.getTeamAssignments().stream()
+                            .anyMatch(t -> t.getTeamLeadId().equals(teamLeadUser.getUserId()));
+                    if (assignedToThisLead) {
+                        Set<UserType> roles = user.getRoles().stream()
+                                .map(Roles::getName)
+                                .collect(Collectors.toSet());
+
+                        if (roles.contains(UserType.SALESEXECUTIVE)) {
+                            salesExecutives.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                        }
+                        if (roles.contains(UserType.RECRUITER)) {
+                            recruiters.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                        }
+                    }
+                }
+            }
+
+            AssociatedToTeamLeadResponse response = new AssociatedToTeamLeadResponse();
+            response.setTeamLeadId(teamLeadUser.getUserId());
+            response.setTeamLeadName(teamLeadUser.getUserName());
+
+            response.setTeamName(teamLeadUser.getTeamName());
+            response.setRecruiters(recruiters);
+            response.setSalesExecutives(salesExecutives);
+
+            result.add(response);
+        }
+        return result;
     }
+    @Transactional
+    public String removeUserFromTeamLead(String userId, String teamLeadId) {
+
+        UserDetails user = userDao.findByUserId(userId);
+        if (user == null) {
+            throw new UserNotFoundException("No User Found With ID: " + userId);
+        }
+
+        List<TeamAssignment> assignments = user.getTeamAssignments();
+        if (assignments == null || assignments.isEmpty()) {
+            throw new UserNotFoundException("User Not Assigned to Team");
+        }
+
+        boolean removed = assignments.removeIf(t -> t.getTeamLeadId().equals(teamLeadId));
+        if (!removed) {
+            return "No assignment found for the given team lead.";
+        }
+        userDao.save(user);
+
+        return "Removed user " + userId + " from team lead " + teamLeadId;
+    }
+
 }
