@@ -43,4 +43,10 @@ public class TeamController {
 
         return new ResponseEntity<>(teamService.getAllUsersAssociatedToTeamLead(),HttpStatus.OK);
     }
+
+    @DeleteMapping("/team/{teamLeadId}/user/{userId}")
+    public String removeUser(@PathVariable String teamLeadId, @PathVariable String userId) {
+        return teamService.removeUserFromTeamLead(userId, teamLeadId);
+    }
+
 }

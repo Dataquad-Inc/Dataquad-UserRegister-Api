@@ -9,6 +9,7 @@ import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -30,6 +31,7 @@ public class UserDto {
          private String entity;
         private String associatedTeamLeadId;
         private String teamName;
+        private List<TeamAssignment> teamAssignments;
 
     public String getAssociatedTeamLeadId() {
         return associatedTeamLeadId;
@@ -162,5 +164,13 @@ public class UserDto {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public List<TeamAssignment> getTeamAssignments() {
+        return teamAssignments;
+    }
+
+    public void setTeamAssignments(List<TeamAssignment> teamAssignments) {
+        this.teamAssignments = teamAssignments;
     }
 }

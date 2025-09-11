@@ -1,14 +1,19 @@
 package com.dataquadinc.model;
 
+import com.dataquadinc.dto.TeamAssignment;
+import com.vladmihalcea.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -74,6 +79,10 @@ public class UserDetails {
     private String entity;
 
     private String teamName;
+
+    @Type(JsonType.class)
+    @Column(columnDefinition = "json")
+    private List<TeamAssignment> teamAssignments=new ArrayList<>();
 
     public String getTeamName() {
         return teamName;
@@ -242,4 +251,37 @@ public class UserDetails {
     public void setEncryptionKey(String encryptionKey) {
         this.encryptionKey = encryptionKey;
     }
+
+    public List<TeamAssignment> getTeamAssignments() {
+        if (teamAssignments == null) {
+            teamAssignments = new ArrayList<>();
+        }
+        return teamAssignments;
+    }
+
+
+    public void setTeamAssignments(List<TeamAssignment> teamAssignments) {
+        this.teamAssignments = teamAssignments;
+    }
+
+
+    public void addTeamAssignment(TeamAssignment assignment) {
+        if (this.teamAssignments == null) {
+            this.teamAssignments = new ArrayList<>();
+        }
+        this.teamAssignments.add(assignment);
+    }
+
+    public void addTeamAssignmentIfNotExists(TeamAssignment newAssignment) {
+        if (this.teamAssignments == null) {
+            this.teamAssignments = new ArrayList<>();
+        }
+        boolean exists = this.teamAssignments.stream()
+                .anyMatch(t -> t.getTeamLeadId().equals(newAssignment.getTeamLeadId())
+                        && t.getTeamName().equalsIgnoreCase(newAssignment.getTeamName()));
+        if (!exists) {
+            this.teamAssignments.add(newAssignment);
+        }
+    }
+
 }
