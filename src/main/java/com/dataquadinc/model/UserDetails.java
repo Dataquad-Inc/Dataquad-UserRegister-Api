@@ -265,23 +265,19 @@ public class UserDetails {
     }
 
 
-    public void addTeamAssignment(TeamAssignment assignment) {
-        if (this.teamAssignments == null) {
-            this.teamAssignments = new ArrayList<>();
-        }
-        this.teamAssignments.add(assignment);
-    }
-
     public void addTeamAssignmentIfNotExists(TeamAssignment newAssignment) {
-        if (this.teamAssignments == null) {
-            this.teamAssignments = new ArrayList<>();
-        }
+
         boolean exists = this.teamAssignments.stream()
                 .anyMatch(t -> t.getTeamLeadId().equals(newAssignment.getTeamLeadId())
                         && t.getTeamName().equalsIgnoreCase(newAssignment.getTeamName()));
+
         if (!exists) {
-            this.teamAssignments.add(newAssignment);
+            List<TeamAssignment> updated = new ArrayList<>(this.teamAssignments);
+            updated.add(newAssignment);
+            this.teamAssignments = updated;
         }
     }
+
+
 
 }
