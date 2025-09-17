@@ -10,6 +10,9 @@ public class AssociatedToTeamLeadResponse {
     private String teamLeadName;
     List<AssociatedUser> salesExecutives=new ArrayList<>();
     List<AssociatedUser> recruiters=new ArrayList<>();
+    List<AssociatedUser> employees=new ArrayList<>();
+    List<AssociatedUser> coordinators=new ArrayList<>();
+    List<AssociatedUser> bdms=new ArrayList<>();
 
     public String getTeamName() {
         return teamName;
@@ -49,5 +52,29 @@ public class AssociatedToTeamLeadResponse {
 
     public void setTeamLeadName(String teamLeadName) {
         this.teamLeadName = teamLeadName;
+    }
+
+    public List<AssociatedUser> getEmployees() {
+        return employees;
+    }
+
+    public void setEmployees(List<AssociatedUser> employees) {
+        this.employees = employees;
+    }
+
+    public List<AssociatedUser> getCoordinators() {
+        return coordinators;
+    }
+
+    public void setCoordinators(List<AssociatedUser> coordinators) {
+        this.coordinators = coordinators;
+    }
+
+    public List<AssociatedUser> getBdms() {
+        return bdms;
+    }
+
+    public void setBdms(List<AssociatedUser> bdms) {
+        this.bdms = bdms;
     }
 }

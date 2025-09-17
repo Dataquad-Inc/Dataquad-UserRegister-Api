@@ -39,9 +39,11 @@ public class TeamController {
        return new ResponseEntity<>(teamService.getUsersAssociatedToTeamLead(teamLeadId),HttpStatus.OK);
     }
     @GetMapping("/AllAssociatedUsers")
-    public ResponseEntity<List<AssociatedToTeamLeadResponse>> getAllUsersAssociatedToTeamLead(){
+    public ResponseEntity<List<AssociatedToTeamLeadResponse>> getAllUsersAssociatedToTeamLead(
+            @RequestParam(defaultValue = "US") String entity
+    ){
 
-        return new ResponseEntity<>(teamService.getAllUsersAssociatedToTeamLead(),HttpStatus.OK);
+        return new ResponseEntity<>(teamService.getAllUsersAssociatedToTeamLead(entity),HttpStatus.OK);
     }
 
     @DeleteMapping("/team/{teamLeadId}/user/{userId}")

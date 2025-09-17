@@ -53,11 +53,11 @@ public class TeamService {
             teamLeadUser.addTeamAssignmentIfNotExists(
                     new TeamAssignment(userId, assignTeamLeadDto.getTeamName())
             );
-            userDao.save(teamLeadUser);
+            userDao.saveAndFlush(teamLeadUser);
         }
 
         //Assign Sales Executives
-        if (!assignTeamLeadDto.getSalesExecutives().isEmpty()) {
+        if (assignTeamLeadDto.getSalesExecutives()!=null &&!assignTeamLeadDto.getSalesExecutives().isEmpty() ) {
             for (String salesExecutiveId : assignTeamLeadDto.getSalesExecutives()) {
                 UserDetails salesUser = userDao.findByUserId(salesExecutiveId);
                 if (salesUser == null) {
@@ -79,7 +79,7 @@ public class TeamService {
         }
 
         // Assign Recruiters
-        if (!assignTeamLeadDto.getRecruiters().isEmpty()) {
+        if (assignTeamLeadDto.getRecruiters()!=null && !assignTeamLeadDto.getRecruiters().isEmpty()) {
             for (String recruiterId : assignTeamLeadDto.getRecruiters()) {
                 UserDetails recruiterUser = userDao.findByUserId(recruiterId);
                 if (recruiterUser == null) {
@@ -96,16 +96,84 @@ public class TeamService {
                         new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
                 );
 
-                userDao.save(recruiterUser);
+                userDao.saveAndFlush(recruiterUser);
             }
         }
-        return "Assigned Recruiters and SalesExecutives to TEAMLEAD " + assignTeamLeadDto.getTeamLead();
+
+        // Assign Coordinators
+        if (assignTeamLeadDto.getCoordinators()!=null && !assignTeamLeadDto.getCoordinators().isEmpty()) {
+            for (String coordinatorId : assignTeamLeadDto.getCoordinators()) {
+                UserDetails coordinatorUser = userDao.findByUserId(coordinatorId);
+                if (coordinatorUser == null) {
+                    throw new UserNotFoundException("No User Found With ID " + coordinatorId);
+                }
+
+                boolean isCoordinator = coordinatorUser.getRoles().stream()
+                        .anyMatch(role -> role.getName() == UserType.COORDINATOR);
+                if (!isCoordinator) {
+                    throw new UserNotFoundException("User " + coordinatorUser.getUserId() + " Not A COORDINATOR");
+                }
+
+                coordinatorUser.addTeamAssignmentIfNotExists(
+                        new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
+                );
+
+                userDao.saveAndFlush(coordinatorUser);
+            }
+        }
+
+            // Assign BDMS
+            if (assignTeamLeadDto.getBdms()!=null && !assignTeamLeadDto.getBdms().isEmpty()) {
+                for (String bdmId : assignTeamLeadDto.getBdms()) {
+                    UserDetails bdmUser = userDao.findByUserId(bdmId);
+                    if (bdmUser == null) {
+                        throw new UserNotFoundException("No User Found With ID " + bdmId);
+                    }
+
+                    boolean isBdm = bdmUser.getRoles().stream()
+                            .anyMatch(role -> role.getName() == UserType.BDM);
+                    if (!isBdm) {
+                        throw new UserNotFoundException("User " + bdmUser.getUserId() + " Not A BDM");
+                    }
+
+                    bdmUser.addTeamAssignmentIfNotExists(
+                            new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
+                    );
+
+                    userDao.saveAndFlush(bdmUser);
+                }
+            }
+        // Assign Employees
+        if (assignTeamLeadDto.getEmployees()!=null && !assignTeamLeadDto.getEmployees().isEmpty()) {
+            for (String employeeId : assignTeamLeadDto.getEmployees()) {
+                UserDetails employeeUser = userDao.findByUserId(employeeId);
+                if (employeeUser == null) {
+                    throw new UserNotFoundException("No User Found With ID " + employeeId);
+                }
+
+                boolean isEmployee = employeeUser.getRoles().stream()
+                        .anyMatch(role -> role.getName() == UserType.EMPLOYEE);
+                if (!isEmployee) {
+                    throw new UserNotFoundException("User " + employeeUser.getUserId() + " Not A Employee");
+                }
+
+                employeeUser.addTeamAssignmentIfNotExists(
+                        new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
+                );
+
+                userDao.saveAndFlush(employeeUser);
+            }
+        }
+            return "Assigned Users to TEAMLEAD " + assignTeamLeadDto.getTeamLead();
     }
 
 
     public AssociatedToTeamLeadResponse getUsersAssociatedToTeamLead(String teamLeadId) {
         List<AssociatedUser> salesExecutives = new ArrayList<>();
         List<AssociatedUser> recruiters = new ArrayList<>();
+        List<AssociatedUser> employees=new ArrayList<>();
+        List<AssociatedUser> coordinators=new ArrayList<>();
+        List<AssociatedUser> bdms=new ArrayList<>();
 
         // Validate team lead exists
         UserDetails teamLead = userDao.findByUserId(teamLeadId);
@@ -130,6 +198,15 @@ public class TeamService {
                     if (roles.contains(UserType.RECRUITER)) {
                         recruiters.add(new AssociatedUser(user.getUserId(), user.getUserName()));
                     }
+                    if (roles.contains(UserType.EMPLOYEE)) {
+                        employees.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                    }
+                    if (roles.contains(UserType.BDM)) {
+                        bdms.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                    }
+                    if (roles.contains(UserType.COORDINATOR)) {
+                        coordinators.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                    }
                 }
             }
         }
@@ -137,19 +214,27 @@ public class TeamService {
         AssociatedToTeamLeadResponse response = new AssociatedToTeamLeadResponse();
         response.setTeamLeadId(teamLead.getUserId());
         response.setTeamLeadName(teamLead.getUserName());
-
-        response.setTeamName(teamLead.getTeamName());
+        response.setTeamName(
+                teamLead.getTeamAssignments().stream()
+                        .map(TeamAssignment::getTeamName)
+                        .findFirst()
+                        .orElse(null)
+        );
         response.setRecruiters(recruiters);
         response.setSalesExecutives(salesExecutives);
+        response.setBdms(bdms);
+        response.setCoordinators(coordinators);
+        response.setEmployees(employees);
         return response;
     }
 
-    public List<AssociatedToTeamLeadResponse> getAllUsersAssociatedToTeamLead() {
+    public List<AssociatedToTeamLeadResponse> getAllUsersAssociatedToTeamLead(String entity) {
         List<AssociatedToTeamLeadResponse> result = new ArrayList<>();
 
         // Get all team leads in US entity
         List<UserDetails> teamLeads = userDao.findAll().stream()
-                .filter(userDetails -> "US".equalsIgnoreCase(userDetails.getEntity()))
+                .filter(userDetails -> entity.equalsIgnoreCase(userDetails.getEntity()))
+                .filter(userDetails -> userDetails.getStatus().equalsIgnoreCase("ACTIVE"))
                 .filter(userDetails -> userDetails.getRoles().stream()
                         .anyMatch(role -> role.getName().equals(UserType.TEAMLEAD)))
                 .toList();
@@ -159,6 +244,9 @@ public class TeamService {
         for (UserDetails teamLeadUser : teamLeads) {
             List<AssociatedUser> salesExecutives = new ArrayList<>();
             List<AssociatedUser> recruiters = new ArrayList<>();
+            List<AssociatedUser> employees=new ArrayList<>();
+            List<AssociatedUser> coordinators=new ArrayList<>();
+            List<AssociatedUser> bdms=new ArrayList<>();
 
             for (UserDetails user : allUsers) {
                 if (user.getTeamAssignments() != null) {
@@ -175,6 +263,15 @@ public class TeamService {
                         if (roles.contains(UserType.RECRUITER)) {
                             recruiters.add(new AssociatedUser(user.getUserId(), user.getUserName()));
                         }
+                        if (roles.contains(UserType.EMPLOYEE)) {
+                            employees.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                        }
+                        if (roles.contains(UserType.BDM)) {
+                            bdms.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                        }
+                        if (roles.contains(UserType.COORDINATOR)) {
+                            coordinators.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                        }
                     }
                 }
             }
@@ -182,10 +279,17 @@ public class TeamService {
             AssociatedToTeamLeadResponse response = new AssociatedToTeamLeadResponse();
             response.setTeamLeadId(teamLeadUser.getUserId());
             response.setTeamLeadName(teamLeadUser.getUserName());
-
-            response.setTeamName(teamLeadUser.getTeamName());
+            response.setTeamName(
+                    teamLeadUser.getTeamAssignments().stream()
+                            .map(TeamAssignment::getTeamName)
+                            .findFirst()
+                            .orElse(null)
+            );
             response.setRecruiters(recruiters);
             response.setSalesExecutives(salesExecutives);
+            response.setBdms(bdms);
+            response.setCoordinators(coordinators);
+            response.setEmployees(employees);
 
             result.add(response);
         }

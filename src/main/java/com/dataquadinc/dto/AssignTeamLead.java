@@ -15,6 +15,12 @@ public class AssignTeamLead {
 
     private Set<String> recruiters;
 
+    private Set<String> bdms;
+
+    private Set<String> employees;
+
+    private Set<String> coordinators;
+
     public String getSuperAdmin() {
         return superAdmin;
     }
@@ -53,5 +59,29 @@ public class AssignTeamLead {
 
     public void setRecruiters(Set<String> recruiters) {
         this.recruiters = recruiters;
+    }
+
+    public Set<String> getBdms() {
+        return bdms;
+    }
+
+    public void setBdms(Set<String> bdms) {
+        this.bdms = bdms;
+    }
+
+    public Set<String> getEmployees() {
+        return employees;
+    }
+
+    public void setEmployees(Set<String> employees) {
+        this.employees = employees;
+    }
+
+    public Set<String> getCoordinators() {
+        return coordinators;
+    }
+
+    public void setCoordinators(Set<String> coordinators) {
+        this.coordinators = coordinators;
     }
 }
