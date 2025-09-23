@@ -26,9 +26,6 @@ public class LogoutService {
             // Get the current timestamp for logout
             LocalDateTime logoutTimestamp = LocalDateTime.now();
 
-            // Optionally, you can reset other session-related fields if needed
-            resetUserSession(userId);
-
             // Build the payload for response
             Payload payload = new Payload(userId, logoutTimestamp);
 
@@ -62,16 +59,4 @@ public class LogoutService {
         }
     }
 
-    // Method to reset user session state (clear any session-related fields)
-    private void resetUserSession(String userId) {
-        UserDetails userDetails = userDao.findByUserId(userId);
-
-        if (userDetails != null) {
-            // Reset session-related fields (like lastLoginTime, session token, etc.)
-            userDetails.setLastLoginTime(null); // Clear the last login time
-            // If you're using JWT or any session tokens, clear those as well
-            // userDetails.setSessionToken(null); // Example: Reset session token (if you are using it)
-            userDao.save(userDetails); // Save the updated user details to persist changes
-        }
-    }
 }
