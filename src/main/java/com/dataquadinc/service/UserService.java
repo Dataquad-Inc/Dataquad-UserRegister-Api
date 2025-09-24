@@ -617,7 +617,7 @@ public class UserService {
                 .collect(Collectors.toSet());
 
         dto.setRoles(userTypes);
-        dto.setAssociatedTeamLeadId(user.getAssociatedTeamLeadId());
+        dto.setIsPrimarySuperAdmin(user.isPrimarySuperAdmin());
         dto.setTeamName(user.getTeamName());
         dto.setTeamAssignments(user.getTeamAssignments());
 

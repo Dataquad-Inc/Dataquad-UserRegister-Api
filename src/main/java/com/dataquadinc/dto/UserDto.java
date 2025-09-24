@@ -29,16 +29,16 @@ public class UserDto {
         private Set<UserType> roles;
          private String status;
          private String entity;
-        private String associatedTeamLeadId;
         private String teamName;
         private List<TeamAssignment> teamAssignments;
+        private Boolean isPrimarySuperAdmin;
 
-    public String getAssociatedTeamLeadId() {
-        return associatedTeamLeadId;
+    public Boolean getPrimarySuperAdmin() {
+        return isPrimarySuperAdmin;
     }
 
-    public void setAssociatedTeamLeadId(String associatedTeamLeadId) {
-        this.associatedTeamLeadId = associatedTeamLeadId;
+    public void setPrimarySuperAdmin(Boolean primarySuperAdmin) {
+        isPrimarySuperAdmin = primarySuperAdmin;
     }
 
     public String getTeamName() {
