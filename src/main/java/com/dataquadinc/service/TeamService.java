@@ -44,6 +44,13 @@ public class TeamService {
                 .anyMatch(role -> role.getName() == UserType.TEAMLEAD);
 
         if (!isTeamLead) {
+            if ("ADRTIN025".equalsIgnoreCase(teamLeadUser.getUserId()) &&
+                    teamLeadUser.getRoles().stream().anyMatch(role -> role.getName() == UserType.BDM)) {
+                isTeamLead = true;
+            }
+        }
+
+        if (!isTeamLead) {
             log.error("User {} Not A TEAMLEAD", assignTeamLeadDto.getTeamLead());
             throw new UserNotFoundException("User " + teamLeadUser.getUserId() + " Not A TEAMLEAD");
         }
@@ -231,12 +238,17 @@ public class TeamService {
     public List<AssociatedToTeamLeadResponse> getAllUsersAssociatedToTeamLead(String entity) {
         List<AssociatedToTeamLeadResponse> result = new ArrayList<>();
 
-        // Get all team leads in US entity
+        // Get all team leads in the entity
         List<UserDetails> teamLeads = userDao.findAll().stream()
                 .filter(userDetails -> entity.equalsIgnoreCase(userDetails.getEntity()))
                 .filter(userDetails -> userDetails.getStatus().equalsIgnoreCase("ACTIVE"))
-                .filter(userDetails -> userDetails.getRoles().stream()
-                        .anyMatch(role -> role.getName().equals(UserType.TEAMLEAD)))
+                .filter(userDetails ->
+                        // Normal Team Leads
+                        userDetails.getRoles().stream().anyMatch(role -> role.getName().equals(UserType.TEAMLEAD))
+                                // Special Case: ADRTIN025 (BDM acting as Team Lead)
+                                || ("ADRTIN025".equalsIgnoreCase(userDetails.getUserId())
+                                && userDetails.getRoles().stream().anyMatch(role -> role.getName().equals(UserType.BDM)))
+                )
                 .toList();
 
         List<UserDetails> allUsers = userDao.findAll();
@@ -244,9 +256,9 @@ public class TeamService {
         for (UserDetails teamLeadUser : teamLeads) {
             List<AssociatedUser> salesExecutives = new ArrayList<>();
             List<AssociatedUser> recruiters = new ArrayList<>();
-            List<AssociatedUser> employees=new ArrayList<>();
-            List<AssociatedUser> coordinators=new ArrayList<>();
-            List<AssociatedUser> bdms=new ArrayList<>();
+            List<AssociatedUser> employees = new ArrayList<>();
+            List<AssociatedUser> coordinators = new ArrayList<>();
+            List<AssociatedUser> bdms = new ArrayList<>();
 
             for (UserDetails user : allUsers) {
                 if (user.getTeamAssignments() != null) {
@@ -295,6 +307,7 @@ public class TeamService {
         }
         return result;
     }
+
     @Transactional
     public String removeUserFromTeamLead(String userId, String teamLeadId) {
 
