@@ -21,6 +21,8 @@ public class AssignTeamLead {
 
     private Set<String> coordinators;
 
+    private Set<String> teamLeads;
+
     public String getSuperAdmin() {
         return superAdmin;
     }
@@ -83,5 +85,13 @@ public class AssignTeamLead {
 
     public void setCoordinators(Set<String> coordinators) {
         this.coordinators = coordinators;
+    }
+
+    public Set<String> getTeamLeads() {
+        return teamLeads;
+    }
+
+    public void setTeamLeads(Set<String> teamLeads) {
+        this.teamLeads = teamLeads;
     }
 }

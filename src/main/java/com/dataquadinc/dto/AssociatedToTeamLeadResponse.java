@@ -13,6 +13,7 @@ public class AssociatedToTeamLeadResponse {
     List<AssociatedUser> employees=new ArrayList<>();
     List<AssociatedUser> coordinators=new ArrayList<>();
     List<AssociatedUser> bdms=new ArrayList<>();
+    List<AssociatedUser> teamLeads=new ArrayList<>();
 
     public String getTeamName() {
         return teamName;
@@ -76,5 +77,13 @@ public class AssociatedToTeamLeadResponse {
 
     public void setBdms(List<AssociatedUser> bdms) {
         this.bdms = bdms;
+    }
+
+    public List<AssociatedUser> getTeamLeads() {
+        return teamLeads;
+    }
+
+    public void setTeamLeads(List<AssociatedUser> teamLeads) {
+        this.teamLeads = teamLeads;
     }
 }
