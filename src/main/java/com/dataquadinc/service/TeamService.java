@@ -32,45 +32,52 @@ public class TeamService {
             throw new UserNotFoundException("No User Found With Id :" + userId);
         }
 
+        // Check if the acting user has permission (keeping SUPERADMIN check for authorization)
         boolean isSuperAdmin = userDetails.getRoles().stream()
                 .anyMatch(role -> role.getName() == UserType.SUPERADMIN);
+
+//        if (!isSuperAdmin) {
+//            throw new UnauthorizedException("Only SUPERADMIN can assign team leads");
+//        }
 
         UserDetails teamLeadUser = userDao.findByUserId(assignTeamLeadDto.getTeamLead());
         if (teamLeadUser == null) {
             throw new UserNotFoundException("No User Found with ID :" + assignTeamLeadDto.getTeamLead());
         }
 
-        boolean isTeamLead = teamLeadUser.getRoles().stream()
-                .anyMatch(role -> role.getName() == UserType.TEAMLEAD);
+        // REMOVED: Team lead role validation - any user can be a team lead now
 
-        if (!isTeamLead) {
-            if ("ADRTIN025".equalsIgnoreCase(teamLeadUser.getUserId()) &&
-                    teamLeadUser.getRoles().stream().anyMatch(role -> role.getName() == UserType.BDM)) {
-                isTeamLead = true;
+        // Assign the team lead to themselves (if needed for hierarchy)
+        teamLeadUser.addTeamAssignmentIfNotExists(
+                new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
+        );
+        userDao.saveAndFlush(teamLeadUser);
+
+        // Assign Additional Team Leads (if any)
+        if (assignTeamLeadDto.getTeamLeads() != null && !assignTeamLeadDto.getTeamLeads().isEmpty()) {
+            for (String teamLeadId : assignTeamLeadDto.getTeamLeads()) {
+                UserDetails teamUser = userDao.findByUserId(teamLeadId);
+                if (teamUser == null) {
+                    throw new UserNotFoundException("No User Found With ID " + teamLeadId);
+                }
+
+                // REMOVED: Team lead role validation
+                teamUser.addTeamAssignmentIfNotExists(
+                        new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
+                );
+                userDao.save(teamUser);
             }
         }
 
-        if (!isTeamLead) {
-            log.error("User {} Not A TEAMLEAD", assignTeamLeadDto.getTeamLead());
-            throw new UserNotFoundException("User " + teamLeadUser.getUserId() + " Not A TEAMLEAD");
-        }
-
-        // SuperAdmin assigning teamLead
-        if (isSuperAdmin && isTeamLead) {
-            teamLeadUser.addTeamAssignmentIfNotExists(
-                    new TeamAssignment(userId, assignTeamLeadDto.getTeamName())
-            );
-            userDao.saveAndFlush(teamLeadUser);
-        }
-
-        //Assign Sales Executives
-        if (assignTeamLeadDto.getSalesExecutives()!=null &&!assignTeamLeadDto.getSalesExecutives().isEmpty() ) {
+        // Assign Sales Executives (no role validation removed - keeping business logic for team members)
+        if (assignTeamLeadDto.getSalesExecutives() != null && !assignTeamLeadDto.getSalesExecutives().isEmpty()) {
             for (String salesExecutiveId : assignTeamLeadDto.getSalesExecutives()) {
                 UserDetails salesUser = userDao.findByUserId(salesExecutiveId);
                 if (salesUser == null) {
                     throw new UserNotFoundException("No User Found With ID " + salesExecutiveId);
                 }
 
+                // Optional: Remove role validation if you want any user to be sales executive
                 boolean isSalesExecutive = salesUser.getRoles().stream()
                         .anyMatch(role -> role.getName() == UserType.SALESEXECUTIVE);
                 if (!isSalesExecutive) {
@@ -80,19 +87,20 @@ public class TeamService {
                 salesUser.addTeamAssignmentIfNotExists(
                         new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
                 );
-
                 userDao.save(salesUser);
             }
         }
 
+        // Similar modifications for other user types (Recruiters, Coordinators, BDMs, Employees)
         // Assign Recruiters
-        if (assignTeamLeadDto.getRecruiters()!=null && !assignTeamLeadDto.getRecruiters().isEmpty()) {
+        if (assignTeamLeadDto.getRecruiters() != null && !assignTeamLeadDto.getRecruiters().isEmpty()) {
             for (String recruiterId : assignTeamLeadDto.getRecruiters()) {
                 UserDetails recruiterUser = userDao.findByUserId(recruiterId);
                 if (recruiterUser == null) {
                     throw new UserNotFoundException("No User Found With ID " + recruiterId);
                 }
 
+                // Optional: Remove role validation if needed
                 boolean isRecruiter = recruiterUser.getRoles().stream()
                         .anyMatch(role -> role.getName() == UserType.RECRUITER);
                 if (!isRecruiter) {
@@ -102,19 +110,19 @@ public class TeamService {
                 recruiterUser.addTeamAssignmentIfNotExists(
                         new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
                 );
-
                 userDao.saveAndFlush(recruiterUser);
             }
         }
 
         // Assign Coordinators
-        if (assignTeamLeadDto.getCoordinators()!=null && !assignTeamLeadDto.getCoordinators().isEmpty()) {
+        if (assignTeamLeadDto.getCoordinators() != null && !assignTeamLeadDto.getCoordinators().isEmpty()) {
             for (String coordinatorId : assignTeamLeadDto.getCoordinators()) {
                 UserDetails coordinatorUser = userDao.findByUserId(coordinatorId);
                 if (coordinatorUser == null) {
                     throw new UserNotFoundException("No User Found With ID " + coordinatorId);
                 }
 
+                // Optional: Remove role validation if needed
                 boolean isCoordinator = coordinatorUser.getRoles().stream()
                         .anyMatch(role -> role.getName() == UserType.COORDINATOR);
                 if (!isCoordinator) {
@@ -124,40 +132,41 @@ public class TeamService {
                 coordinatorUser.addTeamAssignmentIfNotExists(
                         new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
                 );
-
                 userDao.saveAndFlush(coordinatorUser);
             }
         }
 
-            // Assign BDMS
-            if (assignTeamLeadDto.getBdms()!=null && !assignTeamLeadDto.getBdms().isEmpty()) {
-                for (String bdmId : assignTeamLeadDto.getBdms()) {
-                    UserDetails bdmUser = userDao.findByUserId(bdmId);
-                    if (bdmUser == null) {
-                        throw new UserNotFoundException("No User Found With ID " + bdmId);
-                    }
-
-                    boolean isBdm = bdmUser.getRoles().stream()
-                            .anyMatch(role -> role.getName() == UserType.BDM);
-                    if (!isBdm) {
-                        throw new UserNotFoundException("User " + bdmUser.getUserId() + " Not A BDM");
-                    }
-
-                    bdmUser.addTeamAssignmentIfNotExists(
-                            new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
-                    );
-
-                    userDao.saveAndFlush(bdmUser);
+        // Assign BDMs
+        if (assignTeamLeadDto.getBdms() != null && !assignTeamLeadDto.getBdms().isEmpty()) {
+            for (String bdmId : assignTeamLeadDto.getBdms()) {
+                UserDetails bdmUser = userDao.findByUserId(bdmId);
+                if (bdmUser == null) {
+                    throw new UserNotFoundException("No User Found With ID " + bdmId);
                 }
+
+                // Optional: Remove role validation if needed
+                boolean isBdm = bdmUser.getRoles().stream()
+                        .anyMatch(role -> role.getName() == UserType.BDM);
+                if (!isBdm) {
+                    throw new UserNotFoundException("User " + bdmUser.getUserId() + " Not A BDM");
+                }
+
+                bdmUser.addTeamAssignmentIfNotExists(
+                        new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
+                );
+                userDao.saveAndFlush(bdmUser);
             }
+        }
+
         // Assign Employees
-        if (assignTeamLeadDto.getEmployees()!=null && !assignTeamLeadDto.getEmployees().isEmpty()) {
+        if (assignTeamLeadDto.getEmployees() != null && !assignTeamLeadDto.getEmployees().isEmpty()) {
             for (String employeeId : assignTeamLeadDto.getEmployees()) {
                 UserDetails employeeUser = userDao.findByUserId(employeeId);
                 if (employeeUser == null) {
                     throw new UserNotFoundException("No User Found With ID " + employeeId);
                 }
 
+                // Optional: Remove role validation if needed
                 boolean isEmployee = employeeUser.getRoles().stream()
                         .anyMatch(role -> role.getName() == UserType.EMPLOYEE);
                 if (!isEmployee) {
@@ -167,13 +176,12 @@ public class TeamService {
                 employeeUser.addTeamAssignmentIfNotExists(
                         new TeamAssignment(assignTeamLeadDto.getTeamLead(), assignTeamLeadDto.getTeamName())
                 );
-
                 userDao.saveAndFlush(employeeUser);
             }
         }
-            return "Assigned Users to TEAMLEAD " + assignTeamLeadDto.getTeamLead();
-    }
 
+        return "Assigned Users to TEAMLEAD " + assignTeamLeadDto.getTeamLead();
+    }
 
     public AssociatedToTeamLeadResponse getUsersAssociatedToTeamLead(String teamLeadId) {
         List<AssociatedUser> salesExecutives = new ArrayList<>();
@@ -181,6 +189,7 @@ public class TeamService {
         List<AssociatedUser> employees=new ArrayList<>();
         List<AssociatedUser> coordinators=new ArrayList<>();
         List<AssociatedUser> bdms=new ArrayList<>();
+        List<AssociatedUser> teamLeads=new ArrayList<>();
 
         // Validate team lead exists
         UserDetails teamLead = userDao.findByUserId(teamLeadId);
@@ -214,6 +223,9 @@ public class TeamService {
                     if (roles.contains(UserType.COORDINATOR)) {
                         coordinators.add(new AssociatedUser(user.getUserId(), user.getUserName()));
                     }
+                    if (roles.contains(UserType.TEAMLEAD)) {
+                        teamLeads.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                    }
                 }
             }
         }
@@ -232,6 +244,7 @@ public class TeamService {
         response.setBdms(bdms);
         response.setCoordinators(coordinators);
         response.setEmployees(employees);
+        response.setTeamLeads(teamLeads);
         return response;
     }
 
@@ -259,6 +272,8 @@ public class TeamService {
             List<AssociatedUser> employees = new ArrayList<>();
             List<AssociatedUser> coordinators = new ArrayList<>();
             List<AssociatedUser> bdms = new ArrayList<>();
+            List<AssociatedUser> teamLeadsList = new ArrayList<>();
+
 
             for (UserDetails user : allUsers) {
                 if (user.getTeamAssignments() != null) {
@@ -284,6 +299,9 @@ public class TeamService {
                         if (roles.contains(UserType.COORDINATOR)) {
                             coordinators.add(new AssociatedUser(user.getUserId(), user.getUserName()));
                         }
+                        if (roles.contains(UserType.TEAMLEAD)){
+                            teamLeadsList.add(new AssociatedUser(user.getUserId(), user.getUserName()));
+                        }
                     }
                 }
             }
@@ -302,6 +320,7 @@ public class TeamService {
             response.setBdms(bdms);
             response.setCoordinators(coordinators);
             response.setEmployees(employees);
+            response.setTeamLeads(teamLeadsList);
 
             result.add(response);
         }
