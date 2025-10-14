@@ -210,85 +210,6 @@ public class UserService {
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
 
-//    public ResponseEntity<ResponseBean<UserResponse>> updateUser(String userId, UserDto userDto) {
-//        Map<String, String> errors = new HashMap<>();
-//
-//        // Check if the user exists
-//        UserDetails existingUser = userDao.findByUserId(userId);
-//        if (existingUser == null) {
-//            ResponseBean<UserResponse> resp = new ResponseBean<>();
-//            resp.setSuccess(false);
-//            resp.setMessage("User not found");
-//            return new ResponseEntity<>(resp, HttpStatus.NOT_FOUND);
-//        }
-//
-//        if (userDto.getUserName() == null || userDto.getUserName().isEmpty()) {
-//            errors.put("userName", "User name is required and cannot be null or empty");
-//            ResponseBean<UserResponse> resp = new ResponseBean<>();
-//            resp.setSuccess(false);
-//            resp.setMessage("Validation failed");
-//            return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
-//
-//
-//            // Check if personalemail is provided and valid
-//            if (userDto.getPersonalemail() == null || userDto.getPersonalemail().isEmpty()) {
-//                errors.put("personalemail", "Personal email is required and cannot be null or empty");
-//                ResponseBean<UserResponse> resp = new ResponseBean<>();
-//                resp.setSuccess(false);
-//                resp.setMessage("Validation failed");
-//                return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
-//            }
-//
-//        // Update the details (for example, the email, user name, etc.)
-//        existingUser.setUserName(userDto.getUserName());
-//        existingUser.setEmail(userDto.getEmail());
-//        existingUser.setStatus(userDto.getStatus());
-//        existingUser.setGender(userDto.getGender());
-//        existingUser.setDesignation(userDto.getDesignation());
-//        existingUser.setDob(userDto.getDob());
-//        existingUser.setPersonalemail(userDto.getPersonalemail());  // Ensure this is not null or empty
-//        existingUser.setJoiningDate(userDto.getJoiningDate());
-//        existingUser.setPhoneNumber(userDto.getPhoneNumber());
-//
-//        // If password is provided, encode it and update it
-//        if (userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
-//            existingUser.setPassword(passwordEncoder.encode(userDto.getPassword()));
-//        }
-//
-//        // Handle roles update
-//        Set<Roles> roles = userDto.getRoles().stream()
-//                .map(role -> {
-//                    try {
-//                        return rolesDao.findByName(role)
-//                                .orElseThrow(() -> new ValidationException(Map.of("role", "roleNotFound")));
-//                    } catch (ValidationException e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                })
-//                .collect(Collectors.toSet());
-//        existingUser.setRoles(roles);
-//
-//        // Save the updated user
-//        UserDetails updatedUser = userDao.save(existingUser);
-//        System.out.println("Saved UserName: " + updatedUser.getUserName());
-//
-//        // Prepare response
-//        UserResponse userResponse = new UserResponse();
-//        userResponse.setUserName(updatedUser.getUserName());
-//        userResponse.setUserId(updatedUser.getUserId());
-//        userResponse.setEmail(updatedUser.getEmail());
-//
-//        // Prepare the response bean
-//        ResponseBean<UserResponse> responseBean = new ResponseBean<>();
-//        responseBean.setSuccess(true);
-//        responseBean.setMessage("User updated successfully");
-//        responseBean.setData(userResponse);
-//        responseBean.setError(null);
-//
-//        return new ResponseEntity<>(responseBean, HttpStatus.OK);
-//    }
-
-
     public ResponseEntity<ResponseBean<UserResponse>> updateUser(String userId, UserDto userDto) {
         Map<String, String> errors = new HashMap<>();
 
@@ -699,6 +620,23 @@ public class UserService {
 
         return usersDropDown;
     }
+
+    public Map<String, Object> getUserRoleAndUsername(String userId) {
+        UserDetails user = userDao.findByUserId(userId);
+                if(user == null) {
+                    throw new NoSuchUserException("No User Found With ID : " + userId);
+                }
+
+        // Extract roles as a list of names
+        List<UserType> roleNames = user.getRoles().stream()
+                .map(Roles::getName)
+                .toList();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("userName", user.getUserName());
+        return result;
+    }
+
 }
 
 

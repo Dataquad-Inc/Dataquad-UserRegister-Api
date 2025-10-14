@@ -132,7 +132,7 @@ public class GlobalExceptionHandler {
     }
     @ExceptionHandler(NoSuchUserException.class)
     public ResponseEntity<ErrorResponse> handleNoSuchUserException(NoSuchUserException e) {
-        ErrorDto error=new ErrorDto(404,e.getMessage());
+        ErrorDto error=new ErrorDto(String.valueOf(HttpStatus.NOT_FOUND),e.getMessage());
         ErrorResponse errorResponse=new ErrorResponse(
                 false,"User Not Found",new ArrayList<>(),error);
 
