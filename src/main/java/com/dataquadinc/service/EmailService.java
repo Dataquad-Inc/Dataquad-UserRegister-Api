@@ -1,5 +1,7 @@
 package com.dataquadinc.service;
 
+import com.dataquadinc.model.UserDetails;
+import com.dataquadinc.repository.UserDao;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,6 +10,10 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 public class EmailService {
 
@@ -15,6 +21,15 @@ public class EmailService {
 
     @Autowired
     private JavaMailSender mailSender;
+
+    @Autowired
+    private UserDao userDao;
+
+
+    private static final String FROM_EMAIL = "notifications@adroitinnovative.com";
+    private static final String ADMIN_EMAIL = "sasaank9110@gmail.com";
+
+
 
     public void sendPasswordEmailHtml(String to, String userName, String password) {
         try {
@@ -25,7 +40,7 @@ public class EmailService {
 
             String subject = "Welcome to MyMulya! Here Are Your Login Details";
             String htmlBody = buildHtmlPasswordEmailBody(userName, password, to);
-            helper.setFrom("notifications@adroitinnovative.com"); // 👈 force sender
+            helper.setFrom("notifications@adroitinnovative.com");
 
             helper.setTo(to);
             helper.setSubject(subject);
@@ -78,4 +93,131 @@ public class EmailService {
                 + "<div class='footer'>This is an automated message, please do not reply.</div>"
                 + "</div></body></html>";
     }
+
+    public void sendProfileUpdateEmailToUser(UserDetails user, Map<String, String> updatedFields) {
+        try {
+            logger.info("Preparing to send profile update email to user: {}", user.getEmail());
+
+            String subject = "Your Profile Has Been Updated Successfully!";
+            String htmlBody = buildUserProfileUpdateEmailBody(user, updatedFields);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(FROM_EMAIL);
+            helper.setTo(user.getEmail());
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
+
+            mailSender.send(message);
+            logger.info("Profile update email sent successfully to user {}", user.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send profile update email to user {}: {}", user.getEmail(), e.getMessage(), e);
+            throw new RuntimeException("Failed to send email to user " + user.getEmail(), e);
+        }
+    }
+
+    /**
+     * Send profile update email to admin.
+     */
+    public void sendProfileUpdateEmailToAdmin(UserDetails user, Map<String, String> updatedFields) {
+        try {
+            logger.info("Preparing to send profile update notification to admin for user: {}", user.getEmail());
+
+            String subject = "Employee Profile Updated - " + user.getUserName();
+            String htmlBody = buildAdminProfileUpdateEmailBody(user, updatedFields);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(FROM_EMAIL);
+            helper.setTo(ADMIN_EMAIL);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
+
+            mailSender.send(message);
+            logger.info("Profile update notification sent successfully to admin for user {}", user.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send admin profile update email for user {}: {}", user.getEmail(), e.getMessage(), e);
+            throw new RuntimeException("Failed to send admin notification for user " + user.getEmail(), e);
+        }
+    }
+
+    /**
+     * Build HTML email for user profile update confirmation.
+     */
+    private String buildUserProfileUpdateEmailBody(UserDetails user, Map<String, String> updatedFields) {
+        String changesList = updatedFields.entrySet().stream()
+                .map(entry -> "<li><strong>" + entry.getKey() + ":</strong> " + entry.getValue() + "</li>")
+                .collect(Collectors.joining());
+
+        return String.format("""
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <style>
+        body {font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0;}
+        .container {max-width: 600px; margin: 30px auto; background: #ffffff; padding: 25px; border-radius: 8px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);}
+        h2 {color: #007bff; text-align: center;}
+        p {font-size: 15px; color: #333;}
+        ul {font-size: 15px; color: #444;}
+        .footer {text-align: center; margin-top: 20px; font-size: 13px; color: #888;}
+        </style>
+        </head>
+        <body>
+        <div class='container'>
+            <h2>Profile Update Confirmation</h2>
+            <p>Hi <strong>%s</strong>,</p>
+            <p>Your profile has been successfully updated with the following changes:</p>
+            <ul>%s</ul>
+            <p>If you did not make these changes, please contact HR immediately.</p>
+            <div class='footer'>© MyMulya | This is an automated message, please do not reply.</div>
+        </div>
+        </body>
+        </html>
+        """,
+                user.getUserName(),
+                changesList
+        );
+    }
+
+
+    /**
+     * Build HTML email for admin when employee updates profile.
+     */
+    private String buildAdminProfileUpdateEmailBody(UserDetails user, Map<String, String> updatedFields) {
+        String changesList = updatedFields.entrySet().stream()
+                .map(entry -> "<li><strong>" + entry.getKey() + ":</strong> " + entry.getValue() + "</li>")
+                .collect(Collectors.joining());
+
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <style>
+            body {font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0;}
+            .container {max-width: 600px; margin: 30px auto; background: #ffffff; padding: 25px; border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);}
+            h2 {color: #d9534f; text-align: center;}
+            p {font-size: 15px; color: #333;}
+            ul {font-size: 15px; color: #444;}
+            .footer {text-align: center; margin-top: 20px; font-size: 13px; color: #888;}
+            </style>
+            </head>
+            <body>
+            <div class='container'>
+                <h2>Employee Profile Updated</h2>
+                <p>The following employee has updated their profile:</p>
+            """ +
+                "<p><strong>Name:</strong> " + user.getUserName() + "<br/>" +
+                "<strong>Email:</strong> " + user.getEmail() + "</p>" +
+                "<p><strong>Updated Fields:</strong></p>" +
+                "<ul>" + changesList + "</ul>" +
+                """
+                    <div class='footer'>© MyMulya Admin | This is an automated message.</div>
+                </div>
+                </body>
+                </html>
+                """;
+    }
+
 }

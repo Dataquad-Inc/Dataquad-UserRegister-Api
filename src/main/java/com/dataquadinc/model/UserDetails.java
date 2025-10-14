@@ -84,6 +84,18 @@ public class UserDetails {
     @Column(columnDefinition = "json")
     private List<TeamAssignment> teamAssignments=new ArrayList<>();
 
+    private String emergencyContactNumber;
+    private String currentAddress;
+    private String permanentAddress;
+    private String linkedinUrl;
+
+    @Lob
+    @Column(columnDefinition = "LONGBLOB")
+    private byte[] profilePhoto;
+
+    private String profilePhotoFileName;
+    private String profilePhotoContentType;
+
     public String getTeamName() {
         return teamName;
     }
@@ -278,6 +290,59 @@ public class UserDetails {
         }
     }
 
+    public String getEmergencyContactNumber() {
+        return emergencyContactNumber;
+    }
 
+    public void setEmergencyContactNumber(String emergencyContactNumber) {
+        this.emergencyContactNumber = emergencyContactNumber;
+    }
 
+    public String getCurrentAddress() {
+        return currentAddress;
+    }
+
+    public void setCurrentAddress(String currentAddress) {
+        this.currentAddress = currentAddress;
+    }
+
+    public String getPermanentAddress() {
+        return permanentAddress;
+    }
+
+    public void setPermanentAddress(String permanentAddress) {
+        this.permanentAddress = permanentAddress;
+    }
+
+    public String getLinkedinUrl() {
+        return linkedinUrl;
+    }
+
+    public void setLinkedinUrl(String linkedinUrl) {
+        this.linkedinUrl = linkedinUrl;
+    }
+
+    public byte[] getProfilePhoto() {
+        return profilePhoto;
+    }
+
+    public void setProfilePhoto(byte[] profilePhoto) {
+        this.profilePhoto = profilePhoto;
+    }
+
+    public String getProfilePhotoFileName() {
+        return profilePhotoFileName;
+    }
+
+    public void setProfilePhotoFileName(String profilePhotoFileName) {
+        this.profilePhotoFileName = profilePhotoFileName;
+    }
+
+    public String getProfilePhotoContentType() {
+        return profilePhotoContentType;
+    }
+
+    public void setProfilePhotoContentType(String profilePhotoContentType) {
+        this.profilePhotoContentType = profilePhotoContentType;
+    }
 }

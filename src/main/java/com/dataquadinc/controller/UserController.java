@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -271,4 +272,10 @@ public class UserController {
         ApiResponse<List<UserAssignment>> apiResponse=new ApiResponse<>(true,"Users Data Fetched Successful",userService.getUsersDropdown(),null);
         return new ResponseEntity<>(apiResponse,HttpStatus.OK);
     }
+    @GetMapping("/usernameByRole/{userId}")
+    public ResponseEntity<Map<String, Object>> getUserRoleAndUsername(@PathVariable String userId) {
+        Map<String, Object> userInfo = userService.getUserRoleAndUsername(userId);
+        return ResponseEntity.ok(userInfo);
+    }
+
 }
