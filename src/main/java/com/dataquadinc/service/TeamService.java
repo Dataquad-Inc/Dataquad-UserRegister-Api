@@ -327,6 +327,21 @@ public class TeamService {
         return result;
     }
 
+    public String getTeamLeadIdByUserId(String userId) {
+        Optional<UserDetails> userOpt = userDao.findAll().stream()
+                .filter(u -> u.getUserId().equalsIgnoreCase(userId))
+                .findFirst();
+
+        if (userOpt.isPresent() && userOpt.get().getTeamAssignments() != null) {
+            return userOpt.get().getTeamAssignments().stream()
+                    .map(TeamAssignment::getTeamLeadId)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
+    }
+
     @Transactional
     public String removeUserFromTeamLead(String userId, String teamLeadId) {
 
