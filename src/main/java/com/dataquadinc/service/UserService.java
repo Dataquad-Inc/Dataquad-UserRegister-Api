@@ -16,13 +16,13 @@ import com.dataquadinc.repository.UserDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -554,6 +554,27 @@ public class UserService {
 
      return employees;
     }
+
+    public Page<UserDto> getAllFilteredUsers(String userId, String userName, String email, LocalDate joiningDate, Pageable pageable) {
+        Specification<UserDetails> spec = Specification.where(null);
+
+        if (userId != null && !userId.isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("userId")), "%" + userId.toLowerCase() + "%"));
+        }
+        if (userName != null && !userName.isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("userName")), "%" + userName.toLowerCase() + "%"));
+        }
+        if (email != null && !email.isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("email")), "%" + email.toLowerCase() + "%"));
+        }
+        if (joiningDate != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("joiningDate"), joiningDate));
+        }
+
+        Page<UserDetails> userPage = userDao.findAll(spec, pageable);
+        return userPage.map(this::convertToDtoUs);
+    }
+
     public UserDto getUserByUserId(String userId){
 
         UserDetails userDetails=userDao.findByUserId(userId);
@@ -591,6 +612,31 @@ public class UserService {
         dto.setLastLoginTime(user.getLastLoginTime());
         return dto;
     }
+
+    private UserDto convertToDtoUs(UserDetails user) {
+        UserDto dto = new UserDto();
+
+        dto.setUserId(user.getUserId());
+        dto.setUserName(user.getUserName());
+        dto.setPassword(user.getPassword());
+        dto.setConfirmPassword(user.getConfirmPassword());
+        dto.setEmail(user.getEmail());
+        dto.setPersonalemail(user.getPersonalemail());
+        dto.setPhoneNumber(user.getPhoneNumber());
+        dto.setDob(user.getDob());
+        dto.setGender(user.getGender());
+        dto.setJoiningDate(user.getJoiningDate());
+        dto.setDesignation(user.getDesignation());
+        Set<UserType> collect = user.getRoles().stream().map(Roles::getName).collect(Collectors.toSet());
+        dto.setRoles(collect);
+        dto.setStatus(user.getStatus());
+        dto.setEntity(user.getEntity());
+        dto.setTeamName(user.getTeamName());
+        dto.setTeamAssignments(user.getTeamAssignments());
+        dto.setIsPrimarySuperAdmin(user.isPrimarySuperAdmin());
+        return dto;
+    }
+
 
     public List<UserAssignment> getUserIdsAndUserNames(List<String> userIds){
 

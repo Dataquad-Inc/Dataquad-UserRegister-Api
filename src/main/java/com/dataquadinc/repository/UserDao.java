@@ -3,7 +3,11 @@ package com.dataquadinc.repository;
 import com.dataquadinc.dto.UserDto;
 import com.dataquadinc.model.UserDetails;
 import com.dataquadinc.model.UserType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -12,7 +16,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface UserDao extends JpaRepository<UserDetails, Integer> {
+public interface UserDao extends JpaRepository<UserDetails, Integer> ,JpaSpecificationExecutor<UserDetails> {
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
@@ -218,4 +222,6 @@ public interface UserDao extends JpaRepository<UserDetails, Integer> {
     List<UserDetails> findByAssociatedTeamLeadId(String teamLeadId);
 
     List<UserDetails> findByUserIdIn(List<String> userIds);
+
+    Page<UserDetails> findAll(Specification<UserDetails> spec, Pageable pageable);
 }

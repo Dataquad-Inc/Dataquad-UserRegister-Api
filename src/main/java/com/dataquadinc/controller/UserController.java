@@ -3,13 +3,16 @@ package com.dataquadinc.controller;
 import com.dataquadinc.dto.*;
 import com.dataquadinc.exceptions.DateRangeValidationException;
 import com.dataquadinc.exceptions.UserNotFoundException;
-import com.dataquadinc.model.Roles;
 
 import com.dataquadinc.model.UserDetails;
 import com.dataquadinc.service.UserService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +25,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 
 //@CrossOrigin(origins = "http://35.188.150.92")
@@ -250,6 +252,25 @@ public class UserController {
 
         return new ResponseEntity<>(apiResponse,HttpStatus.OK);
     }
+
+    @GetMapping("/allUsers/filters")
+    public ResponseEntity<Page<UserDto>> getAllFilteredUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) String userName,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate joiningDate,
+            @RequestParam(defaultValue = "userId") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDir) {
+
+        Pageable pageable = PageRequest.of(page, size,
+                sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
+
+        Page<UserDto> users = userService.getAllFilteredUsers(userId, userName, email, joiningDate, pageable);
+        return ResponseEntity.ok(users);
+    }
+
 
     @GetMapping("/user/{userId}")
     ResponseEntity<ApiResponse<UserDto>> getUserByUserID(@PathVariable String userId){
