@@ -278,16 +278,25 @@ public class UserDetails {
 
 
     public void addTeamAssignmentIfNotExists(TeamAssignment newAssignment) {
-
-        boolean exists = this.teamAssignments.stream()
-                .anyMatch(t -> t.getTeamLeadId().equals(newAssignment.getTeamLeadId())
-                        && t.getTeamName().equalsIgnoreCase(newAssignment.getTeamName()));
-
-        if (!exists) {
-            List<TeamAssignment> updated = new ArrayList<>(this.teamAssignments);
-            updated.add(newAssignment);
-            this.teamAssignments = updated;
+        List<TeamAssignment> updated = new ArrayList<>(this.teamAssignments);
+        
+        // Find existing assignment with same teamLeadId
+        boolean found = false;
+        for (int i = 0; i < updated.size(); i++) {
+            if (updated.get(i).getTeamLeadId().equals(newAssignment.getTeamLeadId())) {
+                // Update existing assignment
+                updated.set(i, newAssignment);
+                found = true;
+                break;
+            }
         }
+        
+        // If no existing assignment found, add new one
+        if (!found) {
+            updated.add(newAssignment);
+        }
+        
+        this.teamAssignments = updated;
     }
 
     public String getEmergencyContactNumber() {
