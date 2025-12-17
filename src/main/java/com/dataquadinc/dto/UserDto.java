@@ -3,6 +3,7 @@ package com.dataquadinc.dto;
 
 import com.dataquadinc.model.UserType;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.persistence.Column;
 import jakarta.persistence.Id;
 import jakarta.validation.constraints.*;
@@ -11,6 +12,9 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.HashSet;
+import java.util.stream.Collectors;
+import java.util.Arrays;
 
 @Data
 public class UserDto {
@@ -26,6 +30,7 @@ public class UserDto {
         private String gender;
         private LocalDate joiningDate;
         private String designation;
+        @JsonDeserialize(using = RoleDeserializer.class)
         private Set<UserType> roles;
          private String status;
          private String entity;
