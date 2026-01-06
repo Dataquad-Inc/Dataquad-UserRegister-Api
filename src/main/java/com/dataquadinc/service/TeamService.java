@@ -251,17 +251,23 @@ public class TeamService {
     public List<AssociatedToTeamLeadResponse> getAllUsersAssociatedToTeamLead(String entity) {
         List<AssociatedToTeamLeadResponse> result = new ArrayList<>();
 
-        // Get all team leads in the entity
+        // Get all team leads in the entity (including BDMs acting as team leads)
         List<UserDetails> teamLeads = userDao.findAll().stream()
                 .filter(userDetails -> entity.equalsIgnoreCase(userDetails.getEntity()))
                 .filter(userDetails -> userDetails.getStatus().equalsIgnoreCase("ACTIVE"))
-                .filter(userDetails ->
-                        // Normal Team Leads
-                        userDetails.getRoles().stream().anyMatch(role -> role.getName().equals(UserType.TEAMLEAD))
-                                // Special Case: ADRTIN025 (BDM acting as Team Lead)
-                                || ("ADRTIN025".equalsIgnoreCase(userDetails.getUserId())
-                                && userDetails.getRoles().stream().anyMatch(role -> role.getName().equals(UserType.BDM)))
-                )
+                .filter(userDetails -> {
+                    // Check if user has TEAMLEAD role OR BDM role
+                    boolean hasTeamLeadRole = userDetails.getRoles().stream()
+                            .anyMatch(role -> role.getName().equals(UserType.TEAMLEAD));
+                    boolean hasBdmRole = userDetails.getRoles().stream()
+                            .anyMatch(role -> role.getName().equals(UserType.BDM));
+                    
+                    // Check if they have team assignments (meaning they're acting as team lead)
+                    boolean hasTeamAssignments = userDetails.getTeamAssignments() != null 
+                            && !userDetails.getTeamAssignments().isEmpty();
+                    
+                    return (hasTeamLeadRole || hasBdmRole) && hasTeamAssignments;
+                })
                 .toList();
 
         List<UserDetails> allUsers = userDao.findAll();
