@@ -683,6 +683,10 @@ public class UserService {
         return result;
     }
 
+    public UserDetails getUserCreds(String userId) {
+        UserDetails byUserId = userDao.findByUserId(userId);
+        return byUserId;
+    }
 }
 
 

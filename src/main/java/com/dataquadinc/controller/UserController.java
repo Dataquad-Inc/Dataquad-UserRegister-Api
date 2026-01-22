@@ -299,4 +299,9 @@ public class UserController {
         return ResponseEntity.ok(userInfo);
     }
 
+    @GetMapping("/user-creds/{userId}")
+    public ResponseEntity<UserDetails> getUserRole(@PathVariable String userId) {
+        UserDetails data = userService.getUserCreds(userId);
+        return ResponseEntity.ok(data);
+    }
 }
