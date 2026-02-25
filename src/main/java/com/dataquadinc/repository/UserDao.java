@@ -20,9 +20,28 @@ public interface UserDao extends JpaRepository<UserDetails, Integer> ,JpaSpecifi
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
+            "AND u.status = 'ACTIVE' AND u.designation = 'Candidate'")
+    List<UserDetails> findAllActiveExternalUser();
+
+    @Query("SELECT u FROM UserDetails u " +
+            "WHERE u.entity = 'IN' " +
+            "AND u.status = 'ACTIVE' AND u.designation <> 'Candidate'")
+    List<UserDetails> findAllActiveNotExternalUser();
+
+    @Query("SELECT u FROM UserDetails u " +
+            "WHERE u.entity = 'IN' " +
+            "AND u.status = 'INACTIVE' AND u.designation = 'Candidate'")
+    List<UserDetails> findAllInActiveExternalUser();
+
+    @Query("SELECT u FROM UserDetails u " +
+            "WHERE u.entity = 'IN' " +
+            "AND u.status = 'INACTIVE' AND u.designation <> 'Candidate'")
+    List<UserDetails> findAllInActiveNotExternalUser();
+
+    @Query("SELECT u FROM UserDetails u " +
+            "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' AND u.designation <> 'testuser'")
     List<UserDetails> findAllActiveNonTestUsers();
-
 
     UserDetails findByEmail(String email);
     UserDetails findByUserId(String userId);

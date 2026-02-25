@@ -176,7 +176,63 @@ public class UserController {
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
 
+    @GetMapping("/active-internal/employee")
+    public ResponseEntity<List<EmployeeWithRole>> getAllInternalEmployees() {
 
+        ResponseEntity<List<EmployeeWithRole>> responseEntity =
+                userService.findAllActiveInternal();
+
+        List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
+
+        if (employeeRoles == null || employeeRoles.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
+    @GetMapping("/active-external/employee")
+    public ResponseEntity<List<EmployeeWithRole>> getAllExtarnalEmployeesV() {
+
+        ResponseEntity<List<EmployeeWithRole>> responseEntity =
+                userService.findAllActiveExternal();
+
+        List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
+
+        if (employeeRoles == null || employeeRoles.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
+
+    @GetMapping("/inactive-internal/employee")
+    public ResponseEntity<List<EmployeeWithRole>> getAllInactiveInternalEmployees() {
+
+        ResponseEntity<List<EmployeeWithRole>> responseEntity =
+                userService.findAllInActiveInternal();
+
+        List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
+
+        if (employeeRoles == null || employeeRoles.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
+    @GetMapping("/inactive-external/employee")
+    public ResponseEntity<List<EmployeeWithRole>> getAllInactiveExtarnalEmployeesV() {
+
+        ResponseEntity<List<EmployeeWithRole>> responseEntity =
+                userService.findAllInActiveExternal();
+
+        List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
+
+        if (employeeRoles == null || employeeRoles.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
     @GetMapping("/employee/filterByJoiningDate")
     public ResponseEntity<?> getEmployeesByJoiningDateRange(
             @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
