@@ -361,13 +361,64 @@ public class TeamService {
             throw new UserNotFoundException("User Not Assigned to Team");
         }
 
-        boolean removed = assignments.removeIf(t -> t.getTeamLeadId().equals(teamLeadId));
+        boolean removed = assignments.removeIf(t -> Objects.equals(t.getTeamLeadId(), teamLeadId));
         if (!removed) {
             return "No assignment found for the given team lead.";
+        }
+        if (Objects.equals(user.getAssociatedTeamLeadId(), teamLeadId)) {
+            user.setAssociatedTeamLeadId(null);
+            if (assignments.isEmpty()) {
+                user.setTeamName(null);
+            }
         }
         userDao.save(user);
 
         return "Removed user " + userId + " from team lead " + teamLeadId;
+    }
+
+    @Transactional
+    public String deleteTeamByTeamLeadId(String teamLeadId) {
+        UserDetails teamLead = userDao.findByUserId(teamLeadId);
+        if (teamLead == null) {
+            throw new UserNotFoundException("No User Found With ID: " + teamLeadId);
+        }
+
+        List<UserDetails> updatedUsers = new ArrayList<>();
+        for (UserDetails user : userDao.findAll()) {
+            boolean updated = false;
+            List<TeamAssignment> assignments = user.getTeamAssignments();
+
+            if (assignments != null && !assignments.isEmpty()) {
+                List<TeamAssignment> remainingAssignments = assignments.stream()
+                        .filter(assignment -> !Objects.equals(assignment.getTeamLeadId(), teamLeadId))
+                        .collect(Collectors.toList());
+
+                if (remainingAssignments.size() != assignments.size()) {
+                    user.setTeamAssignments(remainingAssignments);
+                    updated = true;
+                }
+            }
+
+            if (Objects.equals(user.getAssociatedTeamLeadId(), teamLeadId)) {
+                user.setAssociatedTeamLeadId(null);
+                updated = true;
+            }
+
+            if (updated && user.getTeamAssignments().isEmpty()) {
+                user.setTeamName(null);
+            }
+
+            if (updated) {
+                updatedUsers.add(user);
+            }
+        }
+
+        if (updatedUsers.isEmpty()) {
+            return "No users found for team lead " + teamLeadId;
+        }
+
+        userDao.saveAll(updatedUsers);
+        return "Deleted team for team lead " + teamLeadId + " and removed team lead details from " + updatedUsers.size() + " users";
     }
 
 }
