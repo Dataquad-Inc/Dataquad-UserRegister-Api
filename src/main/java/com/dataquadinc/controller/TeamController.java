@@ -56,4 +56,9 @@ public class TeamController {
         return teamService.removeUserFromTeamLead(userId, teamLeadId);
     }
 
+    @DeleteMapping("/team/{teamLeadId}")
+    public String deleteTeam(@PathVariable String teamLeadId) {
+        return teamService.deleteTeamByTeamLeadId(teamLeadId);
+    }
+
 }
