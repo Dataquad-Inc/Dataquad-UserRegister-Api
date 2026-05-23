@@ -47,6 +47,12 @@ public class UserProfileService {
         // 🔹 Partial update logic
         updateField(dto.getUserName(), user.getUserName(), "Name", user::setUserName, updatedFields);
         updateField(dto.getPhoneNumber(), user.getPhoneNumber(), "Phone Number", user::setPhoneNumber, updatedFields);
+        updateField(dto.getDob(), user.getDob(), "DOB", user::setDob, updatedFields);
+        updateField(dto.getFatherOrSpouseName(), user.getFatherOrSpouseName(), "Father Name / Spouse Name", user::setFatherOrSpouseName, updatedFields);
+        updateField(dto.getMotherName(), user.getMotherName(), "Mother Name", user::setMotherName, updatedFields);
+        updateField(dto.getBloodGroup(), user.getBloodGroup(), "Blood Group", user::setBloodGroup, updatedFields);
+        updateField(dto.getGender(), user.getGender(), "Gender", user::setGender, updatedFields);
+        updateField(dto.getMaritalStatus(), user.getMaritalStatus(), "Marital Status", user::setMaritalStatus, updatedFields);
         updateField(firstNonNull(dto.getPersonal_email(), dto.getPersonalEmail()), user.getPersonalemail(), "Personal Email", user::setPersonalemail, updatedFields);
         if (dto.getJoining_date() != null && !Objects.equals(dto.getJoining_date(), user.getJoiningDate())) {
             user.setJoiningDate(dto.getJoining_date());

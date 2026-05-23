@@ -27,7 +27,11 @@ public class UserDto {
         private String personalemail;
         private String phoneNumber;
         private String dob;
+        private String fatherOrSpouseName;
+        private String motherName;
+        private String bloodGroup;
         private String gender;
+        private String maritalStatus;
         private LocalDate joiningDate;
         private String designation;
         @JsonDeserialize(using = RoleDeserializer.class)

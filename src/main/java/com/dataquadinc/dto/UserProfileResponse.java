@@ -16,6 +16,12 @@ public class UserProfileResponse {
     private String personal_email;
     private LocalDate joining_date;
     private String phoneNumber;
+    private String dob;
+    private String fatherOrSpouseName;
+    private String motherName;
+    private String bloodGroup;
+    private String gender;
+    private String maritalStatus;
     private String emergencyContactNo;
     private String currentAddress;
     private String permanentAddress;
@@ -52,6 +58,12 @@ public class UserProfileResponse {
         this.personal_email = user.getPersonalemail();
         this.joining_date = user.getJoiningDate();
         this.phoneNumber = user.getPhoneNumber();
+        this.dob = user.getDob();
+        this.fatherOrSpouseName = user.getFatherOrSpouseName();
+        this.motherName = user.getMotherName();
+        this.bloodGroup = user.getBloodGroup();
+        this.gender = user.getGender();
+        this.maritalStatus = user.getMaritalStatus();
         this.emergencyContactNo = user.getEmergencyContactNumber();
         this.currentAddress = user.getCurrentAddress();
         this.permanentAddress = user.getPermanentAddress();

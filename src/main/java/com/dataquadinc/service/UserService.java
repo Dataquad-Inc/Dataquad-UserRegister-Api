@@ -372,6 +372,10 @@ public class UserService {
         existingUser.setEmail(userDto.getEmail());
         existingUser.setStatus(userDto.getStatus());
         existingUser.setGender(userDto.getGender());
+        existingUser.setMaritalStatus(userDto.getMaritalStatus());
+        existingUser.setFatherOrSpouseName(userDto.getFatherOrSpouseName());
+        existingUser.setMotherName(userDto.getMotherName());
+        existingUser.setBloodGroup(userDto.getBloodGroup());
         existingUser.setDesignation(userDto.getDesignation());
         existingUser.setDob(userDto.getDob());
         existingUser.setPersonalemail(userDto.getPersonalemail());  // Ensure this is not null or empty
@@ -470,6 +474,10 @@ public class UserService {
             updateFieldIfSubmitted(formFields, "email", existingUser::setEmail);
             updateFieldIfSubmitted(formFields, "status", existingUser::setStatus);
             updateFieldIfSubmitted(formFields, "gender", existingUser::setGender);
+            updateFieldIfSubmitted(formFields, "maritalStatus", existingUser::setMaritalStatus);
+            updateFieldIfSubmitted(formFields, "fatherOrSpouseName", existingUser::setFatherOrSpouseName);
+            updateFieldIfSubmitted(formFields, "motherName", existingUser::setMotherName);
+            updateFieldIfSubmitted(formFields, "bloodGroup", existingUser::setBloodGroup);
             updateFieldIfSubmitted(formFields, "designation", existingUser::setDesignation);
             updateFieldIfSubmitted(formFields, "dob", existingUser::setDob);
             updateFieldIfSubmitted(formFields, "personalemail", existingUser::setPersonalemail);
@@ -897,7 +905,11 @@ public class UserService {
         dto.setPersonalemail(user.getPersonalemail());
         dto.setPhoneNumber(user.getPhoneNumber());
         dto.setDob(user.getDob());
+        dto.setFatherOrSpouseName(user.getFatherOrSpouseName());
+        dto.setMotherName(user.getMotherName());
+        dto.setBloodGroup(user.getBloodGroup());
         dto.setGender(user.getGender());
+        dto.setMaritalStatus(user.getMaritalStatus());
         dto.setJoiningDate(user.getJoiningDate());
         dto.setDesignation(user.getDesignation());
         dto.setStatus(user.getStatus());
@@ -1022,7 +1034,11 @@ public class UserService {
         dto.setPersonalemail(user.getPersonalemail());
         dto.setPhoneNumber(user.getPhoneNumber());
         dto.setDob(user.getDob());
+        dto.setFatherOrSpouseName(user.getFatherOrSpouseName());
+        dto.setMotherName(user.getMotherName());
+        dto.setBloodGroup(user.getBloodGroup());
         dto.setGender(user.getGender());
+        dto.setMaritalStatus(user.getMaritalStatus());
         dto.setJoiningDate(user.getJoiningDate());
         dto.setDesignation(user.getDesignation());
         Set<UserType> collect = user.getRoles().stream().map(Roles::getName).collect(Collectors.toSet());

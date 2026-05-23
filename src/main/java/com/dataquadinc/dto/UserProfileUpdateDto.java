@@ -9,6 +9,12 @@ public class UserProfileUpdateDto {
     private String userId;
     private String userName;
     private String phoneNumber;
+    private String dob;
+    private String fatherOrSpouseName;
+    private String motherName;
+    private String bloodGroup;
+    private String gender;
+    private String maritalStatus;
     private String emergencyContactNumber;
     private String currentAddress;
     private String permanentAddress;
@@ -97,6 +103,54 @@ public class UserProfileUpdateDto {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public String getDob() {
+        return dob;
+    }
+
+    public void setDob(String dob) {
+        this.dob = dob;
+    }
+
+    public String getFatherOrSpouseName() {
+        return fatherOrSpouseName;
+    }
+
+    public void setFatherOrSpouseName(String fatherOrSpouseName) {
+        this.fatherOrSpouseName = fatherOrSpouseName;
+    }
+
+    public String getMotherName() {
+        return motherName;
+    }
+
+    public void setMotherName(String motherName) {
+        this.motherName = motherName;
+    }
+
+    public String getBloodGroup() {
+        return bloodGroup;
+    }
+
+    public void setBloodGroup(String bloodGroup) {
+        this.bloodGroup = bloodGroup;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    public String getMaritalStatus() {
+        return maritalStatus;
+    }
+
+    public void setMaritalStatus(String maritalStatus) {
+        this.maritalStatus = maritalStatus;
     }
 
     public String getEmergencyContactNumber() {
