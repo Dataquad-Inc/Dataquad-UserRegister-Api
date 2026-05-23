@@ -382,6 +382,30 @@ public class UserService {
         existingUser.setAdhar(userDto.getAdhar());
         existingUser.setCurrentAddress(userDto.getCurrentAddress());
         existingUser.setPermanentAddress(userDto.getPermanentAddress());
+        existingUser.setDoj(userDto.getDoj());
+        existingUser.setOfficialNumber(userDto.getOfficialNumber());
+        existingUser.setOfficialEmailId(userDto.getOfficialEmailId());
+        existingUser.setProbation(userDto.getProbation());
+        existingUser.setReportingManager(userDto.getReportingManager());
+        existingUser.setDepartment(userDto.getDepartment());
+        existingUser.setBankName(userDto.getBankName());
+        existingUser.setAccountNumber(userDto.getAccountNumber());
+        existingUser.setBranch(userDto.getBranch());
+        existingUser.setAccountHolderName(userDto.getAccountHolderName());
+        existingUser.setIfscCode(userDto.getIfscCode());
+        existingUser.setUanNumber(userDto.getUanNumber());
+        existingUser.setPfNumber(userDto.getPfNumber());
+        existingUser.setPayrollPanNumber(userDto.getPayrollPanNumber());
+        existingUser.setPayrollAadharNumber(userDto.getPayrollAadharNumber());
+        existingUser.setClearnessForm(userDto.getClearnessForm());
+        existingUser.setFAndF(userDto.getFAndF());
+        existingUser.setExitFromPfDate(userDto.getExitFromPfDate());
+        existingUser.setLastWorkingDay(userDto.getLastWorkingDay());
+        if (userDto.getLinkedInUrl() != null) {
+            existingUser.setLinkedinUrl(userDto.getLinkedInUrl());
+        } else {
+            existingUser.setLinkedinUrl(userDto.getLinkedinUrl());
+        }
         if (userDto.getEmergencyContactNumber() != null) {
             existingUser.setEmergencyContactNumber(userDto.getEmergencyContactNumber());
         } else {
@@ -457,10 +481,43 @@ public class UserService {
             updateFieldIfSubmitted(formFields, "permanentAddress", existingUser::setPermanentAddress);
             updateFieldIfSubmitted(formFields, "emergencyContactNumber", existingUser::setEmergencyContactNumber);
             updateFieldIfSubmitted(formFields, "emergencyContactNo", existingUser::setEmergencyContactNumber);
+            updateFieldIfSubmitted(formFields, "officialNumber", existingUser::setOfficialNumber);
+            updateFieldIfSubmitted(formFields, "officialEmailId", existingUser::setOfficialEmailId);
+            updateFieldIfSubmitted(formFields, "probation", existingUser::setProbation);
+            updateFieldIfSubmitted(formFields, "reportingManager", existingUser::setReportingManager);
+            updateFieldIfSubmitted(formFields, "department", existingUser::setDepartment);
+            updateFieldIfSubmitted(formFields, "linkedInUrl", existingUser::setLinkedinUrl);
+            updateFieldIfSubmitted(formFields, "linkedinUrl", existingUser::setLinkedinUrl);
+            updateFieldIfSubmitted(formFields, "bankName", existingUser::setBankName);
+            updateFieldIfSubmitted(formFields, "accountNumber", existingUser::setAccountNumber);
+            updateFieldIfSubmitted(formFields, "branch", existingUser::setBranch);
+            updateFieldIfSubmitted(formFields, "accountHolderName", existingUser::setAccountHolderName);
+            updateFieldIfSubmitted(formFields, "ifscCode", existingUser::setIfscCode);
+            updateFieldIfSubmitted(formFields, "uanNumber", existingUser::setUanNumber);
+            updateFieldIfSubmitted(formFields, "pfNumber", existingUser::setPfNumber);
+            updateFieldIfSubmitted(formFields, "payrollPanNumber", existingUser::setPayrollPanNumber);
+            updateFieldIfSubmitted(formFields, "payrollAadharNumber", existingUser::setPayrollAadharNumber);
+            updateFieldIfSubmitted(formFields, "clearnessForm", existingUser::setClearnessForm);
+            updateFieldIfSubmitted(formFields, "fAndF", existingUser::setFAndF);
 
             String joiningDate = submittedValue(formFields, "joiningDate");
             if (joiningDate != null) {
                 existingUser.setJoiningDate(LocalDate.parse(joiningDate));
+            }
+
+            String doj = submittedValue(formFields, "doj");
+            if (doj != null) {
+                existingUser.setDoj(LocalDate.parse(doj));
+            }
+
+            String exitFromPfDate = submittedValue(formFields, "exitFromPfDate");
+            if (exitFromPfDate != null) {
+                existingUser.setExitFromPfDate(LocalDate.parse(exitFromPfDate));
+            }
+
+            String lastWorkingDay = submittedValue(formFields, "lastWorkingDay");
+            if (lastWorkingDay != null) {
+                existingUser.setLastWorkingDay(LocalDate.parse(lastWorkingDay));
             }
 
             String password = submittedValue(formFields, "password");
@@ -861,6 +918,27 @@ public class UserService {
         dto.setPermanentAddress(user.getPermanentAddress());
         dto.setEmergencyContactNo(user.getEmergencyContactNumber());
         dto.setEmergencyContactNumber(user.getEmergencyContactNumber());
+        dto.setDoj(user.getDoj());
+        dto.setOfficialNumber(user.getOfficialNumber());
+        dto.setOfficialEmailId(user.getOfficialEmailId());
+        dto.setProbation(user.getProbation());
+        dto.setReportingManager(user.getReportingManager());
+        dto.setDepartment(user.getDepartment());
+        dto.setLinkedInUrl(user.getLinkedinUrl());
+        dto.setLinkedinUrl(user.getLinkedinUrl());
+        dto.setBankName(user.getBankName());
+        dto.setAccountNumber(user.getAccountNumber());
+        dto.setBranch(user.getBranch());
+        dto.setAccountHolderName(user.getAccountHolderName());
+        dto.setIfscCode(user.getIfscCode());
+        dto.setUanNumber(user.getUanNumber());
+        dto.setPfNumber(user.getPfNumber());
+        dto.setPayrollPanNumber(user.getPayrollPanNumber());
+        dto.setPayrollAadharNumber(user.getPayrollAadharNumber());
+        dto.setClearnessForm(user.getClearnessForm());
+        dto.setFAndF(user.getFAndF());
+        dto.setExitFromPfDate(user.getExitFromPfDate());
+        dto.setLastWorkingDay(user.getLastWorkingDay());
 
         return dto;
     }
@@ -960,6 +1038,27 @@ public class UserService {
         dto.setPermanentAddress(user.getPermanentAddress());
         dto.setEmergencyContactNo(user.getEmergencyContactNumber());
         dto.setEmergencyContactNumber(user.getEmergencyContactNumber());
+        dto.setDoj(user.getDoj());
+        dto.setOfficialNumber(user.getOfficialNumber());
+        dto.setOfficialEmailId(user.getOfficialEmailId());
+        dto.setProbation(user.getProbation());
+        dto.setReportingManager(user.getReportingManager());
+        dto.setDepartment(user.getDepartment());
+        dto.setLinkedInUrl(user.getLinkedinUrl());
+        dto.setLinkedinUrl(user.getLinkedinUrl());
+        dto.setBankName(user.getBankName());
+        dto.setAccountNumber(user.getAccountNumber());
+        dto.setBranch(user.getBranch());
+        dto.setAccountHolderName(user.getAccountHolderName());
+        dto.setIfscCode(user.getIfscCode());
+        dto.setUanNumber(user.getUanNumber());
+        dto.setPfNumber(user.getPfNumber());
+        dto.setPayrollPanNumber(user.getPayrollPanNumber());
+        dto.setPayrollAadharNumber(user.getPayrollAadharNumber());
+        dto.setClearnessForm(user.getClearnessForm());
+        dto.setFAndF(user.getFAndF());
+        dto.setExitFromPfDate(user.getExitFromPfDate());
+        dto.setLastWorkingDay(user.getLastWorkingDay());
         return dto;
     }
 
@@ -1014,21 +1113,3 @@ public class UserService {
         return byUserId;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

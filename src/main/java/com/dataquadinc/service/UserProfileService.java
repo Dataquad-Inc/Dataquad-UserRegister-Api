@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.*;
 
 
@@ -55,7 +56,26 @@ public class UserProfileService {
         updateField(dto.getEmergencyContactNumber(), user.getEmergencyContactNumber(), "Emergency Contact No", user::setEmergencyContactNumber, updatedFields);
         updateField(dto.getCurrentAddress(), user.getCurrentAddress(), "Current Address", user::setCurrentAddress, updatedFields);
         updateField(dto.getPermanentAddress(), user.getPermanentAddress(), "Permanent Address", user::setPermanentAddress, updatedFields);
-        updateField(dto.getLinkedinUrl(), user.getLinkedinUrl(), "LinkedIn URL", user::setLinkedinUrl, updatedFields);
+        updateField(firstNonNull(dto.getLinkedInUrl(), dto.getLinkedinUrl()), user.getLinkedinUrl(), "LinkedIn URL", user::setLinkedinUrl, updatedFields);
+        updateDateField(dto.getDoj(), user.getDoj(), "DOJ", user::setDoj, updatedFields);
+        updateField(dto.getOfficialNumber(), user.getOfficialNumber(), "Official Number", user::setOfficialNumber, updatedFields);
+        updateField(dto.getOfficialEmailId(), user.getOfficialEmailId(), "Official Email ID", user::setOfficialEmailId, updatedFields);
+        updateField(dto.getProbation(), user.getProbation(), "Probation", user::setProbation, updatedFields);
+        updateField(dto.getReportingManager(), user.getReportingManager(), "Reporting Manager", user::setReportingManager, updatedFields);
+        updateField(dto.getDepartment(), user.getDepartment(), "Department", user::setDepartment, updatedFields);
+        updateField(dto.getBankName(), user.getBankName(), "Bank Name", user::setBankName, updatedFields);
+        updateField(dto.getAccountNumber(), user.getAccountNumber(), "Account Number", user::setAccountNumber, updatedFields);
+        updateField(dto.getBranch(), user.getBranch(), "Branch", user::setBranch, updatedFields);
+        updateField(dto.getAccountHolderName(), user.getAccountHolderName(), "Account Holder Name", user::setAccountHolderName, updatedFields);
+        updateField(dto.getIfscCode(), user.getIfscCode(), "IFSC Code", user::setIfscCode, updatedFields);
+        updateField(dto.getUanNumber(), user.getUanNumber(), "UAN Number", user::setUanNumber, updatedFields);
+        updateField(dto.getPfNumber(), user.getPfNumber(), "PF Number", user::setPfNumber, updatedFields);
+        updateField(dto.getPayrollPanNumber(), user.getPayrollPanNumber(), "Payroll PAN Number", user::setPayrollPanNumber, updatedFields);
+        updateField(dto.getPayrollAadharNumber(), user.getPayrollAadharNumber(), "Payroll Aadhar Number", user::setPayrollAadharNumber, updatedFields);
+        updateField(dto.getClearnessForm(), user.getClearnessForm(), "Clearness Form", user::setClearnessForm, updatedFields);
+        updateField(dto.getFAndF(), user.getFAndF(), "F&F", user::setFAndF, updatedFields);
+        updateDateField(dto.getExitFromPfDate(), user.getExitFromPfDate(), "Exit From PF Date", user::setExitFromPfDate, updatedFields);
+        updateDateField(dto.getLastWorkingDay(), user.getLastWorkingDay(), "Last Working Day", user::setLastWorkingDay, updatedFields);
         updateField(dto.getPan(), user.getPan(), "PAN", user::setPan, updatedFields);
         updateField(dto.getAdhar(), user.getAdhar(), "Adhar", user::setAdhar, updatedFields);
 
@@ -136,6 +156,15 @@ public class UserProfileService {
         if (newValue != null && !newValue.equals(oldValue)) {
             setter.accept(newValue);
             updates.put(fieldName, newValue);
+            logger.debug("Updated field: {} -> {}", fieldName, newValue);
+        }
+    }
+
+    private void updateDateField(LocalDate newValue, LocalDate oldValue, String fieldName,
+                                 java.util.function.Consumer<LocalDate> setter, Map<String, String> updates) {
+        if (newValue != null && !Objects.equals(newValue, oldValue)) {
+            setter.accept(newValue);
+            updates.put(fieldName, newValue.toString());
             logger.debug("Updated field: {} -> {}", fieldName, newValue);
         }
     }

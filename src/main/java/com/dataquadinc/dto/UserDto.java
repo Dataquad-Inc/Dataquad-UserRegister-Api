@@ -43,6 +43,27 @@ public class UserDto {
         private String permanentAddress;
         private String emergencyContactNo;
         private String emergencyContactNumber;
+        private LocalDate doj;
+        private String officialNumber;
+        private String officialEmailId;
+        private String probation;
+        private String reportingManager;
+        private String department;
+        private String linkedInUrl;
+        private String linkedinUrl;
+        private String bankName;
+        private String accountNumber;
+        private String branch;
+        private String accountHolderName;
+        private String ifscCode;
+        private String uanNumber;
+        private String pfNumber;
+        private String payrollPanNumber;
+        private String payrollAadharNumber;
+        private String clearnessForm;
+        private String fAndF;
+        private LocalDate exitFromPfDate;
+        private LocalDate lastWorkingDay;
 
     public Boolean getPrimarySuperAdmin() {
         return isPrimarySuperAdmin;
@@ -223,6 +244,28 @@ public class UserDto {
 
     public void setEmergencyContactNo(String emergencyContactNo) {
         this.emergencyContactNo = emergencyContactNo;
+    }
+
+    public String getLinkedInUrl() {
+        return linkedInUrl;
+    }
+
+    public void setLinkedInUrl(String linkedInUrl) {
+        this.linkedInUrl = linkedInUrl;
+    }
+    public String getLinkedinUrl() {
+        return linkedinUrl;
+    }
+
+    public void setLinkedinUrl(String linkedinUrl) {
+        this.linkedinUrl = linkedinUrl;
+    }
+    public String getFAndF() {
+        return fAndF;
+    }
+
+    public void setFAndF(String fAndF) {
+        this.fAndF = fAndF;
     }
 
     public String getEmergencyContactNumber() {
