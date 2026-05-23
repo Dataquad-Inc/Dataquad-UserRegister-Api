@@ -18,6 +18,7 @@ public class UserProfileDocument {
     private String userId;
     private String userName;
     private String documentType;
+    private String fileName;
     private String fileType;
 
     @Lob
@@ -61,6 +62,14 @@ public class UserProfileDocument {
 
     public String getFileType() {
         return fileType;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
     }
 
     public void setFileType(String fileType) {

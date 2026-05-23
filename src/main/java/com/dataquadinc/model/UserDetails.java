@@ -88,6 +88,8 @@ public class UserDetails {
     private String currentAddress;
     private String permanentAddress;
     private String linkedinUrl;
+    private String pan;
+    private String adhar;
 
     @Lob
     @Column(columnDefinition = "LONGBLOB")
@@ -329,6 +331,22 @@ public class UserDetails {
 
     public void setLinkedinUrl(String linkedinUrl) {
         this.linkedinUrl = linkedinUrl;
+    }
+
+    public String getPan() {
+        return pan;
+    }
+
+    public void setPan(String pan) {
+        this.pan = pan;
+    }
+
+    public String getAdhar() {
+        return adhar;
+    }
+
+    public void setAdhar(String adhar) {
+        this.adhar = adhar;
     }
 
     public byte[] getProfilePhoto() {

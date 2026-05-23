@@ -33,10 +33,16 @@ public class UserDto {
         @JsonDeserialize(using = RoleDeserializer.class)
         private Set<UserType> roles;
          private String status;
-         private String entity;
+        private String entity;
         private String teamName;
         private List<TeamAssignment> teamAssignments;
         private Boolean isPrimarySuperAdmin;
+        private String pan;
+        private String adhar;
+        private String currentAddress;
+        private String permanentAddress;
+        private String emergencyContactNo;
+        private String emergencyContactNumber;
 
     public Boolean getPrimarySuperAdmin() {
         return isPrimarySuperAdmin;
@@ -177,5 +183,53 @@ public class UserDto {
 
     public void setTeamAssignments(List<TeamAssignment> teamAssignments) {
         this.teamAssignments = teamAssignments;
+    }
+
+    public String getPan() {
+        return pan;
+    }
+
+    public void setPan(String pan) {
+        this.pan = pan;
+    }
+
+    public String getAdhar() {
+        return adhar;
+    }
+
+    public void setAdhar(String adhar) {
+        this.adhar = adhar;
+    }
+
+    public String getCurrentAddress() {
+        return currentAddress;
+    }
+
+    public void setCurrentAddress(String currentAddress) {
+        this.currentAddress = currentAddress;
+    }
+
+    public String getPermanentAddress() {
+        return permanentAddress;
+    }
+
+    public void setPermanentAddress(String permanentAddress) {
+        this.permanentAddress = permanentAddress;
+    }
+
+    public String getEmergencyContactNo() {
+        return emergencyContactNo;
+    }
+
+    public void setEmergencyContactNo(String emergencyContactNo) {
+        this.emergencyContactNo = emergencyContactNo;
+    }
+
+    public String getEmergencyContactNumber() {
+        return emergencyContactNumber;
+    }
+
+    public void setEmergencyContactNumber(String emergencyContactNumber) {
+        this.emergencyContactNumber = emergencyContactNumber;
     }
 }

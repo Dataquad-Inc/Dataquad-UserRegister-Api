@@ -9,9 +9,11 @@ import com.dataquadinc.exceptions.ValidationException;
 import com.dataquadinc.mapper.UserMapper;
 import com.dataquadinc.model.Roles;
 import com.dataquadinc.model.UserDetails;
+import com.dataquadinc.model.UserProfileDocument;
 import com.dataquadinc.model.UserType;
 import com.dataquadinc.repository.RolesDao;
 import com.dataquadinc.repository.UserDao;
+import com.dataquadinc.repository.UserProfileDocumentRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +25,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -44,6 +49,9 @@ public class UserService {
 
     @Autowired
     private RolesDao rolesDao;
+
+    @Autowired
+    private UserProfileDocumentRepository documentRepo;
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
@@ -369,6 +377,16 @@ public class UserService {
         existingUser.setPersonalemail(userDto.getPersonalemail());  // Ensure this is not null or empty
         existingUser.setJoiningDate(userDto.getJoiningDate());
         existingUser.setPhoneNumber(userDto.getPhoneNumber());
+        existingUser.setEntity(userDto.getEntity());
+        existingUser.setPan(userDto.getPan());
+        existingUser.setAdhar(userDto.getAdhar());
+        existingUser.setCurrentAddress(userDto.getCurrentAddress());
+        existingUser.setPermanentAddress(userDto.getPermanentAddress());
+        if (userDto.getEmergencyContactNumber() != null) {
+            existingUser.setEmergencyContactNumber(userDto.getEmergencyContactNumber());
+        } else {
+            existingUser.setEmergencyContactNumber(userDto.getEmergencyContactNo());
+        }
 
         // If password is provided, encode it and update it
         if (userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
@@ -406,6 +424,182 @@ public class UserService {
         responseBean.setError(null);
 
         return new ResponseEntity<>(responseBean, HttpStatus.OK);
+    }
+
+    public ResponseEntity<ResponseBean<UserResponse>> updateUserMultipart(
+            String userId,
+            MultiValueMap<String, String> formFields,
+            MultipartFile profilePhoto,
+            List<MultipartFile> documentFiles,
+            List<MultipartFile> documents) {
+
+        UserDetails existingUser = userDao.findByUserId(userId);
+        if (existingUser == null) {
+            ResponseBean<UserResponse> resp = new ResponseBean<>();
+            resp.setSuccess(false);
+            resp.setMessage("User not found");
+            return new ResponseEntity<>(resp, HttpStatus.NOT_FOUND);
+        }
+
+        if (formFields != null) {
+            updateFieldIfSubmitted(formFields, "userName", existingUser::setUserName);
+            updateFieldIfSubmitted(formFields, "email", existingUser::setEmail);
+            updateFieldIfSubmitted(formFields, "status", existingUser::setStatus);
+            updateFieldIfSubmitted(formFields, "gender", existingUser::setGender);
+            updateFieldIfSubmitted(formFields, "designation", existingUser::setDesignation);
+            updateFieldIfSubmitted(formFields, "dob", existingUser::setDob);
+            updateFieldIfSubmitted(formFields, "personalemail", existingUser::setPersonalemail);
+            updateFieldIfSubmitted(formFields, "phoneNumber", existingUser::setPhoneNumber);
+            updateFieldIfSubmitted(formFields, "entity", existingUser::setEntity);
+            updateFieldIfSubmitted(formFields, "pan", existingUser::setPan);
+            updateFieldIfSubmitted(formFields, "adhar", existingUser::setAdhar);
+            updateFieldIfSubmitted(formFields, "currentAddress", existingUser::setCurrentAddress);
+            updateFieldIfSubmitted(formFields, "permanentAddress", existingUser::setPermanentAddress);
+            updateFieldIfSubmitted(formFields, "emergencyContactNumber", existingUser::setEmergencyContactNumber);
+            updateFieldIfSubmitted(formFields, "emergencyContactNo", existingUser::setEmergencyContactNumber);
+
+            String joiningDate = submittedValue(formFields, "joiningDate");
+            if (joiningDate != null) {
+                existingUser.setJoiningDate(LocalDate.parse(joiningDate));
+            }
+
+            String password = submittedValue(formFields, "password");
+            if (password != null) {
+                existingUser.setPassword(passwordEncoder.encode(password));
+            }
+
+            List<String> roleValues = formFields.containsKey("roles") ? formFields.get("roles") : formFields.get("role");
+            if (roleValues != null && !roleValues.isEmpty()) {
+                Set<Roles> roles = roleValues.stream()
+                        .flatMap(value -> Arrays.stream(value.split(",")))
+                        .map(String::trim)
+                        .filter(value -> !value.isBlank())
+                        .map(value -> rolesDao.findByName(UserType.valueOf(value.toUpperCase()))
+                                .orElseThrow(() -> new ValidationException(Map.of("role", "roleNotFound"))))
+                        .collect(Collectors.toSet());
+                if (!roles.isEmpty()) {
+                    existingUser.setRoles(roles);
+                }
+            }
+        }
+
+        if (profilePhoto != null && !profilePhoto.isEmpty()) {
+            try {
+                existingUser.setProfilePhoto(profilePhoto.getBytes());
+                existingUser.setProfilePhotoFileName(profilePhoto.getOriginalFilename());
+                existingUser.setProfilePhotoContentType(profilePhoto.getContentType());
+            } catch (IOException e) {
+                ResponseBean<UserResponse> resp = new ResponseBean<>();
+                resp.setSuccess(false);
+                resp.setMessage("Profile photo upload failed");
+                return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        List<MultipartFile> filesToSave = mergeDocumentFiles(documentFiles, documents);
+        if (!filesToSave.isEmpty()) {
+            try {
+                saveUserProfileDocuments(existingUser, formFields, filesToSave);
+            } catch (IOException e) {
+                ResponseBean<UserResponse> resp = new ResponseBean<>();
+                resp.setSuccess(false);
+                resp.setMessage("Document upload failed");
+                return new ResponseEntity<>(resp, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        UserDetails updatedUser = userDao.save(existingUser);
+        return new ResponseEntity<>(buildUserUpdateResponse(updatedUser, "User updated successfully"), HttpStatus.OK);
+    }
+
+    private List<MultipartFile> mergeDocumentFiles(List<MultipartFile> documentFiles, List<MultipartFile> documents) {
+        List<MultipartFile> mergedFiles = new ArrayList<>();
+        if (documentFiles != null) {
+            mergedFiles.addAll(documentFiles);
+        }
+        if (documents != null) {
+            mergedFiles.addAll(documents);
+        }
+        return mergedFiles.stream()
+                .filter(file -> file != null && !file.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    private void saveUserProfileDocuments(
+            UserDetails user,
+            MultiValueMap<String, String> formFields,
+            List<MultipartFile> documentFiles) throws IOException {
+
+        List<String> documentTypes = documentTypes(formFields);
+        for (int i = 0; i < documentFiles.size(); i++) {
+            MultipartFile file = documentFiles.get(i);
+            UserProfileDocument document = new UserProfileDocument();
+            document.setUserId(user.getUserId());
+            document.setUserName(user.getUserName());
+            document.setDocumentType(resolveDocumentType(documentTypes, i, file));
+            document.setFileName(file.getOriginalFilename());
+            document.setFileType(file.getContentType());
+            document.setDocumentData(file.getBytes());
+            documentRepo.save(document);
+        }
+    }
+
+    private List<String> documentTypes(MultiValueMap<String, String> formFields) {
+        if (formFields == null) {
+            return Collections.emptyList();
+        }
+        if (formFields.containsKey("documentTypes")) {
+            return formFields.get("documentTypes");
+        }
+        if (formFields.containsKey("documentType")) {
+            return formFields.get("documentType");
+        }
+        return Collections.emptyList();
+    }
+
+    private String resolveDocumentType(List<String> documentTypes, int index, MultipartFile file) {
+        if (documentTypes != null && index < documentTypes.size()) {
+            String documentType = documentTypes.get(index);
+            if (documentType != null && !documentType.isBlank()) {
+                return documentType;
+            }
+        }
+        return file.getOriginalFilename();
+    }
+
+    private void updateFieldIfSubmitted(
+            MultiValueMap<String, String> formFields,
+            String fieldName,
+            java.util.function.Consumer<String> setter) {
+        String value = submittedValue(formFields, fieldName);
+        if (value != null) {
+            setter.accept(value);
+        }
+    }
+
+    private String submittedValue(MultiValueMap<String, String> formFields, String fieldName) {
+        if (!formFields.containsKey(fieldName)) {
+            return null;
+        }
+        String value = formFields.getFirst(fieldName);
+        if (value != null && !value.isBlank()) {
+            return value;
+        }
+        return null;
+    }
+
+    private ResponseBean<UserResponse> buildUserUpdateResponse(UserDetails updatedUser, String message) {
+        UserResponse userResponse = new UserResponse();
+        userResponse.setUserName(updatedUser.getUserName());
+        userResponse.setUserId(updatedUser.getUserId());
+        userResponse.setEmail(updatedUser.getEmail());
+
+        ResponseBean<UserResponse> responseBean = new ResponseBean<>();
+        responseBean.setSuccess(true);
+        responseBean.setMessage(message);
+        responseBean.setData(userResponse);
+        responseBean.setError(null);
+        return responseBean;
     }
 
     public ResponseEntity<ResponseBean<UserResponse>> deleteUser(String userId) {
@@ -661,6 +855,12 @@ public class UserService {
         dto.setIsPrimarySuperAdmin(user.isPrimarySuperAdmin());
         dto.setTeamName(user.getTeamName());
         dto.setTeamAssignments(user.getTeamAssignments());
+        dto.setPan(user.getPan());
+        dto.setAdhar(user.getAdhar());
+        dto.setCurrentAddress(user.getCurrentAddress());
+        dto.setPermanentAddress(user.getPermanentAddress());
+        dto.setEmergencyContactNo(user.getEmergencyContactNumber());
+        dto.setEmergencyContactNumber(user.getEmergencyContactNumber());
 
         return dto;
     }
@@ -754,6 +954,12 @@ public class UserService {
         dto.setTeamName(user.getTeamName());
         dto.setTeamAssignments(user.getTeamAssignments());
         dto.setIsPrimarySuperAdmin(user.isPrimarySuperAdmin());
+        dto.setPan(user.getPan());
+        dto.setAdhar(user.getAdhar());
+        dto.setCurrentAddress(user.getCurrentAddress());
+        dto.setPermanentAddress(user.getPermanentAddress());
+        dto.setEmergencyContactNo(user.getEmergencyContactNumber());
+        dto.setEmergencyContactNumber(user.getEmergencyContactNumber());
         return dto;
     }
 

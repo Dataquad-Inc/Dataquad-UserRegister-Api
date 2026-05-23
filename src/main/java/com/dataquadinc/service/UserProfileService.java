@@ -46,17 +46,26 @@ public class UserProfileService {
         // 🔹 Partial update logic
         updateField(dto.getUserName(), user.getUserName(), "Name", user::setUserName, updatedFields);
         updateField(dto.getPhoneNumber(), user.getPhoneNumber(), "Phone Number", user::setPhoneNumber, updatedFields);
-        updateField(dto.getPersonalEmail(), user.getPersonalemail(), "Personal Email", user::setPersonalemail, updatedFields);
+        updateField(firstNonNull(dto.getPersonal_email(), dto.getPersonalEmail()), user.getPersonalemail(), "Personal Email", user::setPersonalemail, updatedFields);
+        if (dto.getJoining_date() != null && !Objects.equals(dto.getJoining_date(), user.getJoiningDate())) {
+            user.setJoiningDate(dto.getJoining_date());
+            updatedFields.put("Joining Date", dto.getJoining_date().toString());
+            logger.debug("Updated field: Joining Date -> {}", dto.getJoining_date());
+        }
         updateField(dto.getEmergencyContactNumber(), user.getEmergencyContactNumber(), "Emergency Contact No", user::setEmergencyContactNumber, updatedFields);
         updateField(dto.getCurrentAddress(), user.getCurrentAddress(), "Current Address", user::setCurrentAddress, updatedFields);
         updateField(dto.getPermanentAddress(), user.getPermanentAddress(), "Permanent Address", user::setPermanentAddress, updatedFields);
         updateField(dto.getLinkedinUrl(), user.getLinkedinUrl(), "LinkedIn URL", user::setLinkedinUrl, updatedFields);
+        updateField(dto.getPan(), user.getPan(), "PAN", user::setPan, updatedFields);
+        updateField(dto.getAdhar(), user.getAdhar(), "Adhar", user::setAdhar, updatedFields);
 
         // 🔹 Profile photo
         if (dto.getProfilePhoto() != null && !dto.getProfilePhoto().isEmpty()) {
             try {
                 byte[] photoBytes = dto.getProfilePhoto().getBytes();
                 user.setProfilePhoto(photoBytes);
+                user.setProfilePhotoFileName(dto.getProfilePhoto().getOriginalFilename());
+                user.setProfilePhotoContentType(dto.getProfilePhoto().getContentType());
                 updatedFields.put("Profile Photo", "Updated");
                 logger.info("Profile photo updated for user: {}", userId);
             } catch (Exception e) {
@@ -67,9 +76,9 @@ public class UserProfileService {
 
         userDao.save(user);
 
-        // 🔹 Save documents (BLOB)
-        if (dto.getDocuments() != null && !dto.getDocuments().isEmpty()) {
-            for (UserDocumentDto docDto : dto.getDocuments()) {
+        List<UserDocumentDto> documents = normalizeDocuments(dto);
+        if (!documents.isEmpty()) {
+            for (UserDocumentDto docDto : documents) {
                 try {
                     MultipartFile file = docDto.getFile();
                     if (file != null && !file.isEmpty()) {
@@ -77,6 +86,7 @@ public class UserProfileService {
                         document.setUserId(userId);
                         document.setUserName(user.getUserName());
                         document.setDocumentType(docDto.getDocumentType());
+                        document.setFileName(file.getOriginalFilename());
                         document.setFileType(file.getContentType());
                         document.setDocumentData(file.getBytes());
                         documentRepo.save(document);
@@ -130,5 +140,38 @@ public class UserProfileService {
         }
     }
 
+    private String firstNonNull(String preferredValue, String fallbackValue) {
+        return preferredValue != null ? preferredValue : fallbackValue;
+    }
+
+    private List<UserDocumentDto> normalizeDocuments(UserProfileUpdateDto dto) {
+        if (dto.getDocuments() != null && !dto.getDocuments().isEmpty()) {
+            return dto.getDocuments();
+        }
+
+        List<MultipartFile> files = dto.getDocumentFiles();
+        if (files == null || files.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<String> documentTypes = dto.getDocumentTypes();
+        List<UserDocumentDto> documents = new ArrayList<>();
+        for (int i = 0; i < files.size(); i++) {
+            MultipartFile file = files.get(i);
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
+
+            UserDocumentDto document = new UserDocumentDto();
+            document.setFile(file);
+            if (documentTypes != null && i < documentTypes.size()) {
+                document.setDocumentType(documentTypes.get(i));
+            } else {
+                document.setDocumentType(file.getOriginalFilename());
+            }
+            documents.add(document);
+        }
+        return documents;
+    }
 
 }

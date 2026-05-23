@@ -15,8 +15,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.management.relation.RoleNotFoundException;
 
@@ -261,9 +264,19 @@ public class UserController {
         }
     }
 
-    @PutMapping("/update/{userId}")
+    @PutMapping(value = "/update/{userId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ResponseBean<UserResponse>> updateUser(@PathVariable String userId, @Valid @RequestBody UserDto userDto) throws RoleNotFoundException {
         return userService.updateUser(userId, userDto);
+    }
+
+    @PutMapping(value = "/update/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ResponseBean<UserResponse>> updateUserWithProfilePhoto(
+            @PathVariable String userId,
+            @RequestParam MultiValueMap<String, String> formFields,
+            @RequestPart(value = "profilePhoto", required = false) MultipartFile profilePhoto,
+            @RequestPart(value = "documentFiles", required = false) List<MultipartFile> documentFiles,
+            @RequestPart(value = "documents", required = false) List<MultipartFile> documents) {
+        return userService.updateUserMultipart(userId, formFields, profilePhoto, documentFiles, documents);
     }
 
     @DeleteMapping("/delete/{userId}")

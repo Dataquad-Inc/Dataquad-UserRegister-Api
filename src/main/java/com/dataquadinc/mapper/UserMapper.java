@@ -28,8 +28,19 @@ public class UserMapper {
         user.setJoiningDate(userDto.getJoiningDate());
         user.setStatus(userDto.getStatus());
         user.setEntity(userDto.getEntity());
+        user.setPan(userDto.getPan());
+        user.setAdhar(userDto.getAdhar());
+        user.setCurrentAddress(userDto.getCurrentAddress());
+        user.setPermanentAddress(userDto.getPermanentAddress());
+        user.setEmergencyContactNumber(resolveEmergencyContactNumber(userDto));
 
 
         return user;
+    }
+
+    private String resolveEmergencyContactNumber(UserDto userDto) {
+        return userDto.getEmergencyContactNumber() != null
+                ? userDto.getEmergencyContactNumber()
+                : userDto.getEmergencyContactNo();
     }
 }
