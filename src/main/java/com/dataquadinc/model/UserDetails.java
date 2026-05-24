@@ -40,7 +40,15 @@ public class UserDetails {
 
     private String dob;
 
+    private String fatherOrSpouseName;
+
+    private String motherName;
+
+    private String bloodGroup;
+
     private String gender;
+
+    private String maritalStatus;
 
     private LocalDate joiningDate;
 
@@ -88,6 +96,29 @@ public class UserDetails {
     private String currentAddress;
     private String permanentAddress;
     private String linkedinUrl;
+    private LocalDate doj;
+    private String officialNumber;
+    private String officialEmailId;
+    private String probation;
+    private String reportingManager;
+    private String department;
+    private String bankName;
+    private String accountNumber;
+    private String branch;
+    private String accountHolderName;
+    private String ifscCode;
+    private String uanNumber;
+    private String pfNumber;
+    private String payrollPanNumber;
+    private String payrollAadharNumber;
+    private String clearnessForm;
+    private String fAndF;
+    private LocalDate exitFromPfDate;
+    private LocalDate lastWorkingDay;
+    private String pan;
+    private String adhar;
+
+    private Boolean isEditable = false;
 
     @Lob
     @Column(columnDefinition = "LONGBLOB")
@@ -192,12 +223,44 @@ public class UserDetails {
         this.dob = dob;
     }
 
+    public String getFatherOrSpouseName() {
+        return fatherOrSpouseName;
+    }
+
+    public void setFatherOrSpouseName(String fatherOrSpouseName) {
+        this.fatherOrSpouseName = fatherOrSpouseName;
+    }
+
+    public String getMotherName() {
+        return motherName;
+    }
+
+    public void setMotherName(String motherName) {
+        this.motherName = motherName;
+    }
+
+    public String getBloodGroup() {
+        return bloodGroup;
+    }
+
+    public void setBloodGroup(String bloodGroup) {
+        this.bloodGroup = bloodGroup;
+    }
+
     public String getGender() {
         return gender;
     }
 
     public void setGender(String gender) {
         this.gender = gender;
+    }
+
+    public String getMaritalStatus() {
+        return maritalStatus;
+    }
+
+    public void setMaritalStatus(String maritalStatus) {
+        this.maritalStatus = maritalStatus;
     }
 
     public LocalDate getJoiningDate() {
@@ -279,7 +342,7 @@ public class UserDetails {
 
     public void addTeamAssignmentIfNotExists(TeamAssignment newAssignment) {
         List<TeamAssignment> updated = new ArrayList<>(this.teamAssignments);
-        
+
         // Find existing assignment with same teamLeadId
         boolean found = false;
         for (int i = 0; i < updated.size(); i++) {
@@ -290,12 +353,12 @@ public class UserDetails {
                 break;
             }
         }
-        
+
         // If no existing assignment found, add new one
         if (!found) {
             updated.add(newAssignment);
         }
-        
+
         this.teamAssignments = updated;
     }
 
@@ -331,6 +394,174 @@ public class UserDetails {
         this.linkedinUrl = linkedinUrl;
     }
 
+    public LocalDate getDoj() {
+        return doj;
+    }
+
+    public void setDoj(LocalDate doj) {
+        this.doj = doj;
+    }
+
+    public String getOfficialNumber() {
+        return officialNumber;
+    }
+
+    public void setOfficialNumber(String officialNumber) {
+        this.officialNumber = officialNumber;
+    }
+
+    public String getOfficialEmailId() {
+        return officialEmailId;
+    }
+
+    public void setOfficialEmailId(String officialEmailId) {
+        this.officialEmailId = officialEmailId;
+    }
+
+    public String getProbation() {
+        return probation;
+    }
+
+    public void setProbation(String probation) {
+        this.probation = probation;
+    }
+
+    public String getReportingManager() {
+        return reportingManager;
+    }
+
+    public void setReportingManager(String reportingManager) {
+        this.reportingManager = reportingManager;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
+    public String getBankName() {
+        return bankName;
+    }
+
+    public void setBankName(String bankName) {
+        this.bankName = bankName;
+    }
+
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    public void setAccountNumber(String accountNumber) {
+        this.accountNumber = accountNumber;
+    }
+
+    public String getBranch() {
+        return branch;
+    }
+
+    public void setBranch(String branch) {
+        this.branch = branch;
+    }
+
+    public String getAccountHolderName() {
+        return accountHolderName;
+    }
+
+    public void setAccountHolderName(String accountHolderName) {
+        this.accountHolderName = accountHolderName;
+    }
+
+    public String getIfscCode() {
+        return ifscCode;
+    }
+
+    public void setIfscCode(String ifscCode) {
+        this.ifscCode = ifscCode;
+    }
+
+    public String getUanNumber() {
+        return uanNumber;
+    }
+
+    public void setUanNumber(String uanNumber) {
+        this.uanNumber = uanNumber;
+    }
+
+    public String getPfNumber() {
+        return pfNumber;
+    }
+
+    public void setPfNumber(String pfNumber) {
+        this.pfNumber = pfNumber;
+    }
+
+    public String getPayrollPanNumber() {
+        return payrollPanNumber;
+    }
+
+    public void setPayrollPanNumber(String payrollPanNumber) {
+        this.payrollPanNumber = payrollPanNumber;
+    }
+
+    public String getPayrollAadharNumber() {
+        return payrollAadharNumber;
+    }
+
+    public void setPayrollAadharNumber(String payrollAadharNumber) {
+        this.payrollAadharNumber = payrollAadharNumber;
+    }
+
+    public String getClearnessForm() {
+        return clearnessForm;
+    }
+
+    public void setClearnessForm(String clearnessForm) {
+        this.clearnessForm = clearnessForm;
+    }
+
+    public String getFAndF() {
+        return fAndF;
+    }
+
+    public void setFAndF(String fAndF) {
+        this.fAndF = fAndF;
+    }
+
+    public LocalDate getExitFromPfDate() {
+        return exitFromPfDate;
+    }
+
+    public void setExitFromPfDate(LocalDate exitFromPfDate) {
+        this.exitFromPfDate = exitFromPfDate;
+    }
+
+    public LocalDate getLastWorkingDay() {
+        return lastWorkingDay;
+    }
+
+    public void setLastWorkingDay(LocalDate lastWorkingDay) {
+        this.lastWorkingDay = lastWorkingDay;
+    }
+
+    public String getPan() {
+        return pan;
+    }
+
+    public void setPan(String pan) {
+        this.pan = pan;
+    }
+
+    public String getAdhar() {
+        return adhar;
+    }
+
+    public void setAdhar(String adhar) {
+        this.adhar = adhar;
+    }
+
     public byte[] getProfilePhoto() {
         return profilePhoto;
     }
@@ -355,3 +586,5 @@ public class UserDetails {
         this.profilePhotoContentType = profilePhotoContentType;
     }
 }
+
+

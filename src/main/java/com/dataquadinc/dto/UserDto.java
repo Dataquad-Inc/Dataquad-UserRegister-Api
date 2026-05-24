@@ -27,16 +27,49 @@ public class UserDto {
         private String personalemail;
         private String phoneNumber;
         private String dob;
+        private String fatherOrSpouseName;
+        private String motherName;
+        private String bloodGroup;
         private String gender;
+        private String maritalStatus;
         private LocalDate joiningDate;
         private String designation;
         @JsonDeserialize(using = RoleDeserializer.class)
         private Set<UserType> roles;
          private String status;
-         private String entity;
+        private String entity;
         private String teamName;
         private List<TeamAssignment> teamAssignments;
         private Boolean isPrimarySuperAdmin;
+        private String pan;
+        private String adhar;
+        private String currentAddress;
+        private String permanentAddress;
+        private String emergencyContactNo;
+        private String emergencyContactNumber;
+        private LocalDate doj;
+        private String officialNumber;
+        private String officialEmailId;
+        private String probation;
+        private String reportingManager;
+        private String department;
+        private String linkedInUrl;
+        private String linkedinUrl;
+        private String bankName;
+        private String accountNumber;
+        private String branch;
+        private String accountHolderName;
+        private String ifscCode;
+        private String uanNumber;
+        private String pfNumber;
+        private String payrollPanNumber;
+        private String payrollAadharNumber;
+        private String clearnessForm;
+        private String clearanceForm;
+        private String fAndF;
+        private LocalDate exitFromPfDate;
+        private LocalDate lastWorkingDay;
+        private Boolean isEditable;
 
     public Boolean getPrimarySuperAdmin() {
         return isPrimarySuperAdmin;
@@ -178,4 +211,78 @@ public class UserDto {
     public void setTeamAssignments(List<TeamAssignment> teamAssignments) {
         this.teamAssignments = teamAssignments;
     }
+
+    public String getPan() {
+        return pan;
+    }
+
+    public void setPan(String pan) {
+        this.pan = pan;
+    }
+
+    public String getAdhar() {
+        return adhar;
+    }
+
+    public void setAdhar(String adhar) {
+        this.adhar = adhar;
+    }
+
+    public String getCurrentAddress() {
+        return currentAddress;
+    }
+
+    public void setCurrentAddress(String currentAddress) {
+        this.currentAddress = currentAddress;
+    }
+
+    public String getPermanentAddress() {
+        return permanentAddress;
+    }
+
+    public void setPermanentAddress(String permanentAddress) {
+        this.permanentAddress = permanentAddress;
+    }
+
+    public String getEmergencyContactNo() {
+        return emergencyContactNo;
+    }
+
+    public void setEmergencyContactNo(String emergencyContactNo) {
+        this.emergencyContactNo = emergencyContactNo;
+    }
+
+    public String getLinkedInUrl() {
+        return linkedInUrl;
+    }
+
+    public void setLinkedInUrl(String linkedInUrl) {
+        this.linkedInUrl = linkedInUrl;
+    }
+    public String getLinkedinUrl() {
+        return linkedinUrl;
+    }
+
+    public void setLinkedinUrl(String linkedinUrl) {
+        this.linkedinUrl = linkedinUrl;
+    }
+    public String getFAndF() {
+        return fAndF;
+    }
+
+    public void setFAndF(String fAndF) {
+        this.fAndF = fAndF;
+    }
+
+    public String getEmergencyContactNumber() {
+        return emergencyContactNumber;
+    }
+
+    public void setEmergencyContactNumber(String emergencyContactNumber) {
+        this.emergencyContactNumber = emergencyContactNumber;
+    }
 }
+
+
+
+

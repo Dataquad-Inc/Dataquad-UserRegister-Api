@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -71,8 +72,11 @@ public class UserProfileController {
         if (user == null || user.getProfilePhoto() == null) {
             return ResponseEntity.notFound().build();
         }
+        String contentType = user.getProfilePhotoContentType() == null
+                ? MediaType.IMAGE_JPEG_VALUE
+                : user.getProfilePhotoContentType();
         return ResponseEntity.ok()
-                .header("Content-Type", "image/jpeg")
+                .header("Content-Type", contentType)
                 .body(user.getProfilePhoto());
     }
 
@@ -84,7 +88,7 @@ public class UserProfileController {
         }
         return ResponseEntity.ok()
                 .header("Content-Type", document.getFileType())
-                .header("Content-Disposition", "attachment; filename=\"" + document.getDocumentType() + "\"")
+                .header("Content-Disposition", "attachment; filename=\"" + document.getFileName() + "\"")
                 .body(document.getDocumentData());
     }
 
