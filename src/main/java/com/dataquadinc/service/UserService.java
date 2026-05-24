@@ -209,7 +209,8 @@ public class UserService {
                             user.getDob(),
                             user.getPhoneNumber(),
                             user.getPersonalemail(),
-                            user.getStatus()
+                            user.getStatus(),
+                            user.getIsEditable()
                     );
                 })
                 .collect(Collectors.toList());
@@ -239,7 +240,8 @@ public class UserService {
                             user.getDob(),
                             user.getPhoneNumber(),
                             user.getPersonalemail(),
-                            user.getStatus()
+                            user.getStatus(),
+                            user.getIsEditable()
                     );
                 })
                 .collect(Collectors.toList());
@@ -269,7 +271,8 @@ public class UserService {
                             user.getDob(),
                             user.getPhoneNumber(),
                             user.getPersonalemail(),
-                            user.getStatus()
+                            user.getStatus(),
+                            user.getIsEditable()
                     );
                 })
                 .collect(Collectors.toList());
@@ -299,7 +302,8 @@ public class UserService {
                             user.getDob(),
                             user.getPhoneNumber(),
                             user.getPersonalemail(),
-                            user.getStatus()
+                            user.getStatus(),
+                            user.getIsEditable()
                     );
                 })
                 .collect(Collectors.toList());
@@ -329,7 +333,8 @@ public class UserService {
                             user.getDob(),
                             user.getPhoneNumber(),
                             user.getPersonalemail(),
-                            user.getStatus()
+                            user.getStatus(),
+                            user.getIsEditable()
                     );
                 })
                 .collect(Collectors.toList());
@@ -405,6 +410,9 @@ public class UserService {
         existingUser.setFAndF(userDto.getFAndF());
         existingUser.setExitFromPfDate(userDto.getExitFromPfDate());
         existingUser.setLastWorkingDay(userDto.getLastWorkingDay());
+        if (userDto.getIsEditable() != null) {
+            existingUser.setIsEditable(userDto.getIsEditable());
+        }
         if (userDto.getLinkedInUrl() != null) {
             existingUser.setLinkedinUrl(userDto.getLinkedInUrl());
         } else {
@@ -819,7 +827,8 @@ public class UserService {
                     user.getDob(),
                     user.getPhoneNumber(),
                     user.getPersonalemail(),
-                    user.getStatus());
+                    user.getStatus(),
+                    user.getIsEditable());
         }).collect(Collectors.toList());
     }
 
@@ -953,6 +962,7 @@ public class UserService {
         dto.setFAndF(user.getFAndF());
         dto.setExitFromPfDate(user.getExitFromPfDate());
         dto.setLastWorkingDay(user.getLastWorkingDay());
+        dto.setIsEditable(Boolean.TRUE.equals(user.getIsEditable()));
 
         return dto;
     }
@@ -1078,6 +1088,7 @@ public class UserService {
         dto.setFAndF(user.getFAndF());
         dto.setExitFromPfDate(user.getExitFromPfDate());
         dto.setLastWorkingDay(user.getLastWorkingDay());
+        dto.setIsEditable(Boolean.TRUE.equals(user.getIsEditable()));
         return dto;
     }
 
@@ -1132,4 +1143,6 @@ public class UserService {
         return byUserId;
     }
 }
+
+
 

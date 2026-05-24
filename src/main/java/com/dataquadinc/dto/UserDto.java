@@ -69,6 +69,7 @@ public class UserDto {
         private String fAndF;
         private LocalDate exitFromPfDate;
         private LocalDate lastWorkingDay;
+        private Boolean isEditable;
 
     public Boolean getPrimarySuperAdmin() {
         return isPrimarySuperAdmin;
@@ -281,5 +282,7 @@ public class UserDto {
         this.emergencyContactNumber = emergencyContactNumber;
     }
 }
+
+
 
 

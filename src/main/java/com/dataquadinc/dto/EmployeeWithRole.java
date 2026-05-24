@@ -32,6 +32,8 @@ public class EmployeeWithRole
     private String personalemail;
     @JsonProperty("status")
     private String status;
+    @JsonProperty("isEditable")
+    private Boolean isEditable;
 
 
 //    public EmployeeWithRole(String employeeId, String employeeName, String roles,String email) {
@@ -41,7 +43,7 @@ public class EmployeeWithRole
 //        this.email=email;
 //    }
 
-    public EmployeeWithRole(String employeeId, String employeeName, String roles, String email, String designation, LocalDate joiningDate, String gender, String dob, String phoneNumber, String personalemail,String status) {
+    public EmployeeWithRole(String employeeId, String employeeName, String roles, String email, String designation, LocalDate joiningDate, String gender, String dob, String phoneNumber, String personalemail,String status, Boolean isEditable) {
         this.employeeId = employeeId;
         this.employeeName = employeeName;
         Roles = roles;
@@ -53,6 +55,7 @@ public class EmployeeWithRole
         this.phoneNumber = phoneNumber;
         this.personalemail = personalemail;
         this.status=status;
+        this.isEditable = Boolean.TRUE.equals(isEditable);
     }
 
 

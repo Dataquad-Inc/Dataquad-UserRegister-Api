@@ -33,6 +33,7 @@ public class UserMapper {
         user.setCurrentAddress(userDto.getCurrentAddress());
         user.setPermanentAddress(userDto.getPermanentAddress());
         user.setEmergencyContactNumber(resolveEmergencyContactNumber(userDto));
+        user.setIsEditable(Boolean.TRUE.equals(userDto.getIsEditable()));
 
 
         return user;
@@ -44,3 +45,5 @@ public class UserMapper {
                 : userDto.getEmergencyContactNo();
     }
 }
+
+

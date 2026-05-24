@@ -47,6 +47,7 @@ public class UserProfileResponse {
     private String fAndF;
     private LocalDate exitFromPfDate;
     private LocalDate lastWorkingDay;
+    private Boolean isEditable;
     private String pan;
     private String adhar;
     private byte[] profilePhoto;
@@ -90,11 +91,14 @@ public class UserProfileResponse {
         this.fAndF = user.getFAndF();
         this.exitFromPfDate = user.getExitFromPfDate();
         this.lastWorkingDay = user.getLastWorkingDay();
+        this.isEditable = Boolean.TRUE.equals(user.getIsEditable());
         this.pan = user.getPan();
         this.adhar = user.getAdhar();
         this.profilePhoto = user.getProfilePhoto();
         this.documents = docs.stream().map(DocumentResponse::new).collect(Collectors.toList());
     }
 }
+
+
 
 

@@ -118,6 +118,8 @@ public class UserDetails {
     private String pan;
     private String adhar;
 
+    private Boolean isEditable = false;
+
     @Lob
     @Column(columnDefinition = "LONGBLOB")
     private byte[] profilePhoto;
@@ -584,3 +586,5 @@ public class UserDetails {
         this.profilePhotoContentType = profilePhotoContentType;
     }
 }
+
+
