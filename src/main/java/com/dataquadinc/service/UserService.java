@@ -401,7 +401,7 @@ public class UserService {
         existingUser.setPfNumber(userDto.getPfNumber());
         existingUser.setPayrollPanNumber(userDto.getPayrollPanNumber());
         existingUser.setPayrollAadharNumber(userDto.getPayrollAadharNumber());
-        existingUser.setClearnessForm(userDto.getClearnessForm());
+        existingUser.setClearnessForm(userDto.getClearanceForm() != null ? userDto.getClearanceForm() : userDto.getClearnessForm());
         existingUser.setFAndF(userDto.getFAndF());
         existingUser.setExitFromPfDate(userDto.getExitFromPfDate());
         existingUser.setLastWorkingDay(userDto.getLastWorkingDay());
@@ -505,6 +505,7 @@ public class UserService {
             updateFieldIfSubmitted(formFields, "pfNumber", existingUser::setPfNumber);
             updateFieldIfSubmitted(formFields, "payrollPanNumber", existingUser::setPayrollPanNumber);
             updateFieldIfSubmitted(formFields, "payrollAadharNumber", existingUser::setPayrollAadharNumber);
+            updateFieldIfSubmitted(formFields, "clearanceForm", existingUser::setClearnessForm);
             updateFieldIfSubmitted(formFields, "clearnessForm", existingUser::setClearnessForm);
             updateFieldIfSubmitted(formFields, "fAndF", existingUser::setFAndF);
 
@@ -947,6 +948,7 @@ public class UserService {
         dto.setPfNumber(user.getPfNumber());
         dto.setPayrollPanNumber(user.getPayrollPanNumber());
         dto.setPayrollAadharNumber(user.getPayrollAadharNumber());
+        dto.setClearanceForm(user.getClearnessForm());
         dto.setClearnessForm(user.getClearnessForm());
         dto.setFAndF(user.getFAndF());
         dto.setExitFromPfDate(user.getExitFromPfDate());
@@ -1071,6 +1073,7 @@ public class UserService {
         dto.setPfNumber(user.getPfNumber());
         dto.setPayrollPanNumber(user.getPayrollPanNumber());
         dto.setPayrollAadharNumber(user.getPayrollAadharNumber());
+        dto.setClearanceForm(user.getClearnessForm());
         dto.setClearnessForm(user.getClearnessForm());
         dto.setFAndF(user.getFAndF());
         dto.setExitFromPfDate(user.getExitFromPfDate());
@@ -1129,3 +1132,4 @@ public class UserService {
         return byUserId;
     }
 }
+

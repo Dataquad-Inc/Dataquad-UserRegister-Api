@@ -65,6 +65,7 @@ public class UserDto {
         private String payrollPanNumber;
         private String payrollAadharNumber;
         private String clearnessForm;
+        private String clearanceForm;
         private String fAndF;
         private LocalDate exitFromPfDate;
         private LocalDate lastWorkingDay;
@@ -280,3 +281,5 @@ public class UserDto {
         this.emergencyContactNumber = emergencyContactNumber;
     }
 }
+
+

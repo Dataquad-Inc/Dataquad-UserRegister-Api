@@ -43,6 +43,7 @@ public class UserProfileResponse {
     private String payrollPanNumber;
     private String payrollAadharNumber;
     private String clearnessForm;
+    private String clearanceForm;
     private String fAndF;
     private LocalDate exitFromPfDate;
     private LocalDate lastWorkingDay;
@@ -85,6 +86,7 @@ public class UserProfileResponse {
         this.payrollPanNumber = user.getPayrollPanNumber();
         this.payrollAadharNumber = user.getPayrollAadharNumber();
         this.clearnessForm = user.getClearnessForm();
+        this.clearanceForm = user.getClearnessForm();
         this.fAndF = user.getFAndF();
         this.exitFromPfDate = user.getExitFromPfDate();
         this.lastWorkingDay = user.getLastWorkingDay();
@@ -94,3 +96,5 @@ public class UserProfileResponse {
         this.documents = docs.stream().map(DocumentResponse::new).collect(Collectors.toList());
     }
 }
+
+

@@ -36,6 +36,7 @@ public class UserProfileUpdateDto {
     private String payrollPanNumber;
     private String payrollAadharNumber;
     private String clearnessForm;
+    private String clearanceForm;
     private String fAndF;
     private LocalDate exitFromPfDate;
     private LocalDate lastWorkingDay;
@@ -313,6 +314,14 @@ public class UserProfileUpdateDto {
         this.payrollAadharNumber = payrollAadharNumber;
     }
 
+    public String getClearanceForm() {
+        return clearanceForm;
+    }
+
+    public void setClearanceForm(String clearanceForm) {
+        this.clearanceForm = clearanceForm;
+    }
+
     public String getClearnessForm() {
         return clearnessForm;
     }
@@ -385,3 +394,5 @@ public class UserProfileUpdateDto {
         this.adhar = adhar;
     }
 }
+
+

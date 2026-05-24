@@ -78,7 +78,7 @@ public class UserProfileService {
         updateField(dto.getPfNumber(), user.getPfNumber(), "PF Number", user::setPfNumber, updatedFields);
         updateField(dto.getPayrollPanNumber(), user.getPayrollPanNumber(), "Payroll PAN Number", user::setPayrollPanNumber, updatedFields);
         updateField(dto.getPayrollAadharNumber(), user.getPayrollAadharNumber(), "Payroll Aadhar Number", user::setPayrollAadharNumber, updatedFields);
-        updateField(dto.getClearnessForm(), user.getClearnessForm(), "Clearness Form", user::setClearnessForm, updatedFields);
+        updateField(firstNonNull(dto.getClearanceForm(), dto.getClearnessForm()), user.getClearnessForm(), "Clearance Form", user::setClearnessForm, updatedFields);
         updateField(dto.getFAndF(), user.getFAndF(), "F&F", user::setFAndF, updatedFields);
         updateDateField(dto.getExitFromPfDate(), user.getExitFromPfDate(), "Exit From PF Date", user::setExitFromPfDate, updatedFields);
         updateDateField(dto.getLastWorkingDay(), user.getLastWorkingDay(), "Last Working Day", user::setLastWorkingDay, updatedFields);
@@ -210,3 +210,4 @@ public class UserProfileService {
     }
 
 }
+
