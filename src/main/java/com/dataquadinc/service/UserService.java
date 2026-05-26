@@ -146,7 +146,7 @@ public class UserService {
         // Parse roleName
         if (roleName != null && !roleName.isBlank()) {
             try {
-                includeRole = UserType.valueOf(roleName.toUpperCase());
+                includeRole = UserType.fromValue(roleName);
             } catch (IllegalArgumentException e) {
                 logger.warn("Invalid role name provided: {}", roleName);
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -156,7 +156,7 @@ public class UserService {
         // Parse excludeRoleName
         if (excludeRoleName != null && !excludeRoleName.isBlank()) {
             try {
-                excludeRole = UserType.valueOf(excludeRoleName.toUpperCase());
+                excludeRole = UserType.fromValue(excludeRoleName);
             } catch (IllegalArgumentException e) {
                 logger.warn("Invalid exclude role name provided: {}", excludeRoleName);
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -548,7 +548,7 @@ public class UserService {
                         .flatMap(value -> Arrays.stream(value.split(",")))
                         .map(String::trim)
                         .filter(value -> !value.isBlank())
-                        .map(value -> rolesDao.findByName(UserType.valueOf(value.toUpperCase()))
+                        .map(value -> rolesDao.findByName(UserType.fromValue(value))
                                 .orElseThrow(() -> new ValidationException(Map.of("role", "roleNotFound"))))
                         .collect(Collectors.toSet());
                 if (!roles.isEmpty()) {
