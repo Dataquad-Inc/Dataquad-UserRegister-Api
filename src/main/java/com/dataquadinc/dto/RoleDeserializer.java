@@ -19,10 +19,10 @@ public class RoleDeserializer extends JsonDeserializer<Set<UserType>> {
         
         if (node.isArray()) {
             for (JsonNode element : node) {
-                roles.add(UserType.valueOf(element.asText()));
+                roles.add(UserType.fromValue(element.asText()));
             }
         } else if (node.isTextual()) {
-            roles.add(UserType.valueOf(node.asText()));
+            roles.add(UserType.fromValue(node.asText()));
         }
         
         return roles;
