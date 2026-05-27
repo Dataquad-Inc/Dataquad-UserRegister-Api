@@ -2,6 +2,8 @@ package com.dataquadinc.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Data
@@ -11,8 +13,9 @@ public class Roles {
     private Long id;
 
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, length = 50)
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private UserType name;  //  (e.g., "Admin", "Manager", "Employee")
 
     public Long getId() {
