@@ -402,6 +402,9 @@ public class UserService {
         existingUser.setBranch(userDto.getBranch());
         existingUser.setAccountHolderName(userDto.getAccountHolderName());
         existingUser.setIfscCode(userDto.getIfscCode());
+        if (userDto.getIsEmployeeHavingPF() != null) {
+            existingUser.setIsEmployeeHavingPF(userDto.getIsEmployeeHavingPF());
+        }
         existingUser.setUanNumber(userDto.getUanNumber());
         existingUser.setPfNumber(userDto.getPfNumber());
         existingUser.setPayrollPanNumber(userDto.getPayrollPanNumber());
@@ -509,6 +512,10 @@ public class UserService {
             updateFieldIfSubmitted(formFields, "branch", existingUser::setBranch);
             updateFieldIfSubmitted(formFields, "accountHolderName", existingUser::setAccountHolderName);
             updateFieldIfSubmitted(formFields, "ifscCode", existingUser::setIfscCode);
+            String isEmployeeHavingPF = submittedValue(formFields, "isEmployeeHavingPF");
+            if (isEmployeeHavingPF != null) {
+                existingUser.setIsEmployeeHavingPF(Boolean.parseBoolean(isEmployeeHavingPF));
+            }
             updateFieldIfSubmitted(formFields, "uanNumber", existingUser::setUanNumber);
             updateFieldIfSubmitted(formFields, "pfNumber", existingUser::setPfNumber);
             updateFieldIfSubmitted(formFields, "payrollPanNumber", existingUser::setPayrollPanNumber);
@@ -953,6 +960,7 @@ public class UserService {
         dto.setBranch(user.getBranch());
         dto.setAccountHolderName(user.getAccountHolderName());
         dto.setIfscCode(user.getIfscCode());
+        dto.setIsEmployeeHavingPF(Boolean.TRUE.equals(user.getIsEmployeeHavingPF()));
         dto.setUanNumber(user.getUanNumber());
         dto.setPfNumber(user.getPfNumber());
         dto.setPayrollPanNumber(user.getPayrollPanNumber());
@@ -1079,6 +1087,7 @@ public class UserService {
         dto.setBranch(user.getBranch());
         dto.setAccountHolderName(user.getAccountHolderName());
         dto.setIfscCode(user.getIfscCode());
+        dto.setIsEmployeeHavingPF(Boolean.TRUE.equals(user.getIsEmployeeHavingPF()));
         dto.setUanNumber(user.getUanNumber());
         dto.setPfNumber(user.getPfNumber());
         dto.setPayrollPanNumber(user.getPayrollPanNumber());

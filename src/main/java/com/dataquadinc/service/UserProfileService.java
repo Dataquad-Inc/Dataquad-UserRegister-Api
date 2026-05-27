@@ -74,6 +74,7 @@ public class UserProfileService {
         updateField(dto.getBranch(), user.getBranch(), "Branch", user::setBranch, updatedFields);
         updateField(dto.getAccountHolderName(), user.getAccountHolderName(), "Account Holder Name", user::setAccountHolderName, updatedFields);
         updateField(dto.getIfscCode(), user.getIfscCode(), "IFSC Code", user::setIfscCode, updatedFields);
+        updateBooleanField(dto.getIsEmployeeHavingPF(), user.getIsEmployeeHavingPF(), "Employee Having PF", user::setIsEmployeeHavingPF, updatedFields);
         updateField(dto.getUanNumber(), user.getUanNumber(), "UAN Number", user::setUanNumber, updatedFields);
         updateField(dto.getPfNumber(), user.getPfNumber(), "PF Number", user::setPfNumber, updatedFields);
         updateField(dto.getPayrollPanNumber(), user.getPayrollPanNumber(), "Payroll PAN Number", user::setPayrollPanNumber, updatedFields);
@@ -168,6 +169,15 @@ public class UserProfileService {
 
     private void updateDateField(LocalDate newValue, LocalDate oldValue, String fieldName,
                                  java.util.function.Consumer<LocalDate> setter, Map<String, String> updates) {
+        if (newValue != null && !Objects.equals(newValue, oldValue)) {
+            setter.accept(newValue);
+            updates.put(fieldName, newValue.toString());
+            logger.debug("Updated field: {} -> {}", fieldName, newValue);
+        }
+    }
+
+    private void updateBooleanField(Boolean newValue, Boolean oldValue, String fieldName,
+                                    java.util.function.Consumer<Boolean> setter, Map<String, String> updates) {
         if (newValue != null && !Objects.equals(newValue, oldValue)) {
             setter.accept(newValue);
             updates.put(fieldName, newValue.toString());
