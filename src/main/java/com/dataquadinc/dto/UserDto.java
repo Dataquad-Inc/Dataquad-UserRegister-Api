@@ -60,6 +60,7 @@ public class UserDto {
         private String branch;
         private String accountHolderName;
         private String ifscCode;
+        private Boolean isEmployeeHavingPF;
         private String uanNumber;
         private String pfNumber;
         private String payrollPanNumber;

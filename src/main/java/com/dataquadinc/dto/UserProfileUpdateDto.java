@@ -31,6 +31,7 @@ public class UserProfileUpdateDto {
     private String branch;
     private String accountHolderName;
     private String ifscCode;
+    private Boolean isEmployeeHavingPF;
     private String uanNumber;
     private String pfNumber;
     private String payrollPanNumber;
@@ -280,6 +281,14 @@ public class UserProfileUpdateDto {
 
     public void setIfscCode(String ifscCode) {
         this.ifscCode = ifscCode;
+    }
+
+    public Boolean getIsEmployeeHavingPF() {
+        return isEmployeeHavingPF;
+    }
+
+    public void setIsEmployeeHavingPF(Boolean employeeHavingPF) {
+        isEmployeeHavingPF = employeeHavingPF;
     }
 
     public String getUanNumber() {

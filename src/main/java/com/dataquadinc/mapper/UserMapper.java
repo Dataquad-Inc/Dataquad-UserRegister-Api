@@ -33,6 +33,7 @@ public class UserMapper {
         user.setCurrentAddress(userDto.getCurrentAddress());
         user.setPermanentAddress(userDto.getPermanentAddress());
         user.setEmergencyContactNumber(resolveEmergencyContactNumber(userDto));
+        user.setIsEmployeeHavingPF(Boolean.TRUE.equals(userDto.getIsEmployeeHavingPF()));
         user.setIsEditable(Boolean.TRUE.equals(userDto.getIsEditable()));
 
 
