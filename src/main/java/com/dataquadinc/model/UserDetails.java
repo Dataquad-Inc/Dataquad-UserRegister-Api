@@ -108,6 +108,8 @@ public class UserDetails {
     private String accountHolderName;
     private String ifscCode;
     private Boolean isEmployeeHavingPF = false;
+    private Boolean isEmployeeHavingESI = false;
+    private String esiNumber;
     private String uanNumber;
     private String pfNumber;
     private String payrollPanNumber;
@@ -505,6 +507,22 @@ public class UserDetails {
 
     public void setPfNumber(String pfNumber) {
         this.pfNumber = pfNumber;
+    }
+
+    public Boolean getIsEmployeeHavingESI() {
+        return isEmployeeHavingESI;
+    }
+
+    public void setIsEmployeeHavingESI(Boolean isEmployeeHavingESI) {
+        this.isEmployeeHavingESI = isEmployeeHavingESI;
+    }
+
+    public String getEsiNumber() {
+        return esiNumber;
+    }
+
+    public void setEsiNumber(String esiNumber) {
+        this.esiNumber = esiNumber;
     }
 
     public String getPayrollPanNumber() {

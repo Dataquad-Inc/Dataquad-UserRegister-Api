@@ -92,4 +92,24 @@ public class UserProfileController {
                 .body(document.getDocumentData());
     }
 
+    @PatchMapping("/{userId}/documents/{documentId}/verify")
+    public ResponseEntity<ApiResponse<Boolean>> updateDocumentVerification(
+            @PathVariable String userId,
+            @PathVariable Long documentId,
+            @RequestParam(defaultValue = "true") Boolean isVerified) {
+        UserProfileDocument document = documentRepo.findById(documentId).orElse(null);
+        if (document == null || !document.getUserId().equals(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        document.setIsVerified(Boolean.TRUE.equals(isVerified));
+        documentRepo.save(document);
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Document verification updated successfully",
+                document.getIsVerified(),
+                null
+        ));
+    }
+
 }

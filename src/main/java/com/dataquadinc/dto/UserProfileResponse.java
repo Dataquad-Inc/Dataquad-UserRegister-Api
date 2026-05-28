@@ -39,6 +39,8 @@ public class UserProfileResponse {
     private String accountHolderName;
     private String ifscCode;
     private Boolean isEmployeeHavingPF;
+    private Boolean isEmployeeHavingESI;
+    private String esiNumber;
     private String uanNumber;
     private String pfNumber;
     private String payrollPanNumber;
@@ -84,6 +86,8 @@ public class UserProfileResponse {
         this.accountHolderName = user.getAccountHolderName();
         this.ifscCode = user.getIfscCode();
         this.isEmployeeHavingPF = Boolean.TRUE.equals(user.getIsEmployeeHavingPF());
+        this.isEmployeeHavingESI = Boolean.TRUE.equals(user.getIsEmployeeHavingESI());
+        this.esiNumber = user.getEsiNumber();
         this.uanNumber = user.getUanNumber();
         this.pfNumber = user.getPfNumber();
         this.payrollPanNumber = user.getPayrollPanNumber();

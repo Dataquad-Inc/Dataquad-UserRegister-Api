@@ -75,6 +75,8 @@ public class UserProfileService {
         updateField(dto.getAccountHolderName(), user.getAccountHolderName(), "Account Holder Name", user::setAccountHolderName, updatedFields);
         updateField(dto.getIfscCode(), user.getIfscCode(), "IFSC Code", user::setIfscCode, updatedFields);
         updateBooleanField(dto.getIsEmployeeHavingPF(), user.getIsEmployeeHavingPF(), "Employee Having PF", user::setIsEmployeeHavingPF, updatedFields);
+        updateBooleanField(dto.getIsEmployeeHavingESI(), user.getIsEmployeeHavingESI(), "Employee Having ESI", user::setIsEmployeeHavingESI, updatedFields);
+        updateField(dto.getEsiNumber(), user.getEsiNumber(), "ESI Number", user::setEsiNumber, updatedFields);
         updateField(dto.getUanNumber(), user.getUanNumber(), "UAN Number", user::setUanNumber, updatedFields);
         updateField(dto.getPfNumber(), user.getPfNumber(), "PF Number", user::setPfNumber, updatedFields);
         updateField(dto.getPayrollPanNumber(), user.getPayrollPanNumber(), "Payroll PAN Number", user::setPayrollPanNumber, updatedFields);

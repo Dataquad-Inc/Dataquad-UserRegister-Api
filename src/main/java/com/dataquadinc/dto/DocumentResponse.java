@@ -11,6 +11,7 @@ public class DocumentResponse {
     private String documentType;
     private String fileName;
     private String fileType;
+    private Boolean isVerified;
     private byte[] documentData;
     private LocalDateTime uploadedAt;
 
@@ -19,6 +20,7 @@ public class DocumentResponse {
         this.documentType = doc.getDocumentType();
         this.fileName = doc.getFileName();
         this.fileType = doc.getFileType();
+        this.isVerified = Boolean.TRUE.equals(doc.getIsVerified());
         this.documentData = doc.getDocumentData();
         this.uploadedAt = doc.getUploadedAt();
     }

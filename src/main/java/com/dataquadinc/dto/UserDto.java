@@ -61,6 +61,8 @@ public class UserDto {
         private String accountHolderName;
         private String ifscCode;
         private Boolean isEmployeeHavingPF;
+        private Boolean isEmployeeHavingESI;
+        private String esiNumber;
         private String uanNumber;
         private String pfNumber;
         private String payrollPanNumber;
