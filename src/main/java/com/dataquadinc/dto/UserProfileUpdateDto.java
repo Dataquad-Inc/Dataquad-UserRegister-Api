@@ -32,6 +32,8 @@ public class UserProfileUpdateDto {
     private String accountHolderName;
     private String ifscCode;
     private Boolean isEmployeeHavingPF;
+    private Boolean isEmployeeHavingESI;
+    private String esiNumber;
     private String uanNumber;
     private String pfNumber;
     private String payrollPanNumber;
@@ -289,6 +291,22 @@ public class UserProfileUpdateDto {
 
     public void setIsEmployeeHavingPF(Boolean employeeHavingPF) {
         isEmployeeHavingPF = employeeHavingPF;
+    }
+
+    public Boolean getIsEmployeeHavingESI() {
+        return isEmployeeHavingESI;
+    }
+
+    public void setIsEmployeeHavingESI(Boolean employeeHavingESI) {
+        isEmployeeHavingESI = employeeHavingESI;
+    }
+
+    public String getEsiNumber() {
+        return esiNumber;
+    }
+
+    public void setEsiNumber(String esiNumber) {
+        this.esiNumber = esiNumber;
     }
 
     public String getUanNumber() {

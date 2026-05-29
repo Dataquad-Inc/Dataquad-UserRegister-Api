@@ -20,6 +20,7 @@ public class UserProfileDocument {
     private String documentType;
     private String fileName;
     private String fileType;
+    private Boolean isVerified = false;
 
     @Lob
     @Column(columnDefinition = "LONGBLOB")
@@ -74,6 +75,14 @@ public class UserProfileDocument {
 
     public void setFileType(String fileType) {
         this.fileType = fileType;
+    }
+
+    public Boolean getIsVerified() {
+        return isVerified;
+    }
+
+    public void setIsVerified(Boolean verified) {
+        isVerified = verified;
     }
 
     public byte[] getDocumentData() {

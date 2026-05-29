@@ -407,6 +407,8 @@ public class UserService {
         }
         existingUser.setUanNumber(userDto.getUanNumber());
         existingUser.setPfNumber(userDto.getPfNumber());
+        existingUser.setEsiNumber(userDto.getEsiNumber());
+        existingUser.setIsEmployeeHavingESI(userDto.getIsEmployeeHavingESI());
         existingUser.setPayrollPanNumber(userDto.getPayrollPanNumber());
         existingUser.setPayrollAadharNumber(userDto.getPayrollAadharNumber());
         existingUser.setClearnessForm(userDto.getClearanceForm() != null ? userDto.getClearanceForm() : userDto.getClearnessForm());
@@ -518,6 +520,11 @@ public class UserService {
             }
             updateFieldIfSubmitted(formFields, "uanNumber", existingUser::setUanNumber);
             updateFieldIfSubmitted(formFields, "pfNumber", existingUser::setPfNumber);
+            updateFieldIfSubmitted(formFields, "esiNumber", existingUser::setEsiNumber);
+            String isEmployeeHavingESI = submittedValue(formFields, "isEmployeeHavingESI");
+            if (isEmployeeHavingESI != null) {
+                existingUser.setIsEmployeeHavingESI(Boolean.parseBoolean(isEmployeeHavingESI));
+            }
             updateFieldIfSubmitted(formFields, "payrollPanNumber", existingUser::setPayrollPanNumber);
             updateFieldIfSubmitted(formFields, "payrollAadharNumber", existingUser::setPayrollAadharNumber);
             updateFieldIfSubmitted(formFields, "clearanceForm", existingUser::setClearnessForm);
@@ -961,6 +968,8 @@ public class UserService {
         dto.setAccountHolderName(user.getAccountHolderName());
         dto.setIfscCode(user.getIfscCode());
         dto.setIsEmployeeHavingPF(Boolean.TRUE.equals(user.getIsEmployeeHavingPF()));
+        dto.setIsEmployeeHavingESI(Boolean.TRUE.equals(user.getIsEmployeeHavingESI()));
+        dto.setEsiNumber(user.getEsiNumber());
         dto.setUanNumber(user.getUanNumber());
         dto.setPfNumber(user.getPfNumber());
         dto.setPayrollPanNumber(user.getPayrollPanNumber());
@@ -1088,6 +1097,8 @@ public class UserService {
         dto.setAccountHolderName(user.getAccountHolderName());
         dto.setIfscCode(user.getIfscCode());
         dto.setIsEmployeeHavingPF(Boolean.TRUE.equals(user.getIsEmployeeHavingPF()));
+        dto.setIsEmployeeHavingESI(Boolean.TRUE.equals(user.getIsEmployeeHavingESI()));
+        dto.setEsiNumber(user.getEsiNumber());
         dto.setUanNumber(user.getUanNumber());
         dto.setPfNumber(user.getPfNumber());
         dto.setPayrollPanNumber(user.getPayrollPanNumber());
