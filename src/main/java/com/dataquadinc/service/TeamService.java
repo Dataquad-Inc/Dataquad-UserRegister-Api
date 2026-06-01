@@ -1,9 +1,8 @@
 package com.dataquadinc.service;
 
-import com.dataquadinc.dto.AssignTeamLead;
-import com.dataquadinc.dto.AssociatedToTeamLeadResponse;
-import com.dataquadinc.dto.AssociatedUser;
-import com.dataquadinc.dto.TeamAssignment;
+
+import com.dataquadinc.client.RequirementFeignClient;
+import com.dataquadinc.dto.*;
 import com.dataquadinc.exceptions.UserNotFoundException;
 import com.dataquadinc.model.Roles;
 import com.dataquadinc.model.UserDetails;
@@ -14,6 +13,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.dataquadinc.dto.AssociatedToTeamLeadResponse;
+import com.dataquadinc.dto.CandidateStatsResponse;
+import com.dataquadinc.dto.TeamDashboardResponse;
+import com.dataquadinc.dto.TeamMemberStatsDTO;
+import com.dataquadinc.dto.UserStatsDTO;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,6 +28,12 @@ public class TeamService {
 
     @Autowired
     UserDao userDao;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private RequirementFeignClient requirementFeignClient;
 
     @Transactional
     public String assignTeamLead(String userId, AssignTeamLead assignTeamLeadDto) {
@@ -186,10 +197,10 @@ public class TeamService {
     public AssociatedToTeamLeadResponse getUsersAssociatedToTeamLead(String teamLeadId) {
         List<AssociatedUser> salesExecutives = new ArrayList<>();
         List<AssociatedUser> recruiters = new ArrayList<>();
-        List<AssociatedUser> employees=new ArrayList<>();
-        List<AssociatedUser> coordinators=new ArrayList<>();
-        List<AssociatedUser> bdms=new ArrayList<>();
-        List<AssociatedUser> teamLeads=new ArrayList<>();
+        List<AssociatedUser> employees = new ArrayList<>();
+        List<AssociatedUser> coordinators = new ArrayList<>();
+        List<AssociatedUser> bdms = new ArrayList<>();
+        List<AssociatedUser> teamLeads = new ArrayList<>();
 
         // Validate team lead exists
         UserDetails teamLead = userDao.findByUserId(teamLeadId);
@@ -261,11 +272,11 @@ public class TeamService {
                             .anyMatch(role -> role.getName().equals(UserType.TEAMLEAD));
                     boolean hasBdmRole = userDetails.getRoles().stream()
                             .anyMatch(role -> role.getName().equals(UserType.BDM));
-                    
+
                     // Check if they have team assignments (meaning they're acting as team lead)
-                    boolean hasTeamAssignments = userDetails.getTeamAssignments() != null 
+                    boolean hasTeamAssignments = userDetails.getTeamAssignments() != null
                             && !userDetails.getTeamAssignments().isEmpty();
-                    
+
                     return (hasTeamLeadRole || hasBdmRole) && hasTeamAssignments;
                 })
                 .toList();
@@ -305,7 +316,7 @@ public class TeamService {
                         if (roles.contains(UserType.COORDINATOR)) {
                             coordinators.add(new AssociatedUser(user.getUserId(), user.getUserName()));
                         }
-                        if (roles.contains(UserType.TEAMLEAD)){
+                        if (roles.contains(UserType.TEAMLEAD)) {
                             teamLeadsList.add(new AssociatedUser(user.getUserId(), user.getUserName()));
                         }
                     }
@@ -348,6 +359,162 @@ public class TeamService {
         return null;
     }
 
+    public TeamDashboardResponse getTeamDashboard(String teamId) {
+
+        AssociatedToTeamLeadResponse team =
+                getUsersAssociatedToTeamLead(teamId);
+
+        List<BdmEmployeeDTO> bdmStats =
+                requirementFeignClient.getBdmList();
+
+        CandidateStatsResponse statsResponse =
+                requirementFeignClient.getStats();
+
+        List<Coordinator_DTO> coordinatorStats =
+                requirementFeignClient.getCoordinatorStats();
+
+        TeamDashboardResponse response = new TeamDashboardResponse();
+
+        response.setTeamId(teamId);
+
+        response.setTeamLead(
+                buildUser(team.getTeamLeadId(),
+                        "TEAMLEAD",
+                        bdmStats,
+                        statsResponse,
+                        coordinatorStats)
+        );
+
+        response.setBdms(
+                team.getBdms().stream()
+                        .map(b -> buildUser(
+                                b.getUserId(),
+                                "BDM",
+                                bdmStats,
+                                statsResponse,
+                                coordinatorStats))
+                        .toList()
+        );
+
+        response.setEmployees(
+                team.getEmployees().stream()
+                        .map(e -> buildUser(
+                                e.getUserId(),
+                                "EMPLOYEE",
+                                bdmStats,
+                                statsResponse,
+                                coordinatorStats))
+                        .toList()
+        );
+
+        response.setCoordinators(
+                team.getCoordinators().stream()
+                        .map(c -> buildUser(
+                                c.getUserId(),
+                                "COORDINATOR",
+                                bdmStats,
+                                statsResponse,
+                                coordinatorStats))
+                        .toList()
+        );
+
+        return response;
+    }
+    private TeamMemberStatsDTO buildUser(
+            String userId,
+            String role,
+            List<BdmEmployeeDTO> bdmStats,
+            CandidateStatsResponse statsResponse,
+            List<Coordinator_DTO> coordinatorStats) {
+
+        TeamMemberStatsDTO dto = new TeamMemberStatsDTO();
+
+        dto.setUserId(userId);
+        dto.setRole(role);
+
+        switch (role.toUpperCase()) {
+
+            case "BDM":
+
+                bdmStats.stream()
+                        .filter(b -> userId.equalsIgnoreCase(b.getEmployeeId()))
+                        .findFirst()
+                        .ifPresent(b -> {
+
+                            dto.setUserName(b.getEmployeeName());
+                            dto.setEmail(b.getEmail());
+
+                            dto.setNumberOfClients((int) b.getClientCount());
+                            dto.setNumberOfRequirements((int) b.getRequirementsCount());
+                            dto.setNumberOfSubmissions((int) b.getSubmissionCount());
+                            dto.setNumberOfInterviews((int) b.getInterviewCount());
+                            dto.setNumberOfPlacements((int) b.getPlacementCount());
+                            dto.setStatus(b.getStatus());
+
+                            dto.setNumberOfScreenRejects(0);
+                        });
+
+                break;
+
+            case "TEAMLEAD":
+            case "EMPLOYEE":
+
+                if (statsResponse != null && statsResponse.getUserStats() != null) {
+
+                    statsResponse.getUserStats().stream()
+                            .filter(s -> userId.equalsIgnoreCase(s.getEmployeeId()))
+                            .findFirst()
+                            .ifPresent(s -> {
+
+                                dto.setUserName(s.getEmployeeName());
+                                dto.setEmail(s.getEmployeeEmail());
+                                dto.setRole(s.getRole());
+
+                                dto.setNumberOfClients(s.getNumberOfClients());
+                                dto.setNumberOfRequirements(s.getNumberOfRequirements());
+                                dto.setNumberOfSubmissions(s.getNumberOfSubmissions());
+                                dto.setNumberOfScreenRejects(s.getNumberOfScreenRejects());
+                                dto.setNumberOfInterviews(s.getNumberOfInterviews());
+                                dto.setNumberOfPlacements(s.getNumberOfPlacements());
+
+                                dto.setSelfSubmissions(s.getSelfSubmissions());
+                                dto.setSelfInterviews(s.getSelfInterviews());
+                                dto.setSelfPlacements(s.getSelfPlacements());
+
+                                dto.setTeamSubmissions(s.getTeamSubmissions());
+                                dto.setTeamInterviews(s.getTeamInterviews());
+                                dto.setTeamPlacements(s.getTeamPlacements());
+                                dto.setTeamScreenRejectCount(s.getTeamScreenRejectCount());
+
+                            });
+                }
+
+                break;
+
+            case "COORDINATOR":
+
+                coordinatorStats.stream()
+                        .filter(c -> userId.equalsIgnoreCase(c.getEmployeeId()))
+                        .findFirst()
+                        .ifPresent(c -> {
+
+                            dto.setUserName(c.getEmployeeName());
+                            dto.setEmail(c.getEmployeeEmail());
+
+                            dto.setNumberOfSubmissions(c.getTotalScheduled());
+                            dto.setNumberOfInterviews(c.getTotalInterviews());
+                            dto.setNumberOfPlacements(c.getTotalSelected());
+                            dto.setNumberOfScreenRejects(c.getTotalRejected());
+
+                            dto.setNumberOfClients(0);
+                            dto.setNumberOfRequirements(0);
+                        });
+
+                break;
+        }
+
+        return dto;
+    }
     @Transactional
     public String removeUserFromTeamLead(String userId, String teamLeadId) {
 

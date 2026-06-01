@@ -3,6 +3,7 @@ package com.dataquadinc.controller;
 import com.dataquadinc.dto.AssignTeamLead;
 import com.dataquadinc.dto.AssociatedToTeamLeadResponse;
 import com.dataquadinc.dto.AssociatedUser;
+import com.dataquadinc.dto.TeamDashboardResponse;
 import com.dataquadinc.model.UserDetails;
 import com.dataquadinc.service.TeamService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,14 @@ public class TeamController {
             return ResponseEntity.ok(teamLeadId);
         }
         return new ResponseEntity<>(teamService.getAllUsersAssociatedToTeamLead(entity), HttpStatus.OK);
+    }
+
+    @GetMapping("/team-dashboard/{teamId}")
+    public ResponseEntity<TeamDashboardResponse> getTeamDashboard(
+            @PathVariable String teamId) {
+
+        return ResponseEntity.ok(
+                teamService.getTeamDashboard(teamId));
     }
 
 
