@@ -138,10 +138,11 @@ public class UserService {
     }
 
     public ResponseEntity<List<EmployeeWithRole>> getEmployeesWithFlexibleRoleFilter(
-            String userId, String roleName, String excludeRoleName) {
+            String userId, String roleName, String excludeRoleName, String entity) {
 
         UserType includeRole = null;
         UserType excludeRole = null;
+        String requestedEntity = (entity == null || entity.isBlank()) ? "IN" : entity.trim().toUpperCase();
 
         // Parse roleName
         if (roleName != null && !roleName.isBlank()) {
@@ -167,24 +168,24 @@ public class UserService {
 
         if (excludeRole != null) {
             // ✅ Proper "NOT EXISTS" exclusion, also applies entity='IN'
-            users = userDao.findByUserIdAndRoleNot(userId, excludeRole);
-            logger.info("Fetched {} users with userId={} excluding role={}, entity='IN'",
-                    users.size(), userId, excludeRole);
+            users = userDao.findByUserIdAndRoleNot(userId, excludeRole, requestedEntity);
+            logger.info("Fetched {} users with userId={} excluding role={}, entity={}",
+                    users.size(), userId, excludeRole, requestedEntity);
 
         } else if (includeRole != null) {
             // ✅ Include specific role, entity='IN'
-            users = userDao.findByUserIdAndRole(userId, includeRole);
-            logger.info("Fetched {} users with userId={} and role={}, entity='IN'",
-                    users.size(), userId, includeRole);
+            users = userDao.findByUserIdAndRole(userId, includeRole, requestedEntity);
+            logger.info("Fetched {} users with userId={} and role={}, entity={}",
+                    users.size(), userId, includeRole, requestedEntity);
 
         } else {
             // ✅ No role filter, still entity='IN'
             users = (userId == null || userId.isBlank())
-                    ? userDao.findAllActiveNonTestUsers()
-                    : userDao.findByUserIdAndRole(userId, null);
+                    ? userDao.findAllActiveNonTestUsersByEntity(requestedEntity)
+                    : userDao.findByUserIdAndRole(userId, null, requestedEntity);
 
-            logger.info("Fetched {} users with userId={}, no role filter, entity='IN'",
-                    users.size(), userId);
+            logger.info("Fetched {} users with userId={}, no role filter, entity={}",
+                    users.size(), userId, requestedEntity);
         }
 
         if (users.isEmpty()) {
