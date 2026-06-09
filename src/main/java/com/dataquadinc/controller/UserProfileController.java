@@ -112,4 +112,22 @@ public class UserProfileController {
         ));
     }
 
+    @DeleteMapping("/{userId}/documents/{documentId}")
+    public ResponseEntity<ApiResponse<Boolean>> deleteUserDocument(
+            @PathVariable String userId,
+            @PathVariable Long documentId) {
+        UserProfileDocument document = documentRepo.findById(documentId).orElse(null);
+        if (document == null || !document.getUserId().equals(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        documentRepo.delete(document);
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Document deleted successfully",
+                true,
+                null
+        ));
+    }
+
 }
