@@ -585,6 +585,8 @@ public class UserService {
             }
         }
 
+        deleteUserProfileDocuments(userId, formFields);
+
         List<MultipartFile> filesToSave = mergeDocumentFiles(documentFiles, documents);
         if (!filesToSave.isEmpty()) {
             try {
@@ -654,6 +656,33 @@ public class UserService {
             }
         }
         return file.getOriginalFilename();
+    }
+
+    private void deleteUserProfileDocuments(String userId, MultiValueMap<String, String> formFields) {
+        if (formFields == null) {
+            return;
+        }
+
+        List<String> deleteDocumentIds = formFields.containsKey("deleteDocumentIds")
+                ? formFields.get("deleteDocumentIds")
+                : formFields.get("deleteDocIds");
+
+        if (deleteDocumentIds == null || deleteDocumentIds.isEmpty()) {
+            return;
+        }
+
+        deleteDocumentIds.stream()
+                .flatMap(value -> Arrays.stream(value.split(",")))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .map(Long::valueOf)
+                .forEach(documentId ->
+                        documentRepo.findById(documentId).ifPresent(document -> {
+                            if (userId.equals(document.getUserId())) {
+                                documentRepo.delete(document);
+                            }
+                        })
+                );
     }
 
     private void updateFieldIfSubmitted(
