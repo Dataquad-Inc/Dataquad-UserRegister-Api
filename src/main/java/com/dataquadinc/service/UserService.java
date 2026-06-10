@@ -199,20 +199,7 @@ public class UserService {
                             .map(role -> role.getName().name())
                             .collect(Collectors.joining(", "));
 
-                    return new EmployeeWithRole(
-                            user.getUserId(),
-                            user.getUserName(),
-                            rolesString,
-                            user.getEmail(),
-                            user.getDesignation(),
-                            user.getJoiningDate(),
-                            user.getGender(),
-                            user.getDob(),
-                            user.getPhoneNumber(),
-                            user.getPersonalemail(),
-                            user.getStatus(),
-                            user.getIsEditable()
-                    );
+                    return EmployeeWithRole.fromUserDetails(user, rolesString);
                 })
                 .collect(Collectors.toList());
 
@@ -230,20 +217,7 @@ public class UserService {
                             .map(role -> role.getName().name())
                             .collect(Collectors.joining(", "));
 
-                    return new EmployeeWithRole(
-                            user.getUserId(),
-                            user.getUserName(),
-                            rolesString,
-                            user.getEmail(),
-                            user.getDesignation(),
-                            user.getJoiningDate(),
-                            user.getGender(),
-                            user.getDob(),
-                            user.getPhoneNumber(),
-                            user.getPersonalemail(),
-                            user.getStatus(),
-                            user.getIsEditable()
-                    );
+                    return EmployeeWithRole.fromUserDetails(user, rolesString);
                 })
                 .collect(Collectors.toList());
 
@@ -261,20 +235,7 @@ public class UserService {
                             .map(role -> role.getName().name())
                             .collect(Collectors.joining(", "));
 
-                    return new EmployeeWithRole(
-                            user.getUserId(),
-                            user.getUserName(),
-                            rolesString,
-                            user.getEmail(),
-                            user.getDesignation(),
-                            user.getJoiningDate(),
-                            user.getGender(),
-                            user.getDob(),
-                            user.getPhoneNumber(),
-                            user.getPersonalemail(),
-                            user.getStatus(),
-                            user.getIsEditable()
-                    );
+                    return EmployeeWithRole.fromUserDetails(user, rolesString);
                 })
                 .collect(Collectors.toList());
 
@@ -292,20 +253,7 @@ public class UserService {
                             .map(role -> role.getName().name())
                             .collect(Collectors.joining(", "));
 
-                    return new EmployeeWithRole(
-                            user.getUserId(),
-                            user.getUserName(),
-                            rolesString,
-                            user.getEmail(),
-                            user.getDesignation(),
-                            user.getJoiningDate(),
-                            user.getGender(),
-                            user.getDob(),
-                            user.getPhoneNumber(),
-                            user.getPersonalemail(),
-                            user.getStatus(),
-                            user.getIsEditable()
-                    );
+                    return EmployeeWithRole.fromUserDetails(user, rolesString);
                 })
                 .collect(Collectors.toList());
 
@@ -323,20 +271,7 @@ public class UserService {
                             .map(role -> role.getName().name())
                             .collect(Collectors.joining(", "));
 
-                    return new EmployeeWithRole(
-                            user.getUserId(),
-                            user.getUserName(),
-                            rolesString,
-                            user.getEmail(),
-                            user.getDesignation(),
-                            user.getJoiningDate(),
-                            user.getGender(),
-                            user.getDob(),
-                            user.getPhoneNumber(),
-                            user.getPersonalemail(),
-                            user.getStatus(),
-                            user.getIsEditable()
-                    );
+                    return EmployeeWithRole.fromUserDetails(user, rolesString);
                 })
                 .collect(Collectors.toList());
 
@@ -860,19 +795,7 @@ public class UserService {
                             .findFirst())
                     .orElse("No Role");
 
-            return new EmployeeWithRole(
-                    user.getUserId(),
-                    user.getUserName(),
-                    roleName,
-                    user.getEmail(),
-                    user.getDesignation(),
-                    user.getJoiningDate(),
-                    user.getGender(),
-                    user.getDob(),
-                    user.getPhoneNumber(),
-                    user.getPersonalemail(),
-                    user.getStatus(),
-                    user.getIsEditable());
+            return EmployeeWithRole.fromUserDetails(user, roleName);
         }).collect(Collectors.toList());
     }
 
@@ -1193,6 +1116,7 @@ public class UserService {
         return byUserId;
     }
 }
+
 
 
 
