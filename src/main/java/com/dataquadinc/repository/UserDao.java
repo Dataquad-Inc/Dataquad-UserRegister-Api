@@ -245,6 +245,31 @@ public interface UserDao extends JpaRepository<UserDetails, Integer> ,JpaSpecifi
             @Param("endDate") LocalDate endDate
     );
 
+    @Query("""
+        SELECT u
+        FROM UserDetails u
+        WHERE u.entity = 'IN'
+        AND u.status = 'ACTIVE'
+        AND u.designation <> 'testuser'
+        ORDER BY u.userId
+        """)
+    List<UserDetails> findAllAttendanceEmployees();
+
+    @Query("""
+        SELECT u.userName
+        FROM UserDetails u
+        WHERE u.userId = :teamLeadId
+        """)
+    String getTeamLeadName(
+            @Param("teamLeadId") String teamLeadId
+    );
+    @Query("""
+       SELECT u
+       FROM UserDetails u
+       WHERE u.status = 'ACTIVE'
+       """)
+    List<UserDetails> findAllActiveUsers();
+
     List<UserDetails> findByAssociatedTeamLeadId(String teamLeadId);
 
     List<UserDetails> findByUserIdIn(List<String> userIds);

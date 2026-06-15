@@ -4,6 +4,7 @@ import com.dataquadinc.dto.*;
 import com.dataquadinc.exceptions.DateRangeValidationException;
 import com.dataquadinc.exceptions.UserNotFoundException;
 
+import com.dataquadinc.model.EmployeeAttendance;
 import com.dataquadinc.model.UserDetails;
 import com.dataquadinc.service.UserService;
 import jakarta.validation.Valid;
@@ -48,12 +49,11 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<ResponseBean<UserResponse>> registerUser(@Valid  @RequestBody UserDto userDto) throws RoleNotFoundException {
+    public ResponseEntity<ResponseBean<UserResponse>> registerUser(@Valid @RequestBody UserDto userDto) throws RoleNotFoundException {
 
-         return   userService.registerUser(userDto);
+        return userService.registerUser(userDto);
 
     }
-
 
 
     @GetMapping("/{userId}/email")
@@ -140,9 +140,9 @@ public class UserController {
 
 
     @PostMapping("/addusers")
-    public ResponseEntity<ResponseBean<UserResponse>> registerUsers(@Valid  @RequestBody UserDto userDto) throws RoleNotFoundException {
+    public ResponseEntity<ResponseBean<UserResponse>> registerUsers(@Valid @RequestBody UserDto userDto) throws RoleNotFoundException {
 
-        return   userService.registerUser(userDto);
+        return userService.registerUser(userDto);
 
     }
 
@@ -159,7 +159,7 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("User fetched by email", user));
     }
 
-    
+
     @GetMapping("/employee")
     public ResponseEntity<List<EmployeeWithRole>> getAllEmployees(
             @RequestParam(required = false) String userId,
@@ -193,6 +193,7 @@ public class UserController {
 
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
+
     @GetMapping("/active-external/employee")
     public ResponseEntity<List<EmployeeWithRole>> getAllExtarnalEmployeesV() {
 
@@ -222,6 +223,7 @@ public class UserController {
 
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
+
     @GetMapping("/inactive-external/employee")
     public ResponseEntity<List<EmployeeWithRole>> getAllInactiveExtarnalEmployeesV() {
 
@@ -236,6 +238,7 @@ public class UserController {
 
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
+
     @GetMapping("/employee/filterByJoiningDate")
     public ResponseEntity<?> getEmployeesByJoiningDateRange(
             @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -285,6 +288,7 @@ public class UserController {
         return userService.deleteUser(userId);
 
     }
+
     @GetMapping("/bdmlist")
     public ResponseEntity<List<BdmEmployeeDTO>> getBdmEmployees() {
         List<BdmEmployeeDTO> bdmEmployees = userService.getAllBdmEmployees();
@@ -293,6 +297,7 @@ public class UserController {
         }
         return new ResponseEntity<>(bdmEmployees, HttpStatus.OK);
     }
+
     // Endpoint to get the total submissions count across all clients and jobs
     @GetMapping("/total-submissions")
     public ResponseEntity<Long> getTotalSubmissions() {
@@ -308,18 +313,19 @@ public class UserController {
             @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        List<BdmEmployeeDTO> bdmEmployees = userService.getAllBdmEmployeesDateFilter(startDate,endDate);
+        List<BdmEmployeeDTO> bdmEmployees = userService.getAllBdmEmployeesDateFilter(startDate, endDate);
         if (bdmEmployees.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         return new ResponseEntity<>(bdmEmployees, HttpStatus.OK);
     }
-    @GetMapping("/allUsers")
-    public ResponseEntity<ApiResponse<List<UserDto>>> getAllUsers(){
-        List<UserDto> users=userService.getAllUsers();
-        ApiResponse<List<UserDto>> apiResponse=new ApiResponse<>(true,"Data Fetched",users,null);
 
-        return new ResponseEntity<>(apiResponse,HttpStatus.OK);
+    @GetMapping("/allUsers")
+    public ResponseEntity<ApiResponse<List<UserDto>>> getAllUsers() {
+        List<UserDto> users = userService.getAllUsers();
+        ApiResponse<List<UserDto>> apiResponse = new ApiResponse<>(true, "Data Fetched", users, null);
+
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
     @GetMapping("/allUsers/filters")
@@ -342,26 +348,27 @@ public class UserController {
 
 
     @GetMapping("/user/{userId}")
-    ResponseEntity<ApiResponse<UserDto>> getUserByUserID(@PathVariable String userId){
-        UserDto userDto=userService.getUserByUserId(userId);
-        ApiResponse<UserDto> apiResponse=new ApiResponse<>(true,"Data Fetched",userDto,null);
+    ResponseEntity<ApiResponse<UserDto>> getUserByUserID(@PathVariable String userId) {
+        UserDto userDto = userService.getUserByUserId(userId);
+        ApiResponse<UserDto> apiResponse = new ApiResponse<>(true, "Data Fetched", userDto, null);
 
-        return new ResponseEntity<>(apiResponse,HttpStatus.OK);
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
     @PostMapping("/user/userId-userName")
     public ResponseEntity<List<UserAssignment>> getUserIdsAndUserNames(
             @RequestBody List<String> userIds
-    ){
-        return new ResponseEntity<>(userService.getUserIdsAndUserNames(userIds),HttpStatus.OK);
+    ) {
+        return new ResponseEntity<>(userService.getUserIdsAndUserNames(userIds), HttpStatus.OK);
     }
 
     @GetMapping("/users-dropdown")
-    public ResponseEntity<ApiResponse<List<UserAssignment>>> getUsersDropdown(){
+    public ResponseEntity<ApiResponse<List<UserAssignment>>> getUsersDropdown() {
 
-        ApiResponse<List<UserAssignment>> apiResponse=new ApiResponse<>(true,"Users Data Fetched Successful",userService.getUsersDropdown(),null);
-        return new ResponseEntity<>(apiResponse,HttpStatus.OK);
+        ApiResponse<List<UserAssignment>> apiResponse = new ApiResponse<>(true, "Users Data Fetched Successful", userService.getUsersDropdown(), null);
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
+
     @GetMapping("/usernameByRole/{userId}")
     public ResponseEntity<Map<String, Object>> getUserRoleAndUsername(@PathVariable String userId) {
         Map<String, Object> userInfo = userService.getUserRoleAndUsername(userId);
@@ -372,5 +379,96 @@ public class UserController {
     public ResponseEntity<UserDetails> getUserRole(@PathVariable String userId) {
         UserDetails data = userService.getUserCreds(userId);
         return ResponseEntity.ok(data);
+    }
+
+    @PostMapping("/attendance/month/setup")
+    public ResponseEntity<?> setupAttendanceMonth(
+            @RequestBody AttendanceMonthSetupDto dto) {
+
+        try {
+
+            String response = userService.setupAttendanceMonth(dto);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            response,
+                            null,
+                            null
+                    )
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
+
+    @PostMapping("/attendance/save")
+    public ResponseEntity<?> saveAttendance(
+            @RequestBody AttendanceSaveRequestDto dto) {
+
+        try {
+
+            String response = userService.saveAttendance(dto);
+
+            return ResponseEntity.ok(new ApiResponse<>(
+                            true,
+                            response,
+                            null,
+                            null
+                    )
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
+
+
+    @GetMapping("/attendance/dashboard")
+    public ResponseEntity<?> getAttendanceDashboard(
+            @RequestParam Integer month,
+            @RequestParam Integer year) {
+
+        try {
+
+            List<AttendanceDashboardResponseDto> response = userService.getAttendanceDashboard(month, year);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            "Attendance dashboard fetched successfully",
+                            response,
+                            null
+                    )
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
     }
 }

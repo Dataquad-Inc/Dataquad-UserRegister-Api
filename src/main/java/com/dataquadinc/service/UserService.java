@@ -7,13 +7,9 @@ import com.dataquadinc.exceptions.NoSuchUserException;
 import com.dataquadinc.exceptions.UserNotFoundException;
 import com.dataquadinc.exceptions.ValidationException;
 import com.dataquadinc.mapper.UserMapper;
-import com.dataquadinc.model.Roles;
-import com.dataquadinc.model.UserDetails;
-import com.dataquadinc.model.UserProfileDocument;
-import com.dataquadinc.model.UserType;
-import com.dataquadinc.repository.RolesDao;
-import com.dataquadinc.repository.UserDao;
-import com.dataquadinc.repository.UserProfileDocumentRepository;
+import com.dataquadinc.model.*;
+import com.dataquadinc.repository.*;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,15 +19,21 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.List;
+import java.util.ArrayList;
 
 @Service
 public class UserService {
@@ -53,10 +55,16 @@ public class UserService {
     @Autowired
     private UserProfileDocumentRepository documentRepo;
 
+    @Autowired
+    private AttendanceRepository attendanceRepository;
+
+    @Autowired
+    private AttendanceMonthConfigRepository attendanceMonthConfigRepository;
+
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
 
-    public ResponseEntity<ResponseBean<UserResponse>> registerUser(UserDto userDto)  {
+    public ResponseEntity<ResponseBean<UserResponse>> registerUser(UserDto userDto) {
         Map<String, String> errors = new HashMap<>();
 
         logger.info("New User Registering ...{}", userDto.getUserId());
@@ -113,7 +121,7 @@ public class UserService {
 
         // Check and send email for EMPLOYEE role only
         boolean onlyEmployee = roles.size() == 1 && roles.stream()
-                .allMatch(r ->UserType.EMPLOYEE.name().equalsIgnoreCase(r.getName().name()));
+                .allMatch(r -> UserType.EMPLOYEE.name().equalsIgnoreCase(r.getName().name()));
 
         if (onlyEmployee) {
             try {
@@ -222,7 +230,7 @@ public class UserService {
 
     public ResponseEntity<List<EmployeeWithRole>> findAllActiveInternal() {
 
-        List<UserDetails> users=userDao.findAllActiveNotExternalUser();
+        List<UserDetails> users = userDao.findAllActiveNotExternalUser();
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -253,7 +261,7 @@ public class UserService {
 
     public ResponseEntity<List<EmployeeWithRole>> findAllActiveExternal() {
 
-        List<UserDetails> users=userDao.findAllActiveExternalUser();
+        List<UserDetails> users = userDao.findAllActiveExternalUser();
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -284,7 +292,7 @@ public class UserService {
 
     public ResponseEntity<List<EmployeeWithRole>> findAllInActiveInternal() {
 
-        List<UserDetails> users=userDao.findAllInActiveNotExternalUser();
+        List<UserDetails> users = userDao.findAllInActiveNotExternalUser();
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -315,7 +323,7 @@ public class UserService {
 
     public ResponseEntity<List<EmployeeWithRole>> findAllInActiveExternal() {
 
-        List<UserDetails> users=userDao.findAllInActiveExternalUser();
+        List<UserDetails> users = userDao.findAllInActiveExternalUser();
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -711,7 +719,6 @@ public class UserService {
         userDao.delete(user);
 
 
-
         // Prepare the response
         ResponseBean<UserResponse> response = new ResponseBean<>();
         response.setSuccess(true);
@@ -763,11 +770,11 @@ public class UserService {
                     .orElse("No Role");
 
             // ✅ Count Clients (based on onboarding)
-            long clientCount = userDao.countClientsByUserIdAndDateRange(userId,startDate,endDate);
+            long clientCount = userDao.countClientsByUserIdAndDateRange(userId, startDate, endDate);
             System.out.println("Client Count: " + clientCount);
 
             // ✅ Get client names for this BDM
-            List<String> clientNames = userDao.findClientNamesByUserIdAndDateRange(userId,startDate,endDate);
+            List<String> clientNames = userDao.findClientNamesByUserIdAndDateRange(userId, startDate, endDate);
             System.out.println("Client Names for this BDM: " + clientNames);
 
             // Initialize counters
@@ -782,19 +789,19 @@ public class UserService {
                     System.out.println("Processing Client: " + clientName);
 
                     // ✅ Count ALL submissions for this client (across ALL job IDs)
-                    submissionCount += userDao.countAllSubmissionsByClientNameAndDateRange(clientName,startDate,endDate); // Updated method for count
+                    submissionCount += userDao.countAllSubmissionsByClientNameAndDateRange(clientName, startDate, endDate); // Updated method for count
                     System.out.println("Total Submission Count: " + submissionCount + " for Client: '" + clientName + "'");
 
                     // ✅ Count ALL Interviews for this client (across ALL job IDs)
-                    interviewCount += userDao.countAllInterviewsByClientNameAndDateRange(clientName,startDate,endDate);
+                    interviewCount += userDao.countAllInterviewsByClientNameAndDateRange(clientName, startDate, endDate);
                     System.out.println("Total Interview Count: " + interviewCount + " for Client: '" + clientName + "'");
 
                     // ✅ Count ALL Placements for this client (across ALL job IDs)
-                    placementCount += userDao.countAllPlacementsByClientNameAndDateRange(clientName,startDate,endDate);
+                    placementCount += userDao.countAllPlacementsByClientNameAndDateRange(clientName, startDate, endDate);
                     System.out.println("Total Placement Count: " + placementCount + " for Client: '" + clientName + "'");
 
                     // ✅ Count ALL Requirements for this client
-                    requirementsCount += userDao.countRequirementsByClientNameAndDateRange(clientName,startDate,endDate);
+                    requirementsCount += userDao.countRequirementsByClientNameAndDateRange(clientName, startDate, endDate);
                     System.out.println("Total Requirements Count: " + requirementsCount + " for Client: '" + clientName + "'");
                 }
             }
@@ -847,7 +854,7 @@ public class UserService {
         }).collect(Collectors.toList());
     }
 
-    public List<BdmEmployeeDTO> getAllBdmEmployeesDateFilter(LocalDate startDate,LocalDate endDate) {
+    public List<BdmEmployeeDTO> getAllBdmEmployeesDateFilter(LocalDate startDate, LocalDate endDate) {
         List<UserDetails> users = userDao.findBdmEmployees();  // Get BDM employees
 
         System.out.println("Total BDM employees found: " + users.size());
@@ -866,11 +873,11 @@ public class UserService {
                     .orElse("No Role");
 
             // ✅ Count Clients (based on onboarding)
-            long clientCount = userDao.countClientsByUserIdAndDateRange(userId,startDate,endDate);
+            long clientCount = userDao.countClientsByUserIdAndDateRange(userId, startDate, endDate);
             System.out.println("Client Count: " + clientCount);
 
             // ✅ Get client names for this BDM
-            List<String> clientNames = userDao.findClientNamesByUserIdAndDateRange(userId,startDate,endDate);
+            List<String> clientNames = userDao.findClientNamesByUserIdAndDateRange(userId, startDate, endDate);
             System.out.println("Client Names for this BDM: " + clientNames);
 
             // Initialize counters
@@ -885,19 +892,19 @@ public class UserService {
                     System.out.println("Processing Client: " + clientName);
 
                     // ✅ Count ALL submissions for this client (across ALL job IDs)
-                    submissionCount += userDao.countAllSubmissionsByClientNameAndDateRange(clientName,startDate,endDate); // Updated method for count
+                    submissionCount += userDao.countAllSubmissionsByClientNameAndDateRange(clientName, startDate, endDate); // Updated method for count
                     System.out.println("Total Submission Count: " + submissionCount + " for Client: '" + clientName + "'");
 
                     // ✅ Count ALL Interviews for this client (across ALL job IDs)
-                    interviewCount += userDao.countAllInterviewsByClientNameAndDateRange(clientName,startDate,endDate);
+                    interviewCount += userDao.countAllInterviewsByClientNameAndDateRange(clientName, startDate, endDate);
                     System.out.println("Total Interview Count: " + interviewCount + " for Client: '" + clientName + "'");
 
                     // ✅ Count ALL Placements for this client (across ALL job IDs)
-                    placementCount += userDao.countAllPlacementsByClientNameAndDateRange(clientName,startDate,endDate);
+                    placementCount += userDao.countAllPlacementsByClientNameAndDateRange(clientName, startDate, endDate);
                     System.out.println("Total Placement Count: " + placementCount + " for Client: '" + clientName + "'");
 
                     // ✅ Count ALL Requirements for this client
-                    requirementsCount += userDao.countRequirementsByClientNameAndDateRange(clientName,startDate,endDate);
+                    requirementsCount += userDao.countRequirementsByClientNameAndDateRange(clientName, startDate, endDate);
 
                     System.out.println("Total Requirements Count: " + requirementsCount + " for Client: '" + clientName + "'");
                 }
@@ -985,14 +992,14 @@ public class UserService {
         return dto;
     }
 
-    public List<UserDto> getAllUsers(){
-      List<UserDetails> users=userDao.findAll();
+    public List<UserDto> getAllUsers() {
+        List<UserDetails> users = userDao.findAll();
 
-        List<UserDto> employees =users.stream()
-             .map(UserService::convertEntityToDto)
-             .collect(Collectors.toList());
+        List<UserDto> employees = users.stream()
+                .map(UserService::convertEntityToDto)
+                .collect(Collectors.toList());
 
-     return employees;
+        return employees;
     }
 
     public Page<UserDto> getAllFilteredUsers(String userId, String userName, String email, LocalDate joiningDate, Pageable pageable) {
@@ -1015,28 +1022,29 @@ public class UserService {
         return userPage.map(this::convertToDtoUs);
     }
 
-    public UserDto getUserByUserId(String userId){
+    public UserDto getUserByUserId(String userId) {
 
-        UserDetails userDetails=userDao.findByUserId(userId);
-        if(userDetails==null){
-            throw new NoSuchUserException("No User Found With ID :"+userId);
+        UserDetails userDetails = userDao.findByUserId(userId);
+        if (userDetails == null) {
+            throw new NoSuchUserException("No User Found With ID :" + userId);
         }
-        UserDto userDto=convertEntityToDto(userDetails);
+        UserDto userDto = convertEntityToDto(userDetails);
         return userDto;
     }
 
 
     public UserDetailsDTO getUserByEmail(String email) {
         UserDetails user = userDao.findByEmail(email);
-        if(user==null){
+        if (user == null) {
             throw new NoSuchUserException("No User Found With Email ID : " + email);
-        }        return convertToDto(user);
+        }
+        return convertToDto(user);
     }
 
     public UserLoginStatusDTO getLoginStatusByUserId(String userId) {
         UserDetails user = userDao.findByUserId(userId);
-        if(user==null){
-            throw new NoSuchUserException("No User Found With ID : "+ userId);
+        if (user == null) {
+            throw new NoSuchUserException("No User Found With ID : " + userId);
         }
         UserLoginStatusDTO dto = new UserLoginStatusDTO();
         dto.setUserId(user.getUserId());
@@ -1114,12 +1122,12 @@ public class UserService {
     }
 
 
-    public List<UserAssignment> getUserIdsAndUserNames(List<String> userIds){
+    public List<UserAssignment> getUserIdsAndUserNames(List<String> userIds) {
 
-        List<UserDetails> users=userDao.findByUserIdIn(userIds);
-        List<UserAssignment> userAssignments=users.stream()
+        List<UserDetails> users = userDao.findByUserIdIn(userIds);
+        List<UserAssignment> userAssignments = users.stream()
                 .map(userDetails -> {
-                    UserAssignment userAssignment=new UserAssignment();
+                    UserAssignment userAssignment = new UserAssignment();
                     userAssignment.setUserId(userDetails.getUserId());
                     userAssignment.setUserName(userDetails.getUserName());
                     return userAssignment;
@@ -1127,14 +1135,14 @@ public class UserService {
         return userAssignments;
     }
 
-    public List<UserAssignment> getUsersDropdown(){
-        List<UserAssignment> usersDropDown=new ArrayList<>();
+    public List<UserAssignment> getUsersDropdown() {
+        List<UserAssignment> usersDropDown = new ArrayList<>();
         userDao.findAll().stream()
                 .filter(userDetails ->
-                        userDetails.getRoles().stream().anyMatch(roles -> roles.getName()==UserType.SUPERADMIN) ||
+                        userDetails.getRoles().stream().anyMatch(roles -> roles.getName() == UserType.SUPERADMIN) ||
                                 userDetails.getEntity().equalsIgnoreCase("US"))
-                .forEach(userDetails ->{
-                    UserAssignment userAssignment=new UserAssignment();
+                .forEach(userDetails -> {
+                    UserAssignment userAssignment = new UserAssignment();
                     userAssignment.setUserId(userDetails.getUserId());
                     userAssignment.setUserName(userDetails.getUserName());
                     usersDropDown.add(userAssignment);
@@ -1145,9 +1153,9 @@ public class UserService {
 
     public Map<String, Object> getUserRoleAndUsername(String userId) {
         UserDetails user = userDao.findByUserId(userId);
-                if(user == null) {
-                    throw new NoSuchUserException("No User Found With ID : " + userId);
-                }
+        if (user == null) {
+            throw new NoSuchUserException("No User Found With ID : " + userId);
+        }
 
         // Extract roles as a list of names
         List<UserType> roleNames = user.getRoles().stream()
@@ -1162,6 +1170,448 @@ public class UserService {
     public UserDetails getUserCreds(String userId) {
         UserDetails byUserId = userDao.findByUserId(userId);
         return byUserId;
+    }
+
+    public String setupAttendanceMonth(AttendanceMonthSetupDto dto) {
+        try {
+            AttendanceMonthConfig existingConfig = attendanceMonthConfigRepository
+                            .findByAttendanceMonthAndAttendanceYear(dto.getMonth(), dto.getYear()
+                            )
+                            .orElse(null);
+
+            if (existingConfig != null) {
+
+                throw new RuntimeException(
+                        "Attendance month already configured"
+                );
+            }
+
+            LocalDate fromDate = LocalDate.of(dto.getYear(), dto.getMonth(), 1)
+                            .minusMonths(1)
+                            .withDayOfMonth(26);
+
+            LocalDate toDate = LocalDate.of(dto.getYear(), dto.getMonth(), 25);
+            AttendanceMonthConfig config = new AttendanceMonthConfig();
+
+            config.setAttendanceMonth(dto.getMonth());
+            config.setAttendanceYear(dto.getYear());
+            config.setFromDate(fromDate);
+            config.setToDate(toDate);
+            config.setPublicHolidays(dto.getPublicHolidays());
+            config.setIsLocked(false);
+
+            attendanceMonthConfigRepository.save(config);
+            return "Attendance month configured successfully";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(
+                    e.getMessage()
+            );
+        }
+    }
+
+    public String saveAttendance(AttendanceSaveRequestDto dto) {
+        try {
+            AttendanceMonthConfig monthConfig = attendanceMonthConfigRepository
+                            .findByAttendanceMonthAndAttendanceYear(dto.getAttendanceMonth(), dto.getAttendanceYear())
+                            .orElseThrow(() ->
+                                    new RuntimeException("Attendance month not configured"));
+
+            if (dto.getAttendanceDate()
+                    .isBefore(monthConfig.getFromDate())
+                    ||
+                    dto.getAttendanceDate()
+                            .isAfter(monthConfig.getToDate())) {
+
+                throw new RuntimeException(
+                        "Attendance date is outside configured cycle"
+                );
+            }
+
+            Integer weekNumber;
+            int day = dto.getAttendanceDate().getDayOfMonth();
+            if (day >= 26 || day == 1) {
+                weekNumber = 1;
+            } else if (day >= 2 && day <= 8) {
+                weekNumber = 2;
+            } else if (day >= 9 && day <= 15) {
+                weekNumber = 3;
+            } else if (day >= 16 && day <= 22) {
+                weekNumber = 4;
+            } else {
+                weekNumber = 5;
+            }
+
+            Long approvedCount = attendanceRepository.countApprovedWeek(
+                                    dto.getAttendanceMonth(),
+                                    dto.getAttendanceYear(),
+                                    weekNumber);
+            if (approvedCount > 0) {
+                throw new RuntimeException(
+                        "This week is already approved. Attendance cannot be modified."
+                );
+            }
+
+            boolean isWeekend = dto.getAttendanceDate().getDayOfWeek()
+                              == DayOfWeek.SATURDAY
+                            ||
+                            dto.getAttendanceDate().getDayOfWeek()
+                                    == DayOfWeek.SUNDAY;
+
+            boolean isPublicHoliday = monthConfig.getPublicHolidays() != null &&
+                            monthConfig.getPublicHolidays().contains(
+                                    dto.getAttendanceDate());
+
+            List<EmployeeAttendance> saveList = new ArrayList<>();
+            for (EmployeeAttendanceDto employeeDto : dto.getEmployees()) {
+                UserDetails employee = userDao.findByUserId(employeeDto.getEmployeeId());
+                if (employee == null) {
+                    continue;
+                }
+
+                EmployeeAttendance attendance = attendanceRepository
+                                .findByEmployeeIdAndAttendanceDate(
+                                        employee.getUserId(),
+                                        dto.getAttendanceDate()
+                                )
+                                .orElse(null);
+
+                if (attendance != null &&
+                        "APPROVED".equalsIgnoreCase(
+                                attendance.getApprovalStatus()
+                        )) {
+                    throw new RuntimeException(
+                            "Attendance already approved for employee: "
+                                    + employee.getUserId()
+                    );
+                }
+
+                if (attendance != null &&
+                        "SUBMITTED".equalsIgnoreCase(attendance.getApprovalStatus())) {
+                    throw new RuntimeException(
+                            "Attendance submitted for employee: "
+                                    + employee.getUserId()
+                                    + ". Unlock week to edit."
+                    );
+                }
+
+                if (attendance == null) {
+                    attendance = new EmployeeAttendance();
+                    attendance.setEmployeeId(employee.getUserId());
+                    attendance.setEmployeeName(employee.getUserName());
+                    attendance.setAttendanceDate(dto.getAttendanceDate());
+                    attendance.setAttendanceMonth(dto.getAttendanceMonth());
+                    attendance.setAttendanceYear(dto.getAttendanceYear());
+                    attendance.setWeekNumber(weekNumber);
+                    attendance.setMonthConfig(monthConfig);
+                    attendance.setFromDate(monthConfig.getFromDate());
+                    attendance.setToDate(monthConfig.getToDate());
+                    attendance.setApprovalStatus("DRAFT");
+                    attendance.setCreatedAt(LocalDateTime.now()
+                    );
+                }
+
+                attendance.setIsLocked(false);
+                if (employee.getAssociatedTeamLeadId()
+                        != null
+                        &&
+                        !employee.getAssociatedTeamLeadId().isBlank()) {
+                    String teamLeadName = userDao.getTeamLeadName(
+                                    employee.getAssociatedTeamLeadId());
+
+                    attendance.setReportingManager(teamLeadName);
+
+                } else {
+
+                    attendance.setReportingManager(employee.getReportingManager());
+                }
+
+                boolean isProbation = employee.getProbation() == null
+                                ||
+                                !employee
+                                        .getProbation()
+                                        .equalsIgnoreCase(
+                                                "Completed"
+                                        );
+
+                attendance.setIsProbationEmployee(isProbation);
+
+                if (isPublicHoliday) {
+                    attendance.setAttendanceStatus("PH");
+                    attendance.setAttendanceValue(1.0);
+                    attendance.setIsPublicHoliday(true);
+                    attendance.setIsWeekend(false);
+                    attendance.setIsPaid(true);
+                    attendance.setIsLocked(true);
+                } else if (isWeekend) {
+                    attendance.setAttendanceStatus("WO");
+                    attendance.setAttendanceValue(1.0);
+                    attendance.setIsWeekend(true);
+                    attendance.setIsPublicHoliday(false);
+                    attendance.setIsPaid(true);
+                    attendance.setIsLocked(true);
+                } else {
+                    attendance.setAttendanceStatus(employeeDto.getAttendanceStatus());
+                    attendance.setRemarks(employeeDto.getRemarks());
+
+                    if ("HD".equalsIgnoreCase(employeeDto.getAttendanceStatus())) {
+                        attendance.setAttendanceValue(1.0);
+                    } else {
+                        attendance.setAttendanceValue(employeeDto
+                                        .getAttendanceValue()
+                                        != null
+                                        ? employeeDto
+                                        .getAttendanceValue()
+                                        : 1.0
+                        );
+                    }
+                    attendance.setIsWeekend(false);
+                    attendance.setIsPublicHoliday(false);
+                    attendance.setIsPaid(
+                            !"LOP".equalsIgnoreCase(
+                                    employeeDto.getAttendanceStatus()
+                            )
+                    );
+                }
+                attendance.setSalaryDeduction(false);
+                attendance.setCasualLeaveApplied(false);
+                attendance.setIsSandwichDeduction(false);
+                attendance.setUpdatedAt(LocalDateTime.now());
+                saveList.add(attendance);
+            }
+
+            attendanceRepository.saveAll(saveList);
+            return "Attendance saved successfully";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    public List<AttendanceDashboardResponseDto> getAttendanceDashboard(
+            Integer month,
+            Integer year) {
+
+        try {
+            List<AttendanceDashboardResponseDto> responseList = new ArrayList<>();
+
+            AttendanceMonthConfig monthConfig = attendanceMonthConfigRepository
+                            .findByAttendanceMonthAndAttendanceYear(
+                                    month,
+                                    year
+                            )
+                            .orElseThrow(() ->
+                                    new RuntimeException(
+                                            "Attendance month not configured"
+                                    )
+                            );
+
+            List<UserDetails> employees = userDao.findAllAttendanceEmployees();
+            int serialNo = 1;
+            for (UserDetails employee : employees) {
+                AttendanceDashboardResponseDto dto = new AttendanceDashboardResponseDto();
+                List<EmployeeAttendance> attendanceList = attendanceRepository.getEmployeeAttendanceMonth(
+                                employee.getUserId(),
+                                month,
+                                year
+                        );
+
+                Map<String, String> attendanceGrid = new LinkedHashMap<>();
+
+                double totalPresentDays = 0.0;
+                int totalLeaves = 0;
+                int totalLopLeaves = 0;
+                int casualLeaves = 0;
+                double totalPaidDays = 0.0;
+                int totalWeekendDays = 0;
+                int totalWorkingDays = 0;
+
+                dto.setSerialNo(serialNo++);
+                dto.setEmployeeId(employee.getUserId());
+                dto.setEmployeeName(employee.getUserName());
+                dto.setDesignation(employee.getDesignation());
+                dto.setJoiningDate(employee.getJoiningDate());
+                dto.setProbation(employee.getProbation());
+
+                dto.setPf(Boolean.TRUE.equals(employee.getIsEmployeeHavingPF())
+                                ? "YES"
+                                : "NO"
+                );
+
+                dto.setEsi(Boolean.TRUE.equals(employee.getIsEmployeeHavingESI())
+                                ? "YES"
+                                : "NO"
+                );
+
+                if (employee.getAssociatedTeamLeadId() != null
+                        &&
+                        !employee.getAssociatedTeamLeadId().isBlank()) {
+
+                    dto.setReportingManager(userDao.getTeamLeadName(employee.getAssociatedTeamLeadId()));
+                } else {
+                    dto.setReportingManager(employee.getReportingManager());
+                }
+                Map<LocalDate, EmployeeAttendance> attendanceMap = attendanceList.stream()
+                                .collect(
+                                        Collectors.toMap(
+                                                EmployeeAttendance::getAttendanceDate,
+                                                a -> a,
+                                                (a, b) -> a
+                                        )
+                                );
+
+                LocalDate currentDate = monthConfig.getFromDate();
+
+                while (!currentDate.isAfter(monthConfig.getToDate())) {
+                    int day = currentDate.getDayOfMonth();
+                    EmployeeAttendance attendance = attendanceMap.get(currentDate);
+                    boolean isWeekend = currentDate.getDayOfWeek()
+                                    == DayOfWeek.SATURDAY
+                                    ||
+                                    currentDate.getDayOfWeek()
+                                            == DayOfWeek.SUNDAY;
+                    boolean isPublicHoliday = monthConfig.getPublicHolidays() != null
+                                    &&
+                                    monthConfig.getPublicHolidays()
+                                            .contains(currentDate);
+
+                    if (isWeekend) {
+                        totalWeekendDays++;
+                    }
+                    if (!isWeekend && !isPublicHoliday) {
+                        totalWorkingDays++;
+                    }
+                    String attendanceStatus = "";
+                    if (isPublicHoliday) {
+                        attendanceStatus = "PH";
+                    } else if (isWeekend) {
+                        attendanceStatus = "WO";
+                    } else if (attendance != null) {
+                        attendanceStatus = attendance.getAttendanceStatus();
+                        if (attendanceStatus == null) {
+                            attendanceStatus = "";
+                        }
+                    }
+                    attendanceGrid.put(String.valueOf(day), attendanceStatus);
+
+                    if ("P".equalsIgnoreCase(attendanceStatus)
+                            ||
+                            "WH".equalsIgnoreCase(attendanceStatus)
+                            ||
+                            "WFH".equalsIgnoreCase(attendanceStatus)
+                            ||
+                            "LL".equalsIgnoreCase(attendanceStatus)
+                            ||
+                            "HD".equalsIgnoreCase(attendanceStatus)
+                            ||
+                            "SP".equalsIgnoreCase(attendanceStatus)) {
+
+                        totalPresentDays += 1;
+                    }
+                    if ("L".equalsIgnoreCase(attendanceStatus)) {
+                        totalLeaves++;
+                    }
+                    if ("LOP".equalsIgnoreCase(attendanceStatus)) {
+                        totalLopLeaves++;
+                    }
+
+                    currentDate = currentDate.plusDays(1);
+                }
+                boolean isProbationEmployee = employee.getProbation() == null
+                                ||
+                                !employee.getProbation()
+                                        .equalsIgnoreCase(
+                                                "Completed"
+                                        );
+
+                int allowedCasualLeave = isProbationEmployee ? 0 : 1;
+                Set<LocalDate> sandwichDeductionDates = new HashSet<>();
+                for (EmployeeAttendance attendance : attendanceList) {
+
+                    if (!"L".equalsIgnoreCase(
+                            attendance.getAttendanceStatus())) {
+                        continue;
+                    }
+
+                    LocalDate leaveDate = attendance.getAttendanceDate();
+
+                    if (leaveDate.getDayOfWeek()
+                            == DayOfWeek.FRIDAY) {
+                        sandwichDeductionDates.add(leaveDate.plusDays(1));
+                        sandwichDeductionDates.add(leaveDate.plusDays(2));
+                    }
+                    if (leaveDate.getDayOfWeek() == DayOfWeek.MONDAY) {
+
+                        sandwichDeductionDates.add(leaveDate.minusDays(2));
+
+                        sandwichDeductionDates.add(leaveDate.minusDays(1));
+                    }
+                }
+
+                int unpaidLeaves = 0;
+                if (totalLeaves <= allowedCasualLeave) {
+                    casualLeaves = totalLeaves;
+                } else {
+                    casualLeaves = allowedCasualLeave;
+                    unpaidLeaves = totalLeaves - allowedCasualLeave;
+                }
+                totalPaidDays = totalPresentDays;
+
+                LocalDate date = monthConfig.getFromDate();
+
+                while (!date.isAfter(monthConfig.getToDate())) {
+
+                    boolean isPH = monthConfig.getPublicHolidays() != null
+                                    &&
+                                    monthConfig.getPublicHolidays()
+                                            .contains(date);
+
+                    boolean isWO = date.getDayOfWeek()
+                                    == DayOfWeek.SATURDAY
+                                    ||
+                                    date.getDayOfWeek()
+                                            == DayOfWeek.SUNDAY;
+
+                    if (isPH || isWO) {
+                        totalPaidDays += 1;
+                    }
+
+                    date = date.plusDays(1);
+                }
+
+                totalPaidDays += casualLeaves;
+                totalPaidDays -= unpaidLeaves;
+                totalPaidDays -= totalLopLeaves;
+                totalPaidDays -= sandwichDeductionDates.size();
+
+                if (totalPaidDays < 0) {
+                    totalPaidDays = 0;
+                }
+
+                int totalDaysInMonth = (int) ChronoUnit.DAYS.between(monthConfig.getFromDate(), monthConfig.getToDate()) + 1;
+
+                dto.setAttendanceGrid(attendanceGrid);
+                dto.setTotalDaysInMonth(totalDaysInMonth);
+                dto.setTotalWorkingDays(totalWorkingDays);
+                dto.setTotalWeekendDays(totalWeekendDays);
+                dto.setTotalPresentDays(totalPresentDays);
+                dto.setTotalLeaves(totalLeaves);
+                dto.setCasualLeaves(casualLeaves);
+                dto.setTotalPaidDays(totalPaidDays);
+
+                responseList.add(dto);
+            }
+
+            return responseList;
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            throw new RuntimeException(e.getMessage());
+        }
     }
 }
 
