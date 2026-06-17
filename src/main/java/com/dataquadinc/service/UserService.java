@@ -1565,6 +1565,346 @@ public class UserService {
             throw new RuntimeException(e.getMessage());
         }
     }
+    public List<EmployeeAttendanceViewDto> getEmployeeAttendance(
+            String employeeId,
+            Integer month,
+            Integer year) {
+
+        AttendanceMonthConfig monthConfig = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYear(month, year)
+                        .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
+
+        List<EmployeeAttendance> attendanceList = attendanceRepository.getEmployeeAttendanceMonth(employeeId, month, year);
+
+        Map<LocalDate, EmployeeAttendance> attendanceMap = attendanceList.stream()
+                        .collect(Collectors.toMap(
+                                EmployeeAttendance::getAttendanceDate,
+                                a -> a,
+                                (a, b) -> a
+                        ));
+
+        List<EmployeeAttendanceViewDto> response = new ArrayList<>();
+
+        LocalDate currentDate = monthConfig.getFromDate();
+
+        while (!currentDate.isAfter(monthConfig.getToDate())) {
+
+            EmployeeAttendance attendance = attendanceMap.get(currentDate);
+
+            boolean isWeekend = currentDate.getDayOfWeek() == DayOfWeek.SATURDAY
+                            ||
+                            currentDate.getDayOfWeek() == DayOfWeek.SUNDAY;
+
+            boolean isPublicHoliday = monthConfig.getPublicHolidays() != null
+                            &&
+                            monthConfig.getPublicHolidays()
+                                    .contains(currentDate);
+
+            EmployeeAttendanceViewDto dto = new EmployeeAttendanceViewDto();
+
+            dto.setAttendanceDate(currentDate);
+            dto.setIsWeekend(isWeekend);
+            dto.setIsPublicHoliday(isPublicHoliday);
+
+            if (isPublicHoliday) {
+
+                dto.setAttendanceStatus("PH");
+                dto.setAttendanceValue(1.0);
+
+            } else if (isWeekend) {
+
+                dto.setAttendanceStatus("WO");
+                dto.setAttendanceValue(1.0);
+
+            } else if (attendance != null) {
+
+                dto.setAttendanceStatus(attendance.getAttendanceStatus());
+                dto.setAttendanceValue(attendance.getAttendanceValue());
+                dto.setRemarks(attendance.getRemarks());
+                dto.setWeekNumber(attendance.getWeekNumber());
+            }
+
+            response.add(dto);
+
+            currentDate = currentDate.plusDays(1);
+        }
+
+        return response;
+    }
+
+    public String editAttendance(AttendanceSaveRequestDto dto) {
+
+        try {
+            AttendanceMonthConfig monthConfig = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYear(
+                                    dto.getAttendanceMonth(),
+                                    dto.getAttendanceYear()
+                            )
+                            .orElseThrow(() ->
+                                    new RuntimeException("Attendance month not configured")
+                            );
+
+            if (dto.getAttendanceDate()
+                    .isBefore(monthConfig.getFromDate())
+                    ||
+                    dto.getAttendanceDate()
+                            .isAfter(monthConfig.getToDate())) {
+
+                throw new RuntimeException("Attendance date is outside configured cycle");
+            }
+
+            boolean isWeekend = dto.getAttendanceDate().getDayOfWeek() == DayOfWeek.SATURDAY
+                            ||
+                            dto.getAttendanceDate()
+                                    .getDayOfWeek() == DayOfWeek.SUNDAY;
+
+            boolean isPublicHoliday = monthConfig.getPublicHolidays() != null
+                            &&
+                            monthConfig.getPublicHolidays()
+                                    .contains(
+                                            dto.getAttendanceDate()
+                                    );
+
+            if (isWeekend || isPublicHoliday) {
+
+                throw new RuntimeException(
+                        "Weekend/Public Holiday attendance cannot be edited"
+                );
+            }
+
+            List<EmployeeAttendance> updateList = new ArrayList<>();
+
+            for (EmployeeAttendanceDto employeeDto : dto.getEmployees()) {
+
+                EmployeeAttendance attendance = attendanceRepository.findByEmployeeIdAndAttendanceDate(
+                                        employeeDto.getEmployeeId(),
+                                        dto.getAttendanceDate()
+                                )
+                                .orElseThrow(() ->
+                                        new RuntimeException("Attendance not found for employee : " + employeeDto.getEmployeeId()
+                                        )
+                                );
+
+                String status = attendance.getApprovalStatus();
+
+                if ("SUBMITTED".equalsIgnoreCase(status)
+                        ||
+                        "APPROVED".equalsIgnoreCase(status)) {
+
+                    throw new RuntimeException("Attendance cannot be edited in "
+                                    + status
+                                    + " status for employee : "
+                                    + employeeDto.getEmployeeId()
+                    );
+                }
+                attendance.setAttendanceStatus(employeeDto.getAttendanceStatus());
+                attendance.setRemarks(employeeDto.getRemarks());
+                if ("HD".equalsIgnoreCase(
+                        employeeDto.getAttendanceStatus())) {
+
+                    attendance.setAttendanceValue(employeeDto.getAttendanceValue() != null
+                                    ? employeeDto.getAttendanceValue()
+                                    : 0.5
+                    );
+
+                } else {
+                    attendance.setAttendanceValue(1.0);
+                }
+                attendance.setIsPaid(!"LOP".equalsIgnoreCase(employeeDto.getAttendanceStatus()));
+                attendance.setUpdatedAt(LocalDateTime.now());
+                updateList.add(attendance);
+            }
+
+            attendanceRepository.saveAll(updateList);
+
+            return "Attendance updated successfully";
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+    public String editAttendanceMonth(AttendanceMonthSetupDto dto) {
+        try {
+
+            AttendanceMonthConfig config = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYear(
+                                    dto.getMonth(),
+                                    dto.getYear()
+                            )
+                            .orElseThrow(() ->
+                                    new RuntimeException("Attendance month not configured")
+                            );
+
+            LocalDate fromDate = LocalDate.of(dto.getYear(), dto.getMonth(), 1
+                            ).minusMonths(1)
+                            .withDayOfMonth(26);
+
+            LocalDate toDate = LocalDate.of(dto.getYear(), dto.getMonth(), 25);
+
+            config.setFromDate(fromDate);
+            config.setToDate(toDate);
+            config.setPublicHolidays(dto.getPublicHolidays());
+
+            attendanceMonthConfigRepository.save(config);
+            attendanceRepository.deleteWeekOffAndPublicHoliday(dto.getMonth(), dto.getYear());
+
+            List<UserDetails> employees = userDao.findAllAttendanceEmployees();
+
+            List<EmployeeAttendance> saveList = new ArrayList<>();
+
+            LocalDate currentDate = fromDate;
+            while (!currentDate.isAfter(toDate)) {
+
+                boolean isWeekend = currentDate.getDayOfWeek()
+                                == DayOfWeek.SATURDAY
+                                ||
+                                currentDate.getDayOfWeek()
+                                        == DayOfWeek.SUNDAY;
+
+                boolean isPublicHoliday = dto.getPublicHolidays() != null
+                                &&
+                                dto.getPublicHolidays()
+                                        .contains(currentDate);
+
+                if (!isWeekend && !isPublicHoliday) {
+                    currentDate = currentDate.plusDays(1);
+                    continue;
+                }
+
+                long daysBetween = ChronoUnit.DAYS.between(fromDate, currentDate);
+
+                Integer weekNumber = (int)(daysBetween / 7) + 1;
+
+                if (weekNumber > 5) {
+                    weekNumber = 5;
+                }
+
+                for (UserDetails employee : employees) {
+                    EmployeeAttendance attendance = new EmployeeAttendance();
+                    attendance.setEmployeeId(employee.getUserId());
+                    attendance.setEmployeeName(employee.getUserName());
+                    attendance.setAttendanceDate(currentDate);
+                    attendance.setAttendanceMonth(dto.getMonth());
+                    attendance.setAttendanceYear(dto.getYear());
+                    attendance.setWeekNumber(weekNumber);
+                    attendance.setMonthConfig(config);
+                    attendance.setFromDate(fromDate);
+                    attendance.setToDate(toDate);
+                    attendance.setApprovalStatus("DRAFT");
+                    attendance.setAttendanceValue(1.0);
+                    attendance.setIsLocked(true);
+                    attendance.setIsPaid(true);
+
+                    if (employee.getAssociatedTeamLeadId() != null && !employee.getAssociatedTeamLeadId().isBlank()) {
+
+                        String teamLeadName = userDao.getTeamLeadName(employee.getAssociatedTeamLeadId());
+                        attendance.setReportingManager(teamLeadName);
+
+                    } else {
+
+                        attendance.setReportingManager(employee.getReportingManager());
+                    }
+                    boolean probation = employee.getProbation() == null
+                                    ||
+                                    !employee.getProbation()
+                                            .equalsIgnoreCase("Completed");
+
+                    attendance.setIsProbationEmployee(probation);
+
+                    if (isPublicHoliday) {
+                        attendance.setAttendanceStatus("PH");
+                        attendance.setIsPublicHoliday(true);
+                        attendance.setIsWeekend(false);
+                    } else {
+                        attendance.setAttendanceStatus("WO");
+                        attendance.setIsWeekend(true);
+                        attendance.setIsPublicHoliday(false);
+                    }
+                    saveList.add(attendance);
+                }
+
+                currentDate = currentDate.plusDays(1);
+            }
+
+            attendanceRepository.saveAll(saveList);
+
+            return "Attendance month updated successfully";
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+    public String submitWeekAttendance(Integer month, Integer year, Integer weekNumber) {
+
+        List<EmployeeAttendance> attendanceList = attendanceRepository.findByMonthYearAndWeek(month, year, weekNumber);
+
+        if (attendanceList.isEmpty()) {
+            throw new RuntimeException("No attendance found");
+        }
+
+        for (EmployeeAttendance attendance : attendanceList) {
+            if ("APPROVED".equalsIgnoreCase(
+                    attendance.getApprovalStatus())) {
+
+                throw new RuntimeException("Week already approved");
+            }
+            attendance.setApprovalStatus("SUBMITTED");
+            attendance.setIsLocked(true);
+        }
+        attendanceRepository.saveAll(attendanceList);
+        return "Week submitted successfully";
+    }
+
+    public String approveWeekAttendance(Integer month, Integer year, Integer weekNumber) {
+
+        List<EmployeeAttendance> attendanceList = attendanceRepository.findByMonthYearAndWeek(month, year, weekNumber);
+
+        if (attendanceList.isEmpty()) {
+            throw new RuntimeException("No attendance found");
+        }
+        for (EmployeeAttendance attendance : attendanceList) {
+            attendance.setApprovalStatus("APPROVED");
+            attendance.setIsLocked(true);
+        }
+        attendanceRepository.saveAll(attendanceList);
+        return "Week approved successfully";
+    }
+
+    public String rejectWeekAttendance(Integer month, Integer year, Integer weekNumber) {
+
+        List<EmployeeAttendance> attendanceList = attendanceRepository.findByMonthYearAndWeek(month, year, weekNumber);
+        if (attendanceList.isEmpty()) {
+            throw new RuntimeException("No attendance found");
+        }
+        for (EmployeeAttendance attendance : attendanceList) {
+            attendance.setApprovalStatus("REJECTED");
+            attendance.setIsLocked(false);
+        }
+        attendanceRepository.saveAll(attendanceList);
+        return "Week rejected successfully";
+    }
+
+    public String unlockRejectedWeek(
+            Integer month,
+            Integer year,
+            Integer weekNumber) {
+
+        List<EmployeeAttendance> attendanceList = attendanceRepository.findByMonthYearAndWeek(month, year, weekNumber);
+
+        if (attendanceList.isEmpty()) {
+            throw new RuntimeException("No attendance found");
+        }
+        for (EmployeeAttendance attendance : attendanceList) {
+            if (!"REJECTED".equalsIgnoreCase(attendance.getApprovalStatus())) {
+                throw new RuntimeException("Only rejected weeks can be unlocked");
+            }
+            attendance.setApprovalStatus("DRAFT");
+            attendance.setIsLocked(false);
+        }
+        attendanceRepository.saveAll(attendanceList);
+        return "Week unlocked successfully";
+    }
 }
 
 

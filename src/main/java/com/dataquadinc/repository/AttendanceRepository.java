@@ -239,18 +239,18 @@ public interface AttendanceRepository extends JpaRepository<EmployeeAttendance, 
             String employeeId,
             LocalDate attendanceDate
     );
-       @Modifying
-        @Transactional
-        @Query("""
-        DELETE FROM EmployeeAttendance ea
-        WHERE ea.attendanceMonth = :month
-        AND ea.attendanceYear = :year
-        AND (ea.attendanceStatus = 'WO'
-        OR ea.attendanceStatus = 'PH')
-    """)
-        void deleteWeekOffAndPublicHoliday(
-                @Param("month") Integer month,
-                @Param("year") Integer year
-        );
-    }
+    @Modifying
+    @Transactional
+    @Query("""
+       DELETE FROM EmployeeAttendance ea
+       WHERE ea.attendanceMonth = :month
+       AND ea.attendanceYear = :year
+       AND (ea.attendanceStatus = 'WO'
+            OR ea.attendanceStatus = 'PH')
+            AND ea.approvalStatus <> 'APPROVED'""")
+    void deleteWeekOffAndPublicHoliday(
+            @Param("month") Integer month,
+            @Param("year") Integer year
+    );
+}
 
