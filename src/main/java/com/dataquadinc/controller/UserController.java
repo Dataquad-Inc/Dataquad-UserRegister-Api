@@ -466,6 +466,177 @@ public class UserController {
                             false,
                             e.getMessage(),
                             null,
+                            null));
+        }
+    }
+    @GetMapping("/attendance/employee")
+    public ResponseEntity<?> getEmployeeAttendance(
+            @RequestParam String employeeId,
+            @RequestParam Integer month,
+            @RequestParam Integer year) {
+
+        try {
+
+            List<EmployeeAttendanceViewDto> response = userService.getEmployeeAttendance(employeeId,
+                            month,
+                            year
+                    );
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            "Employee attendance fetched successfully",
+                            response,
+                            null
+                    )
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
+    @PutMapping("/attendance/day/edit")
+    public ResponseEntity<?> editAttendance(
+            @RequestBody AttendanceSaveRequestDto dto) {
+
+        try {
+            String response = userService.editAttendance(dto);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            response,
+                            null,
+                            null
+                    )
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
+    @PutMapping("/attendance/month/edit")
+    public ResponseEntity<?> editAttendanceMonth(
+            @RequestBody AttendanceMonthSetupDto dto) {
+
+        try {
+
+            String response = userService.editAttendanceMonth(dto);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            response,
+                            null,
+                            null
+                    )
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
+    @PostMapping("/attendance/week/submit")
+    public ResponseEntity<?> submitWeekAttendance(
+            @RequestParam Integer month,
+            @RequestParam Integer year,
+            @RequestParam Integer weekNumber) {
+
+        try {
+
+            String response = userService.submitWeekAttendance(month, year, weekNumber);
+            return ResponseEntity.ok(new ApiResponse<>(
+                            true,
+                            response,
+                            null,
+                            null)
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
+    @PostMapping("/attendance/week/approve")
+    public ResponseEntity<?> approveWeekAttendance(
+            @RequestParam Integer month,
+            @RequestParam Integer year,
+            @RequestParam Integer weekNumber) {
+
+        try {
+
+            String response = userService.approveWeekAttendance(month, year, weekNumber);
+
+            return ResponseEntity.ok(new ApiResponse<>(
+                            true,
+                            response,
+                            null,
+                            null
+                    )
+            );
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
+
+    @PostMapping("/attendance/week/reject")
+    public ResponseEntity<?> rejectWeekAttendance(
+            @RequestParam Integer month,
+            @RequestParam Integer year,
+            @RequestParam Integer weekNumber) {
+
+        try {
+            String response = userService.rejectWeekAttendance(month, year, weekNumber);
+
+            return ResponseEntity.ok(new ApiResponse<>(
+                            true,
+                            response,
+                            null,
+                            null
+                    )
+            );
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
                             null
                     )
             );
