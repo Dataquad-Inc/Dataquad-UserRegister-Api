@@ -21,7 +21,13 @@ public class BulkCycleAttendanceResponseDTO {
     private List<String> holidayDates;
     private Map<String, String> holidayNames;
     private List<Integer> weekOffDays;
-    private Integer totalEmployees;
+
+    // ── Pagination metadata ───────────────────────────────────────────────────
+    private Integer totalEmployees;   // total matching the search/filter
+    private Integer totalPages;
+    private Integer pageNumber;       // 0-based (matches Spring Pageable)
+    private Integer pageSize;
+
     private List<EmployeeAttendanceRow> employees;
 
     @Data

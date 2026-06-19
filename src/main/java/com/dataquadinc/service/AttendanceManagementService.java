@@ -56,7 +56,6 @@ public class AttendanceManagementService {
         this.applicationContext   = applicationContext;
     }
 
-    // Helper to get AsyncAttendanceService lazily (avoids circular dependency)
     private AsyncAttendanceService getAsyncAttendanceService() {
         return applicationContext.getBean(AsyncAttendanceService.class);
     }
@@ -79,12 +78,10 @@ public class AttendanceManagementService {
                             + " " + cycleDTO.getAttendanceYear());
         }
 
-        // Overlap check using a dedicated query instead of findAll()
         boolean overlaps = cycleRepository.existsOpenCycleOverlapping(
                 cycleDTO.getStartDate(), cycleDTO.getEndDate());
         if (overlaps) {
-            throw new AttendanceException(
-                    "Cycle dates overlap with an existing OPEN cycle.");
+            throw new AttendanceException("Cycle dates overlap with an existing OPEN cycle.");
         }
 
         AttendanceCycle cycle = new AttendanceCycle();
@@ -96,35 +93,23 @@ public class AttendanceManagementService {
                 (int) (cycleDTO.getEndDate().toEpochDay() - cycleDTO.getStartDate().toEpochDay() + 1));
         cycle.setStatus("OPEN");
         cycle.setCreatedBy(createdBy);
-
         calculateCycleMetrics(cycle);
 
         AttendanceCycle savedCycle = cycleRepository.save(cycle);
-
-        // Flush to ensure the INSERT is sent to DB immediately
         cycleRepository.flush();
 
         final Long savedCycleId = savedCycle.getCycleId();
-
-        // Register a transaction synchronization to trigger async AFTER commit
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                log.info("Transaction COMMITTED for cycle {}. Starting async attendance generation now.", savedCycleId);
+                log.info("Transaction COMMITTED for cycle {}. Starting async attendance generation.", savedCycleId);
                 getAsyncAttendanceService().generateMonthlyAttendanceAsync(savedCycleId, createdBy);
             }
         });
 
-        log.info("Cycle {} created successfully. Attendance generation will start after transaction commit.",
-                savedCycleId);
-
         return convertToCycleResponseDTO(savedCycle);
     }
 
-    /**
-     * Returns all cycles. Uses a lightweight projection query so we only fetch
-     * cycle metadata and avoid loading every attendance row.
-     */
     public List<CycleResponseDTO> getAllCycles() {
         return cycleRepository.findAllByOrderByAttendanceYearDescAttendanceMonthDesc()
                 .stream()
@@ -132,55 +117,73 @@ public class AttendanceManagementService {
                 .collect(Collectors.toList());
     }
 
-    // ==================== OPTIMIZED BULK ATTENDANCE METHOD ====================
+    // ==================== OPTIMIZED BULK ATTENDANCE (SERVER-SIDE PAGINATION) ====================
 
     /**
-     * OPTIMIZED: Get bulk cycle attendance with pagination and filtering
-     * This is the new fast version with pagination, search, and department filters
+     * Returns one page of employees with their attendance data for the cycle.
+     *
+     * <p>Search term is matched (case-insensitive) against:
+     * <ul>
+     *   <li>employeeName (u.userName)</li>
+     *   <li>employeeId (u.userId)</li>
+     *   <li>reportingManager (u.reportingManager)</li>
+     * </ul>
+     *
+     * @param cycleId        target cycle
+     * @param page           0-based page index
+     * @param size           page size
+     * @param search         optional free-text search (null → no filter)
+     * @param department     optional exact department filter (null → no filter)
+     * @param includeSummary ignored – summaries are always fetched
      */
     public BulkCycleAttendanceResponseDTO getBulkCycleAttendance(
             Long cycleId, int page, int size, String search, String department, boolean includeSummary) {
+
         long startTime = System.currentTimeMillis();
 
-        // 1. Get cycle
+        // Normalise: treat blank search strings the same as null
+        String effectiveSearch = (search != null && search.isBlank()) ? null : search;
+        String effectiveDept   = (department != null && department.isBlank()) ? null : department;
+
+        // 1. Validate cycle
         AttendanceCycle cycle = cycleRepository.findById(cycleId)
                 .orElseThrow(() -> new CycleNotFoundException("Cycle not found: " + cycleId));
 
-        // 2. Get paginated employees with filters
-        Pageable pageable = PageRequest.of(page, size);
-        Page<UserDetails> employeePage = userDao.findActiveInEmployeesWithFilters(search, department, pageable);
+        // 2. Paginated employees
+        Pageable pageable = PageRequest.of(page, size, Sort.by("userName").ascending());
+        Page<UserDetails> employeePage = userDao.findActiveInEmployeesWithFilters(
+                effectiveSearch, effectiveDept, pageable);
+
         List<String> employeeIds = employeePage.getContent().stream()
                 .map(UserDetails::getUserId)
                 .collect(Collectors.toList());
 
         if (employeeIds.isEmpty()) {
-            return buildEmptyResponse(cycle);
+            return buildEmptyResponse(cycle, page, size, (int) employeePage.getTotalElements(), employeePage.getTotalPages());
         }
 
-        // 3. Get attendance data - single optimized native query
+        // 3. Attendance data – single native projection query for the page
         List<Object[]> attendanceData = attendanceRepository
                 .findAttendanceProjectionByEmployeeIdsNative(cycleId, employeeIds);
 
-        // 4. Build attendance map
-        final Map<String, Map<String, String>> attendanceByEmployee = new HashMap<>(employeeIds.size());
+        // 4. Build attendance map  empId → (date → status)
+        Map<String, Map<String, String>> attendanceByEmployee = new HashMap<>(employeeIds.size());
         for (Object[] row : attendanceData) {
-            String empId = (String) row[0];
+            String empId   = (String) row[0];
             String dateStr = row[1].toString();
-            String status = (String) row[2];
-            attendanceByEmployee
-                    .computeIfAbsent(empId, k -> new HashMap<>())
-                    .put(dateStr, status);
+            String status  = (String) row[2];
+            attendanceByEmployee.computeIfAbsent(empId, k -> new HashMap<>()).put(dateStr, status);
         }
 
-        // 5. Get summaries - ALWAYS fetch them (ignore includeSummary parameter for now)
-        // This ensures summary data is always populated
+        // 5. Summaries for the current page only
         List<EmployeeAttendanceSummary> summaries = summaryRepository
                 .findByAttendanceCycle_CycleIdAndEmployeeIdIn(cycleId, employeeIds);
-        final Map<String, EmployeeAttendanceSummary> summaryByEmployee = summaries.stream()
+        Map<String, EmployeeAttendanceSummary> summaryByEmployee = summaries.stream()
                 .collect(Collectors.toMap(EmployeeAttendanceSummary::getEmployeeId, s -> s));
 
-        // 6. Get holidays and weekoffs
-        List<Holiday> holidays = holidayRepository.findByHolidayDateBetween(cycle.getStartDate(), cycle.getEndDate());
+        // 6. Holidays and week-offs
+        List<Holiday> holidays = holidayRepository.findByHolidayDateBetween(
+                cycle.getStartDate(), cycle.getEndDate());
         List<String> holidayDates = holidays.stream()
                 .map(h -> h.getHolidayDate().toString())
                 .collect(Collectors.toList());
@@ -192,16 +195,12 @@ public class AttendanceManagementService {
                 .map(WeekOffConfig::getDayOfWeek)
                 .collect(Collectors.toList());
 
-        // 7. Build rows
-        final Map<String, Map<String, String>> finalAttendanceByEmployee = attendanceByEmployee;
-        final Map<String, EmployeeAttendanceSummary> finalSummaryByEmployee = summaryByEmployee;
-        final AttendanceCycle finalCycle = cycle;
-
+        // 7. Build employee rows
         List<BulkCycleAttendanceResponseDTO.EmployeeAttendanceRow> rows = employeePage.getContent().stream()
-                .map(emp -> buildEmployeeAttendanceRow(emp, finalAttendanceByEmployee, finalSummaryByEmployee, finalCycle))
+                .map(emp -> buildEmployeeAttendanceRow(emp, attendanceByEmployee, summaryByEmployee, cycle))
                 .collect(Collectors.toList());
 
-        // 8. Build response
+        // 8. Assemble response with pagination metadata
         BulkCycleAttendanceResponseDTO response = new BulkCycleAttendanceResponseDTO();
         response.setCycleId(cycle.getCycleId());
         response.setCycleStatus(cycle.getStatus());
@@ -216,20 +215,26 @@ public class AttendanceManagementService {
         response.setHolidayDates(holidayDates);
         response.setHolidayNames(holidayNames);
         response.setWeekOffDays(weekOffDays);
-        response.setTotalEmployees((int) employeePage.getTotalElements());
         response.setEmployees(rows);
 
-        log.info("Bulk attendance loaded in {}ms - page {} of {}, {} employees, {} summaries found",
-                System.currentTimeMillis() - startTime, page, employeePage.getTotalPages(),
-                rows.size(), summaryByEmployee.size());
+        // Pagination metadata
+        response.setTotalEmployees((int) employeePage.getTotalElements());
+        response.setTotalPages(employeePage.getTotalPages());
+        response.setPageNumber(employeePage.getNumber());
+        response.setPageSize(employeePage.getSize());
+
+        log.info("Bulk attendance loaded in {}ms — page {}/{}, {} employees on page, {} total, {} summaries",
+                System.currentTimeMillis() - startTime,
+                page, employeePage.getTotalPages(),
+                rows.size(), employeePage.getTotalElements(),
+                summaryByEmployee.size());
 
         return response;
     }
 
-    /**
-     * Build empty response when no employees match the filters
-     */
-    private BulkCycleAttendanceResponseDTO buildEmptyResponse(AttendanceCycle cycle) {
+    private BulkCycleAttendanceResponseDTO buildEmptyResponse(
+            AttendanceCycle cycle, int page, int size, int totalElements, int totalPages) {
+
         BulkCycleAttendanceResponseDTO response = new BulkCycleAttendanceResponseDTO();
         response.setCycleId(cycle.getCycleId());
         response.setCycleStatus(cycle.getStatus());
@@ -241,31 +246,24 @@ public class AttendanceManagementService {
         response.setTotalWorkingDays(cycle.getTotalWorkingDays());
         response.setTotalWeekOffs(cycle.getTotalWeekOffs());
         response.setTotalPublicHolidays(cycle.getTotalPublicHolidays());
-        response.setTotalEmployees(0);
+        response.setTotalEmployees(totalElements);
+        response.setTotalPages(totalPages);
+        response.setPageNumber(page);
+        response.setPageSize(size);
         response.setEmployees(new ArrayList<>());
 
-        // Get holidays and weekoffs
-        List<Holiday> holidays = holidayRepository.findByHolidayDateBetween(cycle.getStartDate(), cycle.getEndDate());
-        List<String> holidayDates = holidays.stream()
-                .map(h -> h.getHolidayDate().toString())
-                .collect(Collectors.toList());
-        Map<String, String> holidayNames = holidays.stream()
-                .collect(Collectors.toMap(h -> h.getHolidayDate().toString(), Holiday::getHolidayName));
-        List<Integer> weekOffDays = weekOffConfigRepository.findByEntity("IN").stream()
+        List<Holiday> holidays = holidayRepository.findByHolidayDateBetween(
+                cycle.getStartDate(), cycle.getEndDate());
+        response.setHolidayDates(holidays.stream()
+                .map(h -> h.getHolidayDate().toString()).collect(Collectors.toList()));
+        response.setHolidayNames(holidays.stream()
+                .collect(Collectors.toMap(h -> h.getHolidayDate().toString(), Holiday::getHolidayName)));
+        response.setWeekOffDays(weekOffConfigRepository.findByEntity("IN").stream()
                 .filter(c -> Boolean.TRUE.equals(c.getIsWeekOff()))
-                .map(WeekOffConfig::getDayOfWeek)
-                .collect(Collectors.toList());
-
-        response.setHolidayDates(holidayDates);
-        response.setHolidayNames(holidayNames);
-        response.setWeekOffDays(weekOffDays);
-
+                .map(WeekOffConfig::getDayOfWeek).collect(Collectors.toList()));
         return response;
     }
 
-    /**
-     * Build employee attendance row from data
-     */
     private BulkCycleAttendanceResponseDTO.EmployeeAttendanceRow buildEmployeeAttendanceRow(
             UserDetails emp,
             Map<String, Map<String, String>> attendanceByEmployee,
@@ -334,14 +332,10 @@ public class AttendanceManagementService {
         LocalDate cur = cycle.getStartDate();
 
         while (!cur.isAfter(cycle.getEndDate())) {
-            int dow = cur.getDayOfWeek().getValue(); // 1=Mon … 7=Sun
-            if (weekOffDays.contains(dow)) {
-                weekOffs++;
-            } else if (holidaySet.contains(cur)) {
-                publicHolidays++;
-            } else {
-                workingDays++;
-            }
+            int dow = cur.getDayOfWeek().getValue();
+            if (weekOffDays.contains(dow))   { weekOffs++; }
+            else if (holidaySet.contains(cur)) { publicHolidays++; }
+            else                               { workingDays++; }
             cur = cur.plusDays(1);
         }
 
@@ -390,11 +384,10 @@ public class AttendanceManagementService {
         cycleRepository.flush();
 
         final Long updatedCycleId = updated.getCycleId();
-
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                log.info("Transaction COMMITTED for updated cycle {}. Starting async attendance regeneration.", updatedCycleId);
+                log.info("Transaction COMMITTED for updated cycle {}. Starting async regeneration.", updatedCycleId);
                 getAsyncAttendanceService().generateMonthlyAttendanceAsync(updatedCycleId, updatedBy);
             }
         });
@@ -430,16 +423,12 @@ public class AttendanceManagementService {
 
     // ==================== CYCLE GENERATION STATUS ====================
 
-    /**
-     * Check the status of attendance generation for a cycle
-     */
     public Map<String, Object> getCycleGenerationStatus(Long cycleId) {
         Map<String, Object> status = new LinkedHashMap<>();
-
         AttendanceCycle cycle = cycleRepository.findById(cycleId)
                 .orElseThrow(() -> new CycleNotFoundException("Cycle not found: " + cycleId));
 
-        long totalRecords = attendanceRepository.countByCycleId(cycleId);
+        long totalRecords   = attendanceRepository.countByCycleId(cycleId);
         long expectedRecords = (long) getActiveINEmployees().size() * cycle.getTotalDaysInCycle();
 
         status.put("cycleId", cycleId);
@@ -448,11 +437,9 @@ public class AttendanceManagementService {
         status.put("expectedRecords", expectedRecords);
         status.put("generationComplete", totalRecords >= expectedRecords);
         status.put("progressPercentage", expectedRecords > 0
-                ? Math.round((totalRecords * 100.0) / expectedRecords * 100.0) / 100.0
-                : 0.0);
+                ? Math.round((totalRecords * 100.0) / expectedRecords * 100.0) / 100.0 : 0.0);
         status.put("attendanceMonth", cycle.getAttendanceMonth());
         status.put("attendanceYear", cycle.getAttendanceYear());
-
         return status;
     }
 
@@ -470,25 +457,17 @@ public class AttendanceManagementService {
 
         AttendanceCycle cycle = getOrCreateCycleForDate(attendanceDate);
         List<UserDetails> activeEmployees = getActiveINEmployees();
-
-        if (activeEmployees.isEmpty()) {
-            throw new AttendanceException("No active employees found");
-        }
+        if (activeEmployees.isEmpty()) throw new AttendanceException("No active employees found");
 
         AttendanceStatus defaultStatus = determineDefaultStatus(attendanceDate);
-
-        // Fetch all existing records for this date in one query
         Set<String> alreadyMarked = attendanceRepository.findByAttendanceDate(attendanceDate)
-                .stream()
-                .map(DailyAttendanceDetail::getEmployeeId)
-                .collect(Collectors.toSet());
+                .stream().map(DailyAttendanceDetail::getEmployeeId).collect(Collectors.toSet());
 
         List<DailyAttendanceDetail> batch = new ArrayList<>();
         int presentMarked = 0, weekOffMarked = 0, holidayMarked = 0;
 
         for (UserDetails emp : activeEmployees) {
             if (alreadyMarked.contains(emp.getUserId())) continue;
-
             DailyAttendanceDetail rec = new DailyAttendanceDetail();
             rec.setEmployeeId(emp.getUserId());
             rec.setAttendanceCycle(cycle);
@@ -496,7 +475,6 @@ public class AttendanceManagementService {
             rec.setStatus(defaultStatus);
             rec.setMarkedBy(markedBy);
             batch.add(rec);
-
             switch (defaultStatus) {
                 case P  -> presentMarked++;
                 case WO -> weekOffMarked++;
@@ -520,51 +498,36 @@ public class AttendanceManagementService {
         return response;
     }
 
-    /**
-     * Generates / fills in missing attendance records for an entire cycle.
-     * Kept for backward compatibility but createCycle now uses async.
-     */
     @Transactional
     public void generateMonthlyAttendance(Long cycleId, String generatedBy) {
         long startTime = System.currentTimeMillis();
-
         AttendanceCycle cycle = cycleRepository.findById(cycleId)
                 .orElseThrow(() -> new CycleNotFoundException("Cycle not found: " + cycleId));
-
         if ("CLOSED".equals(cycle.getStatus())) {
             throw new AttendanceException("Cannot generate attendance for a closed cycle");
         }
 
         List<UserDetails> employees = getActiveINEmployees();
-        if (employees.isEmpty()) {
-            log.warn("No active employees found – skipping attendance generation for cycle {}", cycleId);
-            return;
-        }
+        if (employees.isEmpty()) { log.warn("No active employees – skipping for cycle {}", cycleId); return; }
 
-        // 1. Fetch ALL existing records for this cycle in one query
-        Set<String> existing = attendanceRepository.findAllByCycleId(cycleId)
-                .stream()
+        Set<String> existing = attendanceRepository.findAllByCycleId(cycleId).stream()
                 .map(a -> a.getEmployeeId() + "_" + a.getAttendanceDate())
                 .collect(Collectors.toSet());
 
-        // 2. Build date→status lookup
         List<LocalDate> holidays =
                 holidayRepository.findHolidayDatesBetween(cycle.getStartDate(), cycle.getEndDate());
-        Set<LocalDate>  holidaySet  = new HashSet<>(holidays);
-        Set<Integer>    weekOffDays = getWeekOffDaysSet();
+        Set<LocalDate> holidaySet  = new HashSet<>(holidays);
+        Set<Integer>   weekOffDays = getWeekOffDaysSet();
 
         Map<LocalDate, AttendanceStatus> dateStatusMap = new LinkedHashMap<>();
         for (LocalDate d = cycle.getStartDate(); !d.isAfter(cycle.getEndDate()); d = d.plusDays(1)) {
             dateStatusMap.put(d, determineStatusForDate(d, holidaySet, weekOffDays));
         }
 
-        // 3. Build one big batch
         List<DailyAttendanceDetail> batch = new ArrayList<>();
-
         for (UserDetails emp : employees) {
             for (Map.Entry<LocalDate, AttendanceStatus> entry : dateStatusMap.entrySet()) {
-                String key = emp.getUserId() + "_" + entry.getKey();
-                if (!existing.contains(key)) {
+                if (!existing.contains(emp.getUserId() + "_" + entry.getKey())) {
                     DailyAttendanceDetail rec = new DailyAttendanceDetail();
                     rec.setEmployeeId(emp.getUserId());
                     rec.setAttendanceCycle(cycle);
@@ -576,32 +539,28 @@ public class AttendanceManagementService {
             }
         }
 
-        // 4. Bulk save in chunks
         if (!batch.isEmpty()) {
-            int chunkSize = 500;
-            for (int i = 0; i < batch.size(); i += chunkSize) {
-                attendanceRepository.saveAll(batch.subList(i, Math.min(i + chunkSize, batch.size())));
-            }
+            int chunk = 500;
+            for (int i = 0; i < batch.size(); i += chunk)
+                attendanceRepository.saveAll(batch.subList(i, Math.min(i + chunk, batch.size())));
         }
 
         updateAttendanceSummary(cycleId);
-
-        log.info("generateMonthlyAttendance completed in {}ms: {} new records for cycle {} ({} employees, {} days)",
-                System.currentTimeMillis() - startTime, batch.size(), cycleId,
-                employees.size(), dateStatusMap.size());
+        log.info("generateMonthlyAttendance: {} records for cycle {} in {}ms",
+                batch.size(), cycleId, System.currentTimeMillis() - startTime);
     }
 
     private AttendanceStatus determineStatusForDate(LocalDate date,
                                                     Set<LocalDate> holidaySet,
                                                     Set<Integer> weekOffDays) {
-        if (holidaySet.contains(date))              return AttendanceStatus.PH;
-        if (weekOffDays.contains(date.getDayOfWeek().getValue())) return AttendanceStatus.WO;
+        if (holidaySet.contains(date))                                return AttendanceStatus.PH;
+        if (weekOffDays.contains(date.getDayOfWeek().getValue()))     return AttendanceStatus.WO;
         return AttendanceStatus.P;
     }
 
     private AttendanceStatus determineDefaultStatus(LocalDate date) {
         if (holidayRepository.existsByHolidayDate(date)) return AttendanceStatus.PH;
-        if (isWeekOff(date))                            return AttendanceStatus.WO;
+        if (isWeekOff(date))                             return AttendanceStatus.WO;
         return AttendanceStatus.P;
     }
 
@@ -613,10 +572,8 @@ public class AttendanceManagementService {
         return cycleRepository.findByDate(date).orElseGet(() -> {
             LocalDate start = calculateCycleStartDate(date);
             LocalDate end   = calculateCycleEndDate(date);
-
             AttendanceCycle c = new AttendanceCycle();
-            c.setStartDate(start);
-            c.setEndDate(end);
+            c.setStartDate(start); c.setEndDate(end);
             c.setAttendanceMonth(end.getMonth().toString());
             c.setAttendanceYear(end.getYear());
             c.setTotalDaysInCycle((int) (end.toEpochDay() - start.toEpochDay() + 1));
@@ -647,7 +604,7 @@ public class AttendanceManagementService {
             requestedStatus = request.getStatus();
         } catch (IllegalArgumentException e) {
             throw new InvalidAttendanceStatusException(
-                    "Invalid attendance status: " + request.getStatus() +
+                    "Invalid status: " + request.getStatus() +
                             ". Valid: P, WO, PH, CL, SL, LOP, HD, WFH, SP");
         }
 
@@ -657,14 +614,11 @@ public class AttendanceManagementService {
                         "Attendance not found for " + request.getEmployeeId()
                                 + " on " + request.getAttendanceDate()));
 
-        if (attendance.getStatus() == AttendanceStatus.WO && requestedStatus != AttendanceStatus.WO) {
+        if (attendance.getStatus() == AttendanceStatus.WO && requestedStatus != AttendanceStatus.WO)
             throw new AttendanceException("Cannot change week-off status. Please contact HR.");
-        }
-        if (attendance.getStatus() == AttendanceStatus.PH && requestedStatus != AttendanceStatus.PH) {
+        if (attendance.getStatus() == AttendanceStatus.PH && requestedStatus != AttendanceStatus.PH)
             throw new AttendanceException("Cannot change public-holiday status. Please contact HR.");
-        }
 
-        // Remarks-only update
         if (attendance.getStatus() == requestedStatus) {
             if (request.getRemarks() != null && !request.getRemarks().equals(attendance.getRemarks())) {
                 attendance.setRemarks(request.getRemarks());
@@ -674,14 +628,11 @@ public class AttendanceManagementService {
             return attendance;
         }
 
-        // Leave-policy validation (may also apply sandwich LOP side effects)
         if (leavePolicyService.isLeaveStatus(requestedStatus)) {
             try {
                 requestedStatus = leavePolicyService.validateAndAdjustLeaveStatus(
-                        request.getEmployeeId(),
-                        request.getAttendanceDate(),
-                        requestedStatus,
-                        attendance.getAttendanceCycle().getCycleId());
+                        request.getEmployeeId(), request.getAttendanceDate(),
+                        requestedStatus, attendance.getAttendanceCycle().getCycleId());
             } catch (LeaveQuotaExceededException | SandwichLeaveException | ProbationLeaveException e) {
                 throw e;
             }
@@ -693,24 +644,19 @@ public class AttendanceManagementService {
         attendance.setMarkedBy(markedBy);
 
         DailyAttendanceDetail updated = attendanceRepository.save(attendance);
-
         updateSingleEmployeeSummary(
                 attendance.getAttendanceCycle().getCycleId(),
-                request.getEmployeeId(),
-                oldStatus,
-                requestedStatus);
+                request.getEmployeeId(), oldStatus, requestedStatus);
 
         log.info("Updated attendance for {} on {} in {}ms",
                 request.getEmployeeId(), request.getAttendanceDate(),
                 System.currentTimeMillis() - startTime);
-
         return updated;
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void updateSingleEmployeeSummary(Long cycleId, String employeeId,
-                                            AttendanceStatus oldStatus,
-                                            AttendanceStatus newStatus) {
+                                            AttendanceStatus oldStatus, AttendanceStatus newStatus) {
         AttendanceCycle cycle = cycleRepository.findById(cycleId).orElse(null);
         if (cycle == null) { log.warn("Cycle not found: {}", cycleId); return; }
 
@@ -725,8 +671,7 @@ public class AttendanceManagementService {
 
     private EmployeeAttendanceSummary initializeNewSummary(String employeeId, AttendanceCycle cycle) {
         EmployeeAttendanceSummary s = new EmployeeAttendanceSummary();
-        s.setEmployeeId(employeeId);
-        s.setAttendanceCycle(cycle);
+        s.setEmployeeId(employeeId); s.setAttendanceCycle(cycle);
         s.setTotalWorkingDays(cycle.getTotalWorkingDays());
         s.setTotalWeekOffs(cycle.getTotalWeekOffs());
         s.setTotalPublicHolidays(cycle.getTotalPublicHolidays());
@@ -737,8 +682,7 @@ public class AttendanceManagementService {
     }
 
     private void adjustSummaryForStatusChange(EmployeeAttendanceSummary s,
-                                              AttendanceStatus oldStatus,
-                                              AttendanceStatus newStatus) {
+                                              AttendanceStatus oldStatus, AttendanceStatus newStatus) {
         decrementStatusCount(s, oldStatus);
         incrementStatusCount(s, newStatus);
     }
@@ -771,7 +715,6 @@ public class AttendanceManagementService {
         int totalLeaves = s.getCasualLeaves() + s.getSickLeaves()
                 + s.getLossOfPayLeaves() + s.getSpecialLeaves();
         s.setTotalLeavesTaken(totalLeaves);
-
         int payDays = s.getTotalWorkedDays() + s.getTotalWeekOffs()
                 + s.getTotalPublicHolidays() + s.getCasualLeaves()
                 + s.getSickLeaves() + s.getSpecialLeaves();
@@ -784,21 +727,14 @@ public class AttendanceManagementService {
         if (cycle == null) { log.warn("Cycle not found: {}", cycleId); return; }
 
         List<UserDetails> employees = getActiveINEmployees();
-
-        // Load ALL attendance for this cycle in one query, group in memory
         Map<String, List<DailyAttendanceDetail>> byEmployee =
-                attendanceRepository.findAllByCycleId(cycleId)
-                        .stream()
+                attendanceRepository.findAllByCycleId(cycleId).stream()
                         .collect(Collectors.groupingBy(DailyAttendanceDetail::getEmployeeId));
-
-        // Load all existing summaries
         Map<String, EmployeeAttendanceSummary> existingSummaries =
-                summaryRepository.findByAttendanceCycle_CycleId(cycleId)
-                        .stream()
+                summaryRepository.findByAttendanceCycle_CycleId(cycleId).stream()
                         .collect(Collectors.toMap(EmployeeAttendanceSummary::getEmployeeId, s -> s));
 
         List<EmployeeAttendanceSummary> toSave = new ArrayList<>();
-
         for (UserDetails emp : employees) {
             List<DailyAttendanceDetail> records = byEmployee.getOrDefault(emp.getUserId(), List.of());
             if (records.isEmpty()) continue;
@@ -818,10 +754,8 @@ public class AttendanceManagementService {
             summary.setSickLeaves(cnt.getOrDefault(AttendanceStatus.SL,    0L).intValue());
             summary.setLossOfPayLeaves(cnt.getOrDefault(AttendanceStatus.LOP, 0L).intValue());
             summary.setSpecialLeaves(cnt.getOrDefault(AttendanceStatus.SP,  0L).intValue());
-
-            summary.setTotalLeavesTaken(
-                    summary.getCasualLeaves() + summary.getSickLeaves()
-                            + summary.getLossOfPayLeaves() + summary.getSpecialLeaves());
+            summary.setTotalLeavesTaken(summary.getCasualLeaves() + summary.getSickLeaves()
+                    + summary.getLossOfPayLeaves() + summary.getSpecialLeaves());
 
             double worked = cnt.getOrDefault(AttendanceStatus.P, 0L)
                     + cnt.getOrDefault(AttendanceStatus.WFH, 0L)
@@ -829,13 +763,12 @@ public class AttendanceManagementService {
             summary.setTotalWorkedDays((int) Math.floor(worked));
 
             double payDays = worked
-                    + cnt.getOrDefault(AttendanceStatus.WO,  0L)
-                    + cnt.getOrDefault(AttendanceStatus.PH,  0L)
-                    + cnt.getOrDefault(AttendanceStatus.CL,  0L)
-                    + cnt.getOrDefault(AttendanceStatus.SL,  0L)
-                    + cnt.getOrDefault(AttendanceStatus.SP,  0L);
+                    + cnt.getOrDefault(AttendanceStatus.WO, 0L)
+                    + cnt.getOrDefault(AttendanceStatus.PH, 0L)
+                    + cnt.getOrDefault(AttendanceStatus.CL, 0L)
+                    + cnt.getOrDefault(AttendanceStatus.SL, 0L)
+                    + cnt.getOrDefault(AttendanceStatus.SP, 0L);
             summary.setTotalPayDays((int) Math.floor(payDays));
-
             toSave.add(summary);
         }
 
@@ -848,30 +781,23 @@ public class AttendanceManagementService {
     public List<AttendanceGridResponseDTO> getAttendanceGrid(String employeeId, Long cycleId) {
         AttendanceCycle cycle = cycleRepository.findById(cycleId)
                 .orElseThrow(() -> new CycleNotFoundException("Cycle not found: " + cycleId));
-
         UserDetails employee = getEmployeeById(employeeId);
         if (employee == null) throw new EmployeeNotFoundException("Employee not found: " + employeeId);
 
         Map<LocalDate, DailyAttendanceDetail> attendanceMap =
-                attendanceRepository.findByCycleIdAndEmployeeId(cycleId, employeeId)
-                        .stream()
+                attendanceRepository.findByCycleIdAndEmployeeId(cycleId, employeeId).stream()
                         .collect(Collectors.toMap(DailyAttendanceDetail::getAttendanceDate, a -> a));
 
         DateTimeFormatter dayFmt = DateTimeFormatter.ofPattern("EEEE");
         List<AttendanceGridResponseDTO> grid = new ArrayList<>();
-
         for (LocalDate d = cycle.getStartDate(); !d.isAfter(cycle.getEndDate()); d = d.plusDays(1)) {
             DailyAttendanceDetail rec = attendanceMap.get(d);
             AttendanceStatus status   = rec != null ? rec.getStatus() : AttendanceStatus.P;
-
             AttendanceGridResponseDTO dto = new AttendanceGridResponseDTO();
-            dto.setDate(d);
-            dto.setDay(d.format(dayFmt));
-            dto.setStatus(status.name());
-            dto.setStatusName(status.getDescription());
+            dto.setDate(d); dto.setDay(d.format(dayFmt));
+            dto.setStatus(status.name()); dto.setStatusName(status.getDescription());
             dto.setRemarks(rec != null ? rec.getRemarks() : null);
-            dto.setEmployeeName(employee.getUserName());
-            dto.setDesignation(employee.getDesignation());
+            dto.setEmployeeName(employee.getUserName()); dto.setDesignation(employee.getDesignation());
             grid.add(dto);
         }
         return grid;
@@ -881,19 +807,16 @@ public class AttendanceManagementService {
         EmployeeAttendanceSummary summary = summaryRepository
                 .findByEmployeeIdAndAttendanceCycle_CycleId(employeeId, cycleId)
                 .orElseThrow(() -> new SummaryNotFoundException(
-                        "Summary not found for employee " + employeeId + " in cycle " + cycleId));
+                        "Summary not found for " + employeeId + " in cycle " + cycleId));
 
         AttendanceCycle cycle    = summary.getAttendanceCycle();
         UserDetails     employee = getEmployeeById(employeeId);
         if (employee == null) throw new EmployeeNotFoundException("Employee not found: " + employeeId);
 
         AttendanceSummaryResponseDTO dto = new AttendanceSummaryResponseDTO();
-        dto.setEmployeeId(employeeId);
-        dto.setEmployeeName(employee.getUserName());
-        dto.setDesignation(employee.getDesignation());
-        dto.setDepartment(employee.getDepartment());
-        dto.setAttendanceMonth(cycle.getAttendanceMonth());
-        dto.setAttendanceYear(cycle.getAttendanceYear());
+        dto.setEmployeeId(employeeId); dto.setEmployeeName(employee.getUserName());
+        dto.setDesignation(employee.getDesignation()); dto.setDepartment(employee.getDepartment());
+        dto.setAttendanceMonth(cycle.getAttendanceMonth()); dto.setAttendanceYear(cycle.getAttendanceYear());
         dto.setTotalWorkingDays(summary.getTotalWorkingDays());
         dto.setTotalWeekOffs(summary.getTotalWeekOffs());
         dto.setTotalPublicHolidays(summary.getTotalPublicHolidays());
@@ -904,20 +827,18 @@ public class AttendanceManagementService {
         dto.setTotalLeavesTaken(summary.getTotalLeavesTaken());
         dto.setTotalWorkedDays(summary.getTotalWorkedDays());
         dto.setTotalPayDays(summary.getTotalPayDays());
-
         if (summary.getTotalWorkingDays() != null && summary.getTotalWorkingDays() > 0) {
             double pct = (summary.getTotalWorkedDays() * 100.0) / summary.getTotalWorkingDays();
             dto.setAttendancePercentage(Math.round(pct * 100.0) / 100.0);
         } else {
             dto.setAttendancePercentage(0.0);
         }
-
-        Map<String, Integer> leaveBreakdown = new LinkedHashMap<>();
-        leaveBreakdown.put("Casual Leave (CL)",   summary.getCasualLeaves());
-        leaveBreakdown.put("Sick Leave (SL)",      summary.getSickLeaves());
-        leaveBreakdown.put("Special Leave (SP)",   summary.getSpecialLeaves());
-        leaveBreakdown.put("Loss of Pay (LOP)",    summary.getLossOfPayLeaves());
-        dto.setLeaveBreakdown(leaveBreakdown);
+        Map<String, Integer> breakdown = new LinkedHashMap<>();
+        breakdown.put("Casual Leave (CL)",  summary.getCasualLeaves());
+        breakdown.put("Sick Leave (SL)",     summary.getSickLeaves());
+        breakdown.put("Special Leave (SP)",  summary.getSpecialLeaves());
+        breakdown.put("Loss of Pay (LOP)",   summary.getLossOfPayLeaves());
+        dto.setLeaveBreakdown(breakdown);
         return dto;
     }
 
@@ -937,10 +858,8 @@ public class AttendanceManagementService {
         List<AttendanceGridResponseDTO> content = page.getContent().stream().map(a -> {
             UserDetails emp = getEmployeeById(a.getEmployeeId());
             AttendanceGridResponseDTO dto = new AttendanceGridResponseDTO();
-            dto.setDate(a.getAttendanceDate());
-            dto.setDay(a.getAttendanceDate().format(dayFmt));
-            dto.setStatus(a.getStatus().name());
-            dto.setStatusName(a.getStatus().getDescription());
+            dto.setDate(a.getAttendanceDate()); dto.setDay(a.getAttendanceDate().format(dayFmt));
+            dto.setStatus(a.getStatus().name()); dto.setStatusName(a.getStatus().getDescription());
             dto.setRemarks(a.getRemarks());
             dto.setEmployeeName(emp != null ? emp.getUserName() : "Unknown");
             dto.setDesignation(emp != null ? emp.getDesignation() : "Unknown");
@@ -948,12 +867,9 @@ public class AttendanceManagementService {
         }).collect(Collectors.toList());
 
         PaginatedResponseDTO<AttendanceGridResponseDTO> response = new PaginatedResponseDTO<>();
-        response.setContent(content);
-        response.setPageNumber(page.getNumber());
-        response.setPageSize(page.getSize());
-        response.setTotalElements(page.getTotalElements());
-        response.setTotalPages(page.getTotalPages());
-        response.setLast(page.isLast());
+        response.setContent(content); response.setPageNumber(page.getNumber());
+        response.setPageSize(page.getSize()); response.setTotalElements(page.getTotalElements());
+        response.setTotalPages(page.getTotalPages()); response.setLast(page.isLast());
         return response;
     }
 
@@ -961,23 +877,16 @@ public class AttendanceManagementService {
             String employeeId, LocalDate startDate, LocalDate endDate) {
         UserDetails emp = getEmployeeById(employeeId);
         if (emp == null) throw new EmployeeNotFoundException("Employee not found: " + employeeId);
-
         DateTimeFormatter dayFmt = DateTimeFormatter.ofPattern("EEEE");
-        return attendanceRepository
-                .findByEmployeeIdAndAttendanceDateBetween(employeeId, startDate, endDate)
-                .stream()
-                .map(a -> {
+        return attendanceRepository.findByEmployeeIdAndAttendanceDateBetween(employeeId, startDate, endDate)
+                .stream().map(a -> {
                     AttendanceGridResponseDTO dto = new AttendanceGridResponseDTO();
-                    dto.setDate(a.getAttendanceDate());
-                    dto.setDay(a.getAttendanceDate().format(dayFmt));
-                    dto.setStatus(a.getStatus().name());
-                    dto.setStatusName(a.getStatus().getDescription());
+                    dto.setDate(a.getAttendanceDate()); dto.setDay(a.getAttendanceDate().format(dayFmt));
+                    dto.setStatus(a.getStatus().name()); dto.setStatusName(a.getStatus().getDescription());
                     dto.setRemarks(a.getRemarks());
-                    dto.setEmployeeName(emp.getUserName());
-                    dto.setDesignation(emp.getDesignation());
+                    dto.setEmployeeName(emp.getUserName()); dto.setDesignation(emp.getDesignation());
                     return dto;
-                })
-                .collect(Collectors.toList());
+                }).collect(Collectors.toList());
     }
 
     public Map<String, Object> getAttendanceStatistics(Long cycleId) {
@@ -987,10 +896,8 @@ public class AttendanceManagementService {
                 summaryRepository.findByAttendanceCycle_CycleId(cycleId);
 
         Map<String, Object> stats = new LinkedHashMap<>();
-        stats.put("cycleId",     cycle.getCycleId());
-        stats.put("cycleMonth",  cycle.getAttendanceMonth());
-        stats.put("cycleYear",   cycle.getAttendanceYear());
-        stats.put("cycleStatus", cycle.getStatus());
+        stats.put("cycleId", cycle.getCycleId()); stats.put("cycleMonth", cycle.getAttendanceMonth());
+        stats.put("cycleYear", cycle.getAttendanceYear()); stats.put("cycleStatus", cycle.getStatus());
         stats.put("totalEmployees", summaries.size());
         stats.put("totalPresentDays",  summaries.stream().mapToInt(EmployeeAttendanceSummary::getTotalWorkedDays).sum());
         stats.put("totalLeavesTaken",  summaries.stream().mapToInt(EmployeeAttendanceSummary::getTotalLeavesTaken).sum());
@@ -999,7 +906,6 @@ public class AttendanceManagementService {
                 .mapToDouble(s -> (s.getTotalWorkedDays() * 100.0) / s.getTotalWorkingDays())
                 .average().orElse(0);
         stats.put("averageAttendancePercentage", Math.round(avgAtt * 100.0) / 100.0);
-
         Map<String, Integer> leaveSummary = new LinkedHashMap<>();
         leaveSummary.put("Casual Leave (CL)",  summaries.stream().mapToInt(EmployeeAttendanceSummary::getCasualLeaves).sum());
         leaveSummary.put("Sick Leave (SL)",    summaries.stream().mapToInt(EmployeeAttendanceSummary::getSickLeaves).sum());
@@ -1013,19 +919,12 @@ public class AttendanceManagementService {
     public void processBulkAttendanceUpdate(List<MarkAttendanceRequestDTO> requests, String userId) {
         int success = 0, failure = 0;
         for (MarkAttendanceRequestDTO req : requests) {
-            try {
-                updateAttendance(req, userId);
-                success++;
-            } catch (Exception e) {
-                failure++;
-                log.error("Bulk update failed for {} on {}: {}",
-                        req.getEmployeeId(), req.getAttendanceDate(), e.getMessage());
-            }
+            try { updateAttendance(req, userId); success++; }
+            catch (Exception e) { failure++; log.error("Bulk update failed for {} on {}: {}", req.getEmployeeId(), req.getAttendanceDate(), e.getMessage()); }
         }
         log.info("Bulk update done. Success: {}, Failure: {}", success, failure);
-        if (failure > 0 && success == 0) {
+        if (failure > 0 && success == 0)
             throw new BulkAttendanceException("Bulk attendance update failed for all records");
-        }
     }
 
     // ==================== HELPERS ====================
@@ -1041,20 +940,13 @@ public class AttendanceManagementService {
     private CycleResponseDTO convertToCycleResponseDTO(AttendanceCycle c) {
         if (c == null) return null;
         CycleResponseDTO dto = new CycleResponseDTO();
-        dto.setCycleId(c.getCycleId());
-        dto.setAttendanceMonth(c.getAttendanceMonth());
-        dto.setAttendanceYear(c.getAttendanceYear());
-        dto.setStartDate(c.getStartDate());
-        dto.setEndDate(c.getEndDate());
-        dto.setTotalDaysInCycle(c.getTotalDaysInCycle());
-        dto.setTotalWorkingDays(c.getTotalWorkingDays());
-        dto.setTotalWeekOffs(c.getTotalWeekOffs());
-        dto.setTotalPublicHolidays(c.getTotalPublicHolidays());
-        dto.setStatus(c.getStatus());
-        dto.setCreatedAt(c.getCreatedAt());
-        dto.setUpdatedAt(c.getUpdatedAt());
-        dto.setCreatedBy(c.getCreatedBy());
-        dto.setUpdatedBy(c.getUpdatedBy());
+        dto.setCycleId(c.getCycleId()); dto.setAttendanceMonth(c.getAttendanceMonth());
+        dto.setAttendanceYear(c.getAttendanceYear()); dto.setStartDate(c.getStartDate());
+        dto.setEndDate(c.getEndDate()); dto.setTotalDaysInCycle(c.getTotalDaysInCycle());
+        dto.setTotalWorkingDays(c.getTotalWorkingDays()); dto.setTotalWeekOffs(c.getTotalWeekOffs());
+        dto.setTotalPublicHolidays(c.getTotalPublicHolidays()); dto.setStatus(c.getStatus());
+        dto.setCreatedAt(c.getCreatedAt()); dto.setUpdatedAt(c.getUpdatedAt());
+        dto.setCreatedBy(c.getCreatedBy()); dto.setUpdatedBy(c.getUpdatedBy());
         return dto;
     }
 }
