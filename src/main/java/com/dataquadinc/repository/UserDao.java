@@ -271,10 +271,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
 
     // ============ NEW METHODS FOR ATTENDANCE SYSTEM ============
 
-    /**
-     * Get all active IN employees excluding external candidates (Candidate designation)
-     * This is used for attendance generation
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -282,17 +278,11 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "AND u.designation <> 'testuser'")
     List<UserDetails> findAllActiveInEmployeesExcludingExternal();
 
-    /**
-     * Get all active IN employees including external candidates
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE'")
     List<UserDetails> findAllActiveInEmployees();
 
-    /**
-     * Get active IN employees by department
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -301,9 +291,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "AND u.department = :department")
     List<UserDetails> findActiveInEmployeesByDepartment(@Param("department") String department);
 
-    /**
-     * Get active IN employees by reporting manager
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -312,9 +299,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "AND u.reportingManager = :managerId")
     List<UserDetails> findActiveInEmployeesByReportingManager(@Param("managerId") String managerId);
 
-    /**
-     * Get active IN employees by designation
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -323,9 +307,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "AND u.designation = :designation")
     List<UserDetails> findActiveInEmployeesByDesignation(@Param("designation") String designation);
 
-    /**
-     * Get active IN employees with pagination
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -333,9 +314,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "AND u.designation <> 'testuser'")
     Page<UserDetails> findActiveInEmployeesWithPagination(Pageable pageable);
 
-    /**
-     * Count active IN employees excluding external
-     */
     @Query("SELECT COUNT(u) FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -343,9 +321,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "AND u.designation <> 'testuser'")
     long countActiveInEmployeesExcludingExternal();
 
-    /**
-     * Get active IN employees by joining date range
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -356,9 +331,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
 
-    /**
-     * Get active IN employees with PF/ESI status
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -370,18 +342,12 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             @Param("hasPF") Boolean hasPF,
             @Param("hasESI") Boolean hasESI);
 
-    /**
-     * Get employee by user ID with active status check
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.userId = :userId " +
             "AND u.entity = 'IN' " +
             "AND u.status = 'ACTIVE'")
     UserDetails findActiveInEmployeeByUserId(@Param("userId") String userId);
 
-    /**
-     * Get employees by multiple user IDs
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.userId IN :userIds " +
             "AND u.entity = 'IN' " +
@@ -389,9 +355,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "AND u.designation <> 'Candidate'")
     List<UserDetails> findActiveInEmployeesByUserIds(@Param("userIds") List<String> userIds);
 
-    /**
-     * Get all active employees (both IN and US) for future multi-entity support
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity IN :entities " +
             "AND u.status = 'ACTIVE' " +
@@ -399,9 +362,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "AND u.designation <> 'testuser'")
     List<UserDetails> findAllActiveEmployeesByEntities(@Param("entities") List<String> entities);
 
-    /**
-     * Search employees by name or ID for attendance marking
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -411,9 +371,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
     Page<UserDetails> searchActiveInEmployees(@Param("searchTerm") String searchTerm, Pageable pageable);
 
-    /**
-     * Get employees on probation
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -421,9 +378,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "AND u.probation = 'YES'")
     List<UserDetails> findActiveInEmployeesOnProbation();
 
-    /**
-     * Get employees by team
-     */
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -431,9 +385,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "AND u.teamName = :teamName")
     List<UserDetails> findActiveInEmployeesByTeam(@Param("teamName") String teamName);
 
-    /**
-     * Get count of employees by department (for dashboard)
-     */
     @Query("SELECT u.department, COUNT(u) FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'ACTIVE' " +
@@ -441,16 +392,14 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "GROUP BY u.department")
     List<Object[]> getEmployeeCountByDepartment();
 
-    // ============ NEW OPTIMIZED METHODS FOR BULK ATTENDANCE ============
+    // ============ OPTIMIZED METHODS FOR BULK ATTENDANCE ============
 
     /**
-     * Get paginated active IN employees with search and department filters
-     * This is used for the optimized bulk attendance endpoint
+     * Paginated active IN employees with search across name, userId, AND reportingManager.
+     * Used by the server-side paginated bulk attendance endpoint.
      *
-     * @param search search term for employee name or ID (optional)
-     * @param department department filter (optional)
-     * @param pageable pagination information
-     * @return Page of UserDetails matching the filters
+     * search  – matched against userName, userId, and reportingManager (case-insensitive LIKE)
+     * department – exact match filter (optional)
      */
     @Query("""
             SELECT u FROM UserDetails u 
@@ -458,8 +407,10 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             AND u.status = 'ACTIVE' 
             AND u.designation <> 'Candidate' 
             AND u.designation <> 'testuser'
-            AND (:search IS NULL OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :search, '%'))
-                 OR LOWER(u.userId) LIKE LOWER(CONCAT('%', :search, '%')))
+            AND (:search IS NULL OR 
+                 LOWER(u.userName) LIKE LOWER(CONCAT('%', :search, '%')) OR
+                 LOWER(u.userId)   LIKE LOWER(CONCAT('%', :search, '%')) OR
+                 LOWER(u.reportingManager) LIKE LOWER(CONCAT('%', :search, '%')))
             AND (:department IS NULL OR u.department = :department)
             """)
     Page<UserDetails> findActiveInEmployeesWithFilters(
@@ -467,12 +418,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             @Param("department") String department,
             Pageable pageable);
 
-    /**
-     * Get just employee IDs for a cycle - lightweight query
-     * Used for bulk operations where only IDs are needed
-     *
-     * @return List of active employee IDs
-     */
     @Query("""
             SELECT u.userId FROM UserDetails u 
             WHERE u.entity = 'IN' 
@@ -482,12 +427,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             """)
     List<String> findAllActiveInEmployeeIds();
 
-    /**
-     * Get active employees with their basic info for attendance grid
-     * Lightweight projection to avoid loading full entities
-     *
-     * @return List of Object arrays [userId, userName, designation, department]
-     */
     @Query("""
             SELECT u.userId, u.userName, u.designation, u.department 
             FROM UserDetails u 
@@ -499,9 +438,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             """)
     List<Object[]> findActiveEmployeeProjection();
 
-    /**
-     * Get active employees by department with pagination
-     */
     @Query("""
             SELECT u FROM UserDetails u 
             WHERE u.entity = 'IN' 
@@ -514,9 +450,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             @Param("department") String department,
             Pageable pageable);
 
-    /**
-     * Get active employees by search term with pagination
-     */
     @Query("""
             SELECT u FROM UserDetails u 
             WHERE u.entity = 'IN' 
@@ -532,9 +465,6 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             @Param("search") String search,
             Pageable pageable);
 
-    /**
-     * Get count of active employees by department with filters
-     */
     @Query("""
             SELECT u.department, COUNT(u) 
             FROM UserDetails u 
