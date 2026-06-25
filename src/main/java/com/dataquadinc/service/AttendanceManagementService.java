@@ -614,8 +614,7 @@ public class AttendanceManagementService {
                         "Attendance not found for " + request.getEmployeeId()
                                 + " on " + request.getAttendanceDate()));
 
-        if (attendance.getStatus() == AttendanceStatus.WO && requestedStatus != AttendanceStatus.WO)
-            throw new AttendanceException("Cannot change week-off status. Please contact HR.");
+
         if (attendance.getStatus() == AttendanceStatus.PH && requestedStatus != AttendanceStatus.PH)
             throw new AttendanceException("Cannot change public-holiday status. Please contact HR.");
 
