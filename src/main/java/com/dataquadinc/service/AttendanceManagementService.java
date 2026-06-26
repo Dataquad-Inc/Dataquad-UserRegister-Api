@@ -654,20 +654,94 @@ public class AttendanceManagementService {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
-    public void updateSingleEmployeeSummary(Long cycleId, String employeeId,
-                                            AttendanceStatus oldStatus, AttendanceStatus newStatus) {
+    public void updateSingleEmployeeSummary(Long cycleId,
+                                            String employeeId,
+                                            AttendanceStatus oldStatus,
+                                            AttendanceStatus newStatus) {
+
         AttendanceCycle cycle = cycleRepository.findById(cycleId).orElse(null);
-        if (cycle == null) { log.warn("Cycle not found: {}", cycleId); return; }
+
+        if (cycle == null) {
+            log.warn("Cycle not found: {}", cycleId);
+            return;
+        }
+
+        List<DailyAttendanceDetail> records =
+                attendanceRepository.findByCycleIdAndEmployeeId(cycleId, employeeId);
+
+        if (records.isEmpty()) {
+            log.warn("No attendance records found for employee {} in cycle {}",
+                    employeeId, cycleId);
+            return;
+        }
 
         EmployeeAttendanceSummary summary = summaryRepository
                 .findByEmployeeIdAndAttendanceCycle_CycleId(employeeId, cycleId)
                 .orElseGet(() -> initializeNewSummary(employeeId, cycle));
 
-        adjustSummaryForStatusChange(summary, oldStatus, newStatus);
-        recalculateSummaryTotals(summary);
-        summaryRepository.save(summary);
-    }
+        Map<AttendanceStatus, Long> cnt = records.stream()
+                .collect(Collectors.groupingBy(
+                        DailyAttendanceDetail::getStatus,
+                        Collectors.counting()));
 
+        int actualWeekOffs =
+                cnt.getOrDefault(AttendanceStatus.WO, 0L).intValue();
+
+        int actualPublicHolidays =
+                cnt.getOrDefault(AttendanceStatus.PH, 0L).intValue();
+
+        summary.setEmployeeId(employeeId);
+        summary.setAttendanceCycle(cycle);
+
+        summary.setTotalWeekOffs(actualWeekOffs);
+        summary.setTotalPublicHolidays(actualPublicHolidays);
+
+        summary.setTotalWorkingDays(
+                cycle.getTotalDaysInCycle()
+                        - actualWeekOffs
+                        - actualPublicHolidays
+        );
+
+        summary.setCasualLeaves(
+                cnt.getOrDefault(AttendanceStatus.CL, 0L).intValue());
+
+        summary.setSickLeaves(
+                cnt.getOrDefault(AttendanceStatus.SL, 0L).intValue());
+
+        summary.setLossOfPayLeaves(
+                cnt.getOrDefault(AttendanceStatus.LOP, 0L).intValue());
+
+        summary.setSpecialLeaves(
+                cnt.getOrDefault(AttendanceStatus.SP, 0L).intValue());
+
+        summary.setTotalLeavesTaken(
+                summary.getCasualLeaves()
+                        + summary.getSickLeaves()
+                        + summary.getLossOfPayLeaves()
+                        + summary.getSpecialLeaves());
+
+        double workedDays =
+                cnt.getOrDefault(AttendanceStatus.P, 0L)
+                        + cnt.getOrDefault(AttendanceStatus.WFH, 0L)
+                        + (cnt.getOrDefault(AttendanceStatus.HD, 0L) * 0.5);
+
+        summary.setTotalWorkedDays((int) Math.floor(workedDays));
+
+        double payDays =
+                workedDays
+                        + cnt.getOrDefault(AttendanceStatus.WO, 0L)
+                        + cnt.getOrDefault(AttendanceStatus.PH, 0L)
+                        + cnt.getOrDefault(AttendanceStatus.CL, 0L)
+                        + cnt.getOrDefault(AttendanceStatus.SL, 0L)
+                        + cnt.getOrDefault(AttendanceStatus.SP, 0L);
+
+        summary.setTotalPayDays((int) Math.floor(payDays));
+
+        summaryRepository.save(summary);
+
+        log.info("Summary recalculated for employee {} in cycle {}",
+                employeeId, cycleId);
+    }
     private EmployeeAttendanceSummary initializeNewSummary(String employeeId, AttendanceCycle cycle) {
         EmployeeAttendanceSummary s = new EmployeeAttendanceSummary();
         s.setEmployeeId(employeeId); s.setAttendanceCycle(cycle);
@@ -745,10 +819,20 @@ public class AttendanceManagementService {
 
             Map<AttendanceStatus, Long> cnt = records.stream()
                     .collect(Collectors.groupingBy(DailyAttendanceDetail::getStatus, Collectors.counting()));
+            int actualWeekOffs =
+                    cnt.getOrDefault(AttendanceStatus.WO, 0L).intValue();
 
-            summary.setTotalWorkingDays(cycle.getTotalWorkingDays());
-            summary.setTotalWeekOffs(cycle.getTotalWeekOffs());
-            summary.setTotalPublicHolidays(cycle.getTotalPublicHolidays());
+            int actualPublicHolidays =
+                    cnt.getOrDefault(AttendanceStatus.PH, 0L).intValue();
+
+            summary.setTotalWeekOffs(actualWeekOffs);
+            summary.setTotalPublicHolidays(actualPublicHolidays);
+
+            summary.setTotalWorkingDays(
+                    cycle.getTotalDaysInCycle()
+                            - actualWeekOffs
+                            - actualPublicHolidays
+            );
             summary.setCasualLeaves(cnt.getOrDefault(AttendanceStatus.CL,  0L).intValue());
             summary.setSickLeaves(cnt.getOrDefault(AttendanceStatus.SL,    0L).intValue());
             summary.setLossOfPayLeaves(cnt.getOrDefault(AttendanceStatus.LOP, 0L).intValue());

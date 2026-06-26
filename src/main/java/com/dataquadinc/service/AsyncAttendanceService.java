@@ -203,9 +203,21 @@ public class AsyncAttendanceService {
                 Map<AttendanceStatus, Long> cnt = records.stream()
                         .collect(Collectors.groupingBy(DailyAttendanceDetail::getStatus, Collectors.counting()));
 
-                summary.setTotalWorkingDays(cycle.getTotalWorkingDays());
-                summary.setTotalWeekOffs(cycle.getTotalWeekOffs());
-                summary.setTotalPublicHolidays(cycle.getTotalPublicHolidays());
+
+                int actualWeekOffs =
+                        cnt.getOrDefault(AttendanceStatus.WO, 0L).intValue();
+
+                int actualPublicHolidays =
+                        cnt.getOrDefault(AttendanceStatus.PH, 0L).intValue();
+
+                summary.setTotalWeekOffs(actualWeekOffs);
+                summary.setTotalPublicHolidays(actualPublicHolidays);
+
+                summary.setTotalWorkingDays(
+                        cycle.getTotalDaysInCycle()
+                                - actualWeekOffs
+                                - actualPublicHolidays
+                );
                 summary.setCasualLeaves(cnt.getOrDefault(AttendanceStatus.CL,  0L).intValue());
                 summary.setSickLeaves(cnt.getOrDefault(AttendanceStatus.SL,    0L).intValue());
                 summary.setLossOfPayLeaves(cnt.getOrDefault(AttendanceStatus.LOP, 0L).intValue());
