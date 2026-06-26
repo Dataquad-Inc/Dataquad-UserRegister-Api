@@ -251,10 +251,13 @@ public class TeamService {
     public List<AssociatedToTeamLeadResponse> getAllUsersAssociatedToTeamLead(String entity) {
         List<AssociatedToTeamLeadResponse> result = new ArrayList<>();
 
+        List<UserDetails> activeUsers = userDao.findAll().stream()
+                .filter(this::isActiveUser)
+                .toList();
+
         // Get all team leads in the entity (including BDMs acting as team leads)
-        List<UserDetails> teamLeads = userDao.findAll().stream()
+        List<UserDetails> teamLeads = activeUsers.stream()
                 .filter(userDetails -> entity.equalsIgnoreCase(userDetails.getEntity()))
-                .filter(userDetails -> userDetails.getStatus().equalsIgnoreCase("ACTIVE"))
                 .filter(userDetails -> {
                     // Check if user has TEAMLEAD role OR BDM role
                     boolean hasTeamLeadRole = userDetails.getRoles().stream()
@@ -270,8 +273,6 @@ public class TeamService {
                 })
                 .toList();
 
-        List<UserDetails> allUsers = userDao.findAll();
-
         for (UserDetails teamLeadUser : teamLeads) {
             List<AssociatedUser> salesExecutives = new ArrayList<>();
             List<AssociatedUser> recruiters = new ArrayList<>();
@@ -281,7 +282,7 @@ public class TeamService {
             List<AssociatedUser> teamLeadsList = new ArrayList<>();
 
 
-            for (UserDetails user : allUsers) {
+            for (UserDetails user : activeUsers) {
                 if (user.getTeamAssignments() != null) {
                     boolean assignedToThisLead = user.getTeamAssignments().stream()
                             .anyMatch(t -> t.getTeamLeadId().equals(teamLeadUser.getUserId()));
@@ -331,6 +332,10 @@ public class TeamService {
             result.add(response);
         }
         return result;
+    }
+
+    private boolean isActiveUser(UserDetails userDetails) {
+        return userDetails != null && "ACTIVE".equalsIgnoreCase(userDetails.getStatus());
     }
 
     public String getTeamLeadIdByUserId(String userId) {
