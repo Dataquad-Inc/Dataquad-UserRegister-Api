@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -66,6 +67,8 @@ public class EmployeeWithRole
     private String pan;
     private String adhar;
     private String entity;
+    @JsonProperty("last_login_time")
+    private LocalDateTime lastLoginTime;
 
 
 //    public EmployeeWithRole(String employeeId, String employeeName, String roles,String email) {
@@ -137,6 +140,7 @@ public class EmployeeWithRole
         employee.setPan(user.getPan());
         employee.setAdhar(user.getAdhar());
         employee.setEntity(user.getEntity());
+        employee.setLastLoginTime(user.getLastLoginTime());
         return employee;
     }
 
