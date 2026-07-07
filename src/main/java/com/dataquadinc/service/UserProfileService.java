@@ -76,9 +76,18 @@ public class UserProfileService {
         updateField(dto.getIfscCode(), user.getIfscCode(), "IFSC Code", user::setIfscCode, updatedFields);
         updateBooleanField(dto.getIsEmployeeHavingPF(), user.getIsEmployeeHavingPF(), "Employee Having PF", user::setIsEmployeeHavingPF, updatedFields);
         updateBooleanField(dto.getIsEmployeeHavingESI(), user.getIsEmployeeHavingESI(), "Employee Having ESI", user::setIsEmployeeHavingESI, updatedFields);
-        updateField(dto.getEsiNumber(), user.getEsiNumber(), "ESI Number", user::setEsiNumber, updatedFields);
-        updateField(dto.getUanNumber(), user.getUanNumber(), "UAN Number", user::setUanNumber, updatedFields);
-        updateField(dto.getPfNumber(), user.getPfNumber(), "PF Number", user::setPfNumber, updatedFields);
+        if (Boolean.FALSE.equals(dto.getIsEmployeeHavingESI())) {
+            clearField(user.getEsiNumber(), "ESI Number", user::setEsiNumber, updatedFields);
+        } else {
+            updateField(dto.getEsiNumber(), user.getEsiNumber(), "ESI Number", user::setEsiNumber, updatedFields);
+        }
+        if (Boolean.FALSE.equals(dto.getIsEmployeeHavingPF())) {
+            clearField(user.getUanNumber(), "UAN Number", user::setUanNumber, updatedFields);
+            clearField(user.getPfNumber(), "PF Number", user::setPfNumber, updatedFields);
+        } else {
+            updateField(dto.getUanNumber(), user.getUanNumber(), "UAN Number", user::setUanNumber, updatedFields);
+            updateField(dto.getPfNumber(), user.getPfNumber(), "PF Number", user::setPfNumber, updatedFields);
+        }
         updateField(dto.getPayrollPanNumber(), user.getPayrollPanNumber(), "Payroll PAN Number", user::setPayrollPanNumber, updatedFields);
         updateField(dto.getPayrollAadharNumber(), user.getPayrollAadharNumber(), "Payroll Aadhar Number", user::setPayrollAadharNumber, updatedFields);
         updateField(firstNonNull(dto.getClearanceForm(), dto.getClearnessForm()), user.getClearnessForm(), "Clearance Form", user::setClearnessForm, updatedFields);
@@ -166,6 +175,15 @@ public class UserProfileService {
             setter.accept(newValue);
             updates.put(fieldName, newValue);
             logger.debug("Updated field: {} -> {}", fieldName, newValue);
+        }
+    }
+
+    private void clearField(String oldValue, String fieldName,
+                            java.util.function.Consumer<String> setter, Map<String, String> updates) {
+        if (oldValue != null) {
+            setter.accept(null);
+            updates.put(fieldName, "");
+            logger.debug("Cleared field: {}", fieldName);
         }
     }
 
