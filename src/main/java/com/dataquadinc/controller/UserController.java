@@ -444,11 +444,13 @@ public class UserController {
     @GetMapping("/attendance/dashboard")
     public ResponseEntity<?> getAttendanceDashboard(
             @RequestParam Integer month,
-            @RequestParam Integer year) {
+            @RequestParam Integer year,
+            @RequestParam String entity) {
 
         try {
 
-            List<AttendanceDashboardResponseDto> response = userService.getAttendanceDashboard(month, year);
+            List<AttendanceDashboardResponseDto> response =
+                    userService.getAttendanceDashboard(month, year, entity);
 
             return ResponseEntity.ok(
                     new ApiResponse<>(
@@ -466,7 +468,9 @@ public class UserController {
                             false,
                             e.getMessage(),
                             null,
-                            null));
+                            null
+                    )
+            );
         }
     }
     @GetMapping("/attendance/employee")
@@ -533,11 +537,12 @@ public class UserController {
     }
     @PutMapping("/attendance/month/edit")
     public ResponseEntity<?> editAttendanceMonth(
-            @RequestBody AttendanceMonthSetupDto dto) {
+            @RequestBody AttendanceMonthSetupDto dto,
+            @RequestParam String entity) {
 
         try {
 
-            String response = userService.editAttendanceMonth(dto);
+            String response = userService.editAttendanceMonth(dto, entity);
 
             return ResponseEntity.ok(
                     new ApiResponse<>(

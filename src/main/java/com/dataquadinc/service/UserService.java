@@ -1344,7 +1344,8 @@ public class UserService {
 
     public List<AttendanceDashboardResponseDto> getAttendanceDashboard(
             Integer month,
-            Integer year) {
+            Integer year,
+            String entity){
 
         try {
             List<AttendanceDashboardResponseDto> responseList = new ArrayList<>();
@@ -1360,7 +1361,7 @@ public class UserService {
                                     )
                             );
 
-            List<UserDetails> employees = userDao.findAllAttendanceEmployees();
+            List<UserDetails> employees = userDao.findAllAttendanceEmployeesByEntity(entity);
             int serialNo = 1;
             for (UserDetails employee : employees) {
                 AttendanceDashboardResponseDto dto = new AttendanceDashboardResponseDto();
@@ -1723,7 +1724,7 @@ public class UserService {
             throw new RuntimeException(e.getMessage());
         }
     }
-    public String editAttendanceMonth(AttendanceMonthSetupDto dto) {
+    public String editAttendanceMonth(AttendanceMonthSetupDto dto, String entity) {
         try {
 
             AttendanceMonthConfig config = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYear(
@@ -1747,7 +1748,7 @@ public class UserService {
             attendanceMonthConfigRepository.save(config);
             attendanceRepository.deleteWeekOffAndPublicHoliday(dto.getMonth(), dto.getYear());
 
-            List<UserDetails> employees = userDao.findAllAttendanceEmployees();
+            List<UserDetails> employees = userDao.findAllAttendanceEmployeesByEntity(entity);
 
             List<EmployeeAttendance> saveList = new ArrayList<>();
 
