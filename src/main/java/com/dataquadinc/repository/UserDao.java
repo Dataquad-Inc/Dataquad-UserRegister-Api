@@ -238,14 +238,15 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
     );
 
     @Query("""
-        SELECT u
-        FROM UserDetails u
-        WHERE u.entity = 'IN'
-        AND u.status = 'ACTIVE'
-        AND u.designation <> 'testuser'
-        ORDER BY u.userId
-        """)
-    List<UserDetails> findAllAttendanceEmployees();
+    SELECT u
+    FROM UserDetails u
+    WHERE u.entity = :entity
+    AND u.status = 'ACTIVE'
+    AND u.designation <> 'testuser'
+    ORDER BY u.userId
+    """)
+    List<UserDetails> findAllAttendanceEmployeesByEntity(
+            @Param("entity") String entity);
 
     @Query("""
         SELECT u.userName
