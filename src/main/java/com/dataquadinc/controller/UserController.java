@@ -477,14 +477,17 @@ public class UserController {
     public ResponseEntity<?> getEmployeeAttendance(
             @RequestParam String employeeId,
             @RequestParam Integer month,
-            @RequestParam Integer year) {
+            @RequestParam Integer year,
+            @RequestParam String entity) {
 
         try {
 
-            List<EmployeeAttendanceViewDto> response = userService.getEmployeeAttendance(employeeId,
+            List<EmployeeAttendanceViewDto> response =
+                    userService.getEmployeeAttendance(
+                            employeeId,
                             month,
-                            year
-                    );
+                            year,
+                            entity);
 
             return ResponseEntity.ok(
                     new ApiResponse<>(
