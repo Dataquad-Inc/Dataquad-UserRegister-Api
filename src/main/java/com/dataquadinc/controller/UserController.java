@@ -650,4 +650,34 @@ public class UserController {
             );
         }
     }
+    @GetMapping("/attendance/month/holidays")
+    public ResponseEntity<?> getAttendanceMonthHolidays(
+            @RequestParam Integer month,
+            @RequestParam Integer year) {
+
+        try {
+
+            List<LocalDate> response = userService.getAttendanceMonthHolidays(month, year);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            "Attendance holidays fetched successfully",
+                            response,
+                            null
+                    )
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
 }
