@@ -1933,6 +1933,25 @@ public class UserService {
         attendanceRepository.saveAll(attendanceList);
         return "Week unlocked successfully";
     }
+    public List<LocalDate> getAttendanceMonthHolidays(Integer month, Integer year) {
+
+        try {
+
+            AttendanceMonthConfig config = attendanceMonthConfigRepository
+                            . findByAttendanceMonthAndAttendanceYear(
+                                    month,
+                                    year)
+                            .orElseThrow(() ->
+                                    new RuntimeException("Attendance month not configured"));
+
+            return config.getPublicHolidays();
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
 }
 
 
