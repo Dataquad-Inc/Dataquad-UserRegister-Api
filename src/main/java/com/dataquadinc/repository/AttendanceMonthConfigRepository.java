@@ -9,8 +9,9 @@ public interface AttendanceMonthConfigRepository
         extends JpaRepository<AttendanceMonthConfig, Long> {
 
     Optional<AttendanceMonthConfig>
-    findByAttendanceMonthAndAttendanceYear(
+    findByAttendanceMonthAndAttendanceYearAndEntity(
             Integer attendanceMonth,
-            Integer attendanceYear
+            Integer attendanceYear,
+            String entity
     );
 }

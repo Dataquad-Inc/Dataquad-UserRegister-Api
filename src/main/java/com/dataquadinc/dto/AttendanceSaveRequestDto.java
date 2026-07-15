@@ -14,5 +14,7 @@ public class AttendanceSaveRequestDto {
 
     private Integer attendanceYear;
 
+    private String entity;
+
     private List<EmployeeAttendanceDto> employees;
 }

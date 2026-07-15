@@ -653,11 +653,16 @@ public class UserController {
     @GetMapping("/attendance/month/holidays")
     public ResponseEntity<?> getAttendanceMonthHolidays(
             @RequestParam Integer month,
-            @RequestParam Integer year) {
+            @RequestParam Integer year,
+            @RequestParam String entity) {
 
         try {
 
-            List<LocalDate> response = userService.getAttendanceMonthHolidays(month, year);
+            List<LocalDate> response =
+                    userService.getAttendanceMonthHolidays(
+                            month,
+                            year,
+                            entity);
 
             return ResponseEntity.ok(
                     new ApiResponse<>(

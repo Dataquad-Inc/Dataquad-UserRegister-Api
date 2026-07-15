@@ -48,7 +48,17 @@ public class AttendanceMonthConfig {
 
     private LocalDateTime createdAt;
 
+    public String getEntity() {
+        return entity;
+    }
+
+    public void setEntity(String entity) {
+        this.entity = entity;
+    }
+
     private LocalDateTime updatedAt;
+    @Column(name = "entity")
+    private String entity;
 
     @PrePersist
     public void onCreate() {
