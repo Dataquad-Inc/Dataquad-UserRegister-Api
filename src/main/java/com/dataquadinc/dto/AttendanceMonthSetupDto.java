@@ -13,4 +13,6 @@ public class AttendanceMonthSetupDto {
     private Integer year;
 
     private List<LocalDate> publicHolidays;
+
+    private String entity;
 }

@@ -1125,50 +1125,58 @@ public class UserService {
     }
 
     public String setupAttendanceMonth(AttendanceMonthSetupDto dto) {
+
         try {
-            AttendanceMonthConfig existingConfig = attendanceMonthConfigRepository
-                            .findByAttendanceMonthAndAttendanceYear(dto.getMonth(), dto.getYear()
-                            )
+
+            AttendanceMonthConfig existingConfig =
+                    attendanceMonthConfigRepository
+                            .findByAttendanceMonthAndAttendanceYearAndEntity(
+                                    dto.getMonth(),
+                                    dto.getYear(),
+                                    dto.getEntity())
                             .orElse(null);
 
             if (existingConfig != null) {
 
                 throw new RuntimeException(
-                        "Attendance month already configured"
-                );
+                        "Attendance month already configured for entity : "
+                                + dto.getEntity());
             }
 
             LocalDate fromDate = LocalDate.of(dto.getYear(), dto.getMonth(), 1)
-                            .minusMonths(1)
-                            .withDayOfMonth(26);
+                    .minusMonths(1)
+                    .withDayOfMonth(26);
 
             LocalDate toDate = LocalDate.of(dto.getYear(), dto.getMonth(), 25);
+
             AttendanceMonthConfig config = new AttendanceMonthConfig();
 
             config.setAttendanceMonth(dto.getMonth());
             config.setAttendanceYear(dto.getYear());
+            config.setEntity(dto.getEntity());
             config.setFromDate(fromDate);
             config.setToDate(toDate);
             config.setPublicHolidays(dto.getPublicHolidays());
             config.setIsLocked(false);
 
             attendanceMonthConfigRepository.save(config);
+
             return "Attendance month configured successfully";
 
         } catch (Exception e) {
+
             e.printStackTrace();
-            throw new RuntimeException(
-                    e.getMessage()
-            );
+            throw new RuntimeException(e.getMessage());
         }
     }
 
     public String saveAttendance(AttendanceSaveRequestDto dto) {
         try {
             AttendanceMonthConfig monthConfig = attendanceMonthConfigRepository
-                    .findByAttendanceMonthAndAttendanceYear(
+                    .findByAttendanceMonthAndAttendanceYearAndEntity(
                             dto.getAttendanceMonth(),
-                            dto.getAttendanceYear())
+                            dto.getAttendanceYear(),
+                            dto.getEntity())
                     .orElseThrow(() ->
                             new RuntimeException("Attendance month not configured"));
 
@@ -1347,7 +1355,7 @@ public class UserService {
             List<AttendanceDashboardResponseDto> responseList = new ArrayList<>();
 
             AttendanceMonthConfig monthConfig = attendanceMonthConfigRepository
-                    .findByAttendanceMonthAndAttendanceYear(month, year)
+                    .findByAttendanceMonthAndAttendanceYearAndEntity(month, year, entity)
                     .orElseThrow(() ->
                             new RuntimeException("Attendance month not configured"));
 
@@ -1585,7 +1593,7 @@ public class UserService {
             Integer year,
             String entity) {
 
-        AttendanceMonthConfig monthConfig = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYear(month, year)
+        AttendanceMonthConfig monthConfig = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYearAndEntity(month, year,entity)
                         .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
 
         List<EmployeeAttendance> attendanceList = attendanceRepository.getEmployeeAttendanceMonth(employeeId, month, year);
@@ -1651,9 +1659,7 @@ public class UserService {
         try {
 
             AttendanceMonthConfig monthConfig = attendanceMonthConfigRepository
-                    .findByAttendanceMonthAndAttendanceYear(
-                            dto.getAttendanceMonth(),
-                            dto.getAttendanceYear())
+                    .findByAttendanceMonthAndAttendanceYearAndEntity(dto.getAttendanceMonth(), dto.getAttendanceYear(), dto.getEntity())
                     .orElseThrow(() ->
                             new RuntimeException("Attendance month not configured"));
 
@@ -1747,9 +1753,7 @@ public class UserService {
         try {
 
             AttendanceMonthConfig config = attendanceMonthConfigRepository
-                    .findByAttendanceMonthAndAttendanceYear(
-                            dto.getMonth(),
-                            dto.getYear())
+                    .findByAttendanceMonthAndAttendanceYearAndEntity(dto.getMonth(), dto.getYear(), dto.getEntity())
                     .orElseThrow(() ->
                             new RuntimeException("Attendance month not configured"));
 
@@ -1933,16 +1937,20 @@ public class UserService {
         attendanceRepository.saveAll(attendanceList);
         return "Week unlocked successfully";
     }
-    public List<LocalDate> getAttendanceMonthHolidays(Integer month, Integer year) {
+    public List<LocalDate> getAttendanceMonthHolidays(
+            Integer month,
+            Integer year,
+            String entity) {
 
         try {
 
             AttendanceMonthConfig config = attendanceMonthConfigRepository
-                            . findByAttendanceMonthAndAttendanceYear(
-                                    month,
-                                    year)
-                            .orElseThrow(() ->
-                                    new RuntimeException("Attendance month not configured"));
+                    .findByAttendanceMonthAndAttendanceYearAndEntity(
+                            month,
+                            year,
+                            entity)
+                    .orElseThrow(() ->
+                            new RuntimeException("Attendance month not configured"));
 
             return config.getPublicHolidays();
 
