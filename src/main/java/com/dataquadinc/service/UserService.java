@@ -1137,7 +1137,6 @@ public class UserService {
                             .orElse(null);
 
             if (existingConfig != null) {
-
                 throw new RuntimeException(
                         "Attendance month already configured for entity : "
                                 + dto.getEntity());
@@ -1150,7 +1149,6 @@ public class UserService {
             LocalDate toDate = LocalDate.of(dto.getYear(), dto.getMonth(), 25);
 
             AttendanceMonthConfig config = new AttendanceMonthConfig();
-
             config.setAttendanceMonth(dto.getMonth());
             config.setAttendanceYear(dto.getYear());
             config.setEntity(dto.getEntity());
@@ -1161,7 +1159,112 @@ public class UserService {
 
             attendanceMonthConfigRepository.save(config);
 
-            return "Attendance month configured successfully";
+            // Fetch all employees for selected entity
+            List<UserDetails> employees =
+                    userDao.findAllAttendanceEmployeesByEntity(dto.getEntity());
+
+            List<EmployeeAttendance> saveList = new ArrayList<>();
+
+            LocalDate currentDate = fromDate;
+
+            while (!currentDate.isAfter(toDate)) {
+
+                boolean isWeekend =
+                        currentDate.getDayOfWeek() == DayOfWeek.SATURDAY
+                                || currentDate.getDayOfWeek() == DayOfWeek.SUNDAY;
+
+                boolean isPublicHoliday =
+                        dto.getPublicHolidays() != null
+                                && dto.getPublicHolidays().contains(currentDate);
+
+                Integer weekNumber;
+                int day = currentDate.getDayOfMonth();
+
+                if (day >= 26 || day == 1) {
+                    weekNumber = 1;
+                } else if (day >= 2 && day <= 8) {
+                    weekNumber = 2;
+                } else if (day >= 9 && day <= 15) {
+                    weekNumber = 3;
+                } else if (day >= 16 && day <= 22) {
+                    weekNumber = 4;
+                } else {
+                    weekNumber = 5;
+                }
+
+                for (UserDetails employee : employees) {
+
+                    EmployeeAttendance attendance = new EmployeeAttendance();
+
+                    attendance.setEmployeeId(employee.getUserId());
+                    attendance.setEmployeeName(employee.getUserName());
+                    attendance.setAttendanceDate(currentDate);
+                    attendance.setAttendanceMonth(dto.getMonth());
+                    attendance.setAttendanceYear(dto.getYear());
+                    attendance.setWeekNumber(weekNumber);
+                    attendance.setMonthConfig(config);
+                    attendance.setFromDate(fromDate);
+                    attendance.setToDate(toDate);
+                    attendance.setApprovalStatus("DRAFT");
+                    attendance.setCreatedAt(LocalDateTime.now());
+                    attendance.setUpdatedAt(LocalDateTime.now());
+                    attendance.setIsLocked(false);
+                    attendance.setSalaryDeduction(false);
+                    attendance.setCasualLeaveApplied(false);
+                    attendance.setIsSandwichDeduction(false);
+
+                    if (employee.getAssociatedTeamLeadId() != null
+                            && !employee.getAssociatedTeamLeadId().isBlank()) {
+
+                        attendance.setReportingManager(
+                                userDao.getTeamLeadName(
+                                        employee.getAssociatedTeamLeadId()));
+                    } else {
+                        attendance.setReportingManager(
+                                employee.getReportingManager());
+                    }
+
+                    boolean isProbation =
+                            employee.getProbation() == null
+                                    || !employee.getProbation().equalsIgnoreCase("Completed");
+
+                    attendance.setIsProbationEmployee(isProbation);
+
+                    if (isPublicHoliday) {
+
+                        attendance.setAttendanceStatus("PH");
+                        attendance.setAttendanceValue(1.0);
+                        attendance.setIsPublicHoliday(true);
+                        attendance.setIsWeekend(false);
+                        attendance.setIsPaid(true);
+
+                    } else if (isWeekend) {
+
+                        attendance.setAttendanceStatus("WO");
+                        attendance.setAttendanceValue(1.0);
+                        attendance.setIsWeekend(true);
+                        attendance.setIsPublicHoliday(false);
+                        attendance.setIsPaid(true);
+
+                    } else {
+
+                        // Default Present
+                        attendance.setAttendanceStatus("P");
+                        attendance.setAttendanceValue(1.0);
+                        attendance.setIsWeekend(false);
+                        attendance.setIsPublicHoliday(false);
+                        attendance.setIsPaid(true);
+                    }
+
+                    saveList.add(attendance);
+                }
+
+                currentDate = currentDate.plusDays(1);
+            }
+
+            attendanceRepository.saveAll(saveList);
+
+            return "Attendance month configured successfully and default attendance generated.";
 
         } catch (Exception e) {
 
