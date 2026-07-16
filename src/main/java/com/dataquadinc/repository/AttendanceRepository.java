@@ -1,5 +1,6 @@
 package com.dataquadinc.repository;
 
+import com.dataquadinc.model.AttendanceMonthConfig;
 import com.dataquadinc.model.EmployeeAttendance;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -251,6 +252,16 @@ public interface AttendanceRepository extends JpaRepository<EmployeeAttendance, 
     void deleteWeekOffAndPublicHoliday(
             @Param("month") Integer month,
             @Param("year") Integer year
+    );
+
+    @Modifying
+    @Transactional
+    @Query("""
+       DELETE FROM EmployeeAttendance ea
+       WHERE ea.monthConfig = :monthConfig
+       """)
+    void deleteByMonthConfig(
+            @Param("monthConfig") AttendanceMonthConfig monthConfig
     );
 }
 

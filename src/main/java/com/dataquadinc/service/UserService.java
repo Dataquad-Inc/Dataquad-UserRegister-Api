@@ -11,6 +11,7 @@ import com.dataquadinc.model.*;
 import com.dataquadinc.repository.*;
 
 
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -2059,6 +2060,39 @@ public class UserService {
 
         } catch (Exception e) {
 
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    @Transactional
+    public String deleteAttendanceMonth(
+            Integer month,
+            Integer year,
+            String entity) {
+
+        try {
+
+            AttendanceMonthConfig config = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYearAndEntity(
+                                    month,
+                                    year,
+                                    entity)
+                            .orElseThrow(() -> new RuntimeException("Attendance month configuration not found."));
+
+            if (Boolean.TRUE.equals(config.getIsLocked())) {
+                throw new RuntimeException(
+                        "Attendance month is locked and cannot be deleted.");
+            }
+
+            // Delete all attendance records for this month configuration
+            attendanceRepository.deleteByMonthConfig(config);
+
+            // Delete the month configuration
+            attendanceMonthConfigRepository.delete(config);
+
+            return "Attendance month deleted successfully.";
+
+        } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
