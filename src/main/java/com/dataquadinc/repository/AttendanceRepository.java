@@ -173,12 +173,14 @@ public interface AttendanceRepository extends JpaRepository<EmployeeAttendance, 
             WHERE ea.attendanceMonth = :month
             AND ea.attendanceYear = :year
             AND ea.weekNumber = :weekNumber
+            AND ea.monthConfig.entity = :entity
             """)
     List<EmployeeAttendance>
     findByMonthYearAndWeek(
             @Param("month") Integer month,
             @Param("year") Integer year,
-            @Param("weekNumber") Integer weekNumber
+            @Param("weekNumber") Integer weekNumber,
+            @Param("entity")String entity
     );
 
 
@@ -246,6 +248,7 @@ public interface AttendanceRepository extends JpaRepository<EmployeeAttendance, 
        DELETE FROM EmployeeAttendance ea
        WHERE ea.attendanceMonth = :month
        AND ea.attendanceYear = :year
+       AND ea.monthConfig.entity=:entity
        AND (ea.attendanceStatus = 'WO'
             OR ea.attendanceStatus = 'PH')
             AND ea.approvalStatus <> 'APPROVED'""")
@@ -259,9 +262,84 @@ public interface AttendanceRepository extends JpaRepository<EmployeeAttendance, 
     @Query("""
        DELETE FROM EmployeeAttendance ea
        WHERE ea.monthConfig = :monthConfig
+       AND ea.monthConfig.entity=:entity
        """)
     void deleteByMonthConfig(
             @Param("monthConfig") AttendanceMonthConfig monthConfig
     );
+
+    @Query("""
+       SELECT ea
+       FROM EmployeeAttendance ea
+       WHERE ea.attendanceMonth=:month
+       AND ea.attendanceYear=:year
+       AND ea.monthConfig.entity = :entity
+       ORDER BY ea.employeeId,
+                ea.attendanceDate
+       """)
+    List<EmployeeAttendance> findMonthAttendance(
+            @Param("month") Integer month,
+            @Param("year") Integer year,
+            @Param("entity")String entity);
+
+    @Query("""
+       SELECT ea
+       FROM EmployeeAttendance ea
+       WHERE ea.attendanceMonth=:month
+       AND ea.attendanceYear=:year
+       AND ea.monthConfig.entity = :entity
+       AND ea.approvalStatus='SUBMITTED'
+       ORDER BY ea.employeeId,
+                ea.attendanceDate
+       """)
+    List<EmployeeAttendance> findSubmittedMonthAttendance(
+            @Param("month") Integer month,
+            @Param("year") Integer year,
+            @Param("entity") String entity);
+
+    @Query("""
+       SELECT ea
+       FROM EmployeeAttendance ea
+       WHERE ea.attendanceMonth=:month
+       AND ea.attendanceYear=:year
+       AND ea.weekNumber=:weekNumber
+       AND ea.monthConfig.entity = :entity
+       AND ea.approvalStatus='SUBMITTED'
+       ORDER BY ea.employeeId,
+                ea.attendanceDate
+       """)
+    List<EmployeeAttendance> findSubmittedWeekAttendance(
+            @Param("month") Integer month,
+            @Param("year") Integer year,
+            @Param("weekNumber") Integer weekNumber,
+            @Param("entity") String entity);
+
+    @Query("""
+       SELECT COUNT(ea)
+       FROM EmployeeAttendance ea
+       WHERE ea.attendanceMonth=:month
+       AND ea.attendanceYear=:year
+       AND ea.monthConfig.entity = :entity
+       AND ea.approvalStatus='APPROVED'
+       """)
+    Long countApprovedMonth(
+            @Param("month") Integer month,
+            @Param("year") Integer year,
+            @Param("entity") String Entity);
+
+    @Query("""
+       SELECT COUNT(ea)
+       FROM EmployeeAttendance ea
+       WHERE ea.attendanceMonth=:month
+       AND ea.attendanceYear=:year
+       AND ea.monthConfig.entity = :entity
+       AND ea.approvalStatus='SUBMITTED'
+       """)
+    Long countSubmittedMonth(
+            @Param("month") Integer month,
+            @Param("year") Integer year,
+            @Param("entity") String entity);
+
+
 }
 
