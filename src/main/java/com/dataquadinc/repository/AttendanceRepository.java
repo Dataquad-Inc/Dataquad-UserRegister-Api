@@ -262,11 +262,9 @@ public interface AttendanceRepository extends JpaRepository<EmployeeAttendance, 
     @Query("""
        DELETE FROM EmployeeAttendance ea
        WHERE ea.monthConfig = :monthConfig
-       AND ea.monthConfig.entity=:entity
        """)
     void deleteByMonthConfig(
-            @Param("monthConfig") AttendanceMonthConfig monthConfig
-    );
+            @Param("monthConfig") AttendanceMonthConfig monthConfig);
 
     @Query("""
        SELECT ea
