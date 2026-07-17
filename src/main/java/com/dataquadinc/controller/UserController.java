@@ -568,88 +568,6 @@ public class UserController {
             );
         }
     }
-    @PostMapping("/attendance/week/submit")
-    public ResponseEntity<?> submitWeekAttendance(
-            @RequestParam Integer month,
-            @RequestParam Integer year,
-            @RequestParam Integer weekNumber) {
-
-        try {
-
-            String response = userService.submitWeekAttendance(month, year, weekNumber);
-            return ResponseEntity.ok(new ApiResponse<>(
-                            true,
-                            response,
-                            null,
-                            null)
-            );
-
-        } catch (Exception e) {
-
-            return ResponseEntity.internalServerError().body(
-                    new ApiResponse<>(false,
-                            e.getMessage(),
-                            null,
-                            null
-                    )
-            );
-        }
-    }
-    @PostMapping("/attendance/week/approve")
-    public ResponseEntity<?> approveWeekAttendance(
-            @RequestParam Integer month,
-            @RequestParam Integer year,
-            @RequestParam Integer weekNumber) {
-
-        try {
-
-            String response = userService.approveWeekAttendance(month, year, weekNumber);
-
-            return ResponseEntity.ok(new ApiResponse<>(
-                            true,
-                            response,
-                            null,
-                            null
-                    )
-            );
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(new ApiResponse<>(
-                            false,
-                            e.getMessage(),
-                            null,
-                            null
-                    )
-            );
-        }
-    }
-
-    @PostMapping("/attendance/week/reject")
-    public ResponseEntity<?> rejectWeekAttendance(
-            @RequestParam Integer month,
-            @RequestParam Integer year,
-            @RequestParam Integer weekNumber) {
-
-        try {
-            String response = userService.rejectWeekAttendance(month, year, weekNumber);
-
-            return ResponseEntity.ok(new ApiResponse<>(
-                            true,
-                            response,
-                            null,
-                            null
-                    )
-            );
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(new ApiResponse<>(
-                            false,
-                            e.getMessage(),
-                            null,
-                            null
-                    )
-            );
-        }
-    }
     @GetMapping("/attendance/month/holidays")
     public ResponseEntity<?> getAttendanceMonthHolidays(
             @RequestParam Integer month,
@@ -707,6 +625,122 @@ public class UserController {
         } catch (Exception e) {
 
             return ResponseEntity.internalServerError().body(new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null));
+        }
+    }
+    @PostMapping("/attendance/submit")
+    public ResponseEntity<?> submitAttendance(
+            @RequestBody AttendanceApprovalDto dto) {
+
+        try {
+
+            String response =
+                    userService.submitAttendance(dto);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            response,
+                            null,
+                            null));
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null));
+        }
+    }
+
+    @GetMapping("/attendance/pending")
+    public ResponseEntity<?> getPendingAttendance(
+            @RequestParam Integer month,
+            @RequestParam Integer year,
+            @RequestParam(required = false) Integer weekNumber,
+            @RequestParam String entity) {
+
+        try {
+
+            List<AttendanceDashboardResponseDto> response =
+                    userService.getPendingAttendance(
+                            month,
+                            year,
+                            weekNumber,
+                            entity);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            "Pending attendance fetched successfully",
+                            response,
+                            null));
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null));
+        }
+
+    }
+
+    @PutMapping("/attendance/approve")
+    public ResponseEntity<?> approveAttendance(
+            @RequestBody AttendanceApprovalDto dto) {
+
+        try {
+
+            String response =
+                    userService.approveAttendance(dto);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            response,
+                            null,
+                            null));
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null));
+        }
+
+    }
+
+    @PutMapping("/attendance/reject")
+    public ResponseEntity<?> rejectAttendance(
+            @RequestBody AttendanceApprovalDto dto) {
+
+        try {
+
+            String response =
+                    userService.rejectAttendance(dto);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            response,
+                            null,
+                            null));
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
                             false,
                             e.getMessage(),
                             null,
