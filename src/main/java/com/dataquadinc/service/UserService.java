@@ -2365,6 +2365,34 @@ public class UserService {
 
         return responseList;
     }
+
+    @Transactional
+    public String deleteAttendanceMonthconfig(
+            Integer month,
+            Integer year,
+            String entity) {
+
+        AttendanceMonthConfig config =
+                attendanceMonthConfigRepository
+                        .findByAttendanceMonthAndAttendanceYearAndEntity(
+                                month,
+                                year,
+                                entity)
+                        .orElseThrow(() ->
+                                new RuntimeException("Attendance month configuration not found."));
+
+        if (Boolean.TRUE.equals(config.getIsLocked())) {
+            throw new RuntimeException("Attendance month is locked and cannot be deleted.");
+        }
+
+        // Delete attendance first
+        attendanceRepository.deleteAttendanceByMonthconfig(month, year, entity);
+
+        // Delete month configuration
+        attendanceMonthConfigRepository.delete(config);
+
+        return "Attendance month deleted successfully.";
+    }
 }
 
 
