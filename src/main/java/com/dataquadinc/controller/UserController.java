@@ -747,4 +747,33 @@ public class UserController {
                             null));
         }
     }
+
+    @DeleteMapping("/attendance/monthconfig/delete")
+    public ResponseEntity<?> deleteAttendanceMonthconfig(
+            @RequestParam Integer month,
+            @RequestParam Integer year,
+            @RequestParam String entity) {
+
+        try {
+
+            String response =
+                    userService.deleteAttendanceMonthconfig(month, year, entity);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            response,
+                            null,
+                            null));
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null));
+        }
+    }
 }
