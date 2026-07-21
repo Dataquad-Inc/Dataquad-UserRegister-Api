@@ -1178,20 +1178,7 @@ public class UserService {
                         dto.getPublicHolidays() != null
                                 && dto.getPublicHolidays().contains(currentDate);
 
-                Integer weekNumber;
-                int day = currentDate.getDayOfMonth();
-
-                if (day >= 26 || day == 1) {
-                    weekNumber = 1;
-                } else if (day >= 2 && day <= 8) {
-                    weekNumber = 2;
-                } else if (day >= 9 && day <= 15) {
-                    weekNumber = 3;
-                } else if (day >= 16 && day <= 22) {
-                    weekNumber = 4;
-                } else {
-                    weekNumber = 5;
-                }
+                Integer weekNumber = calculateWeekNumber(fromDate, currentDate);
 
                 for (UserDetails employee : employees) {
 
@@ -1705,13 +1692,7 @@ public class UserService {
                     continue;
                 }
 
-                long daysBetween = ChronoUnit.DAYS.between(fromDate, currentDate);
-
-                Integer weekNumber = (int) (daysBetween / 7) + 1;
-
-                if (weekNumber > 5) {
-                    weekNumber = 5;
-                }
+                Integer weekNumber = calculateWeekNumber(fromDate, currentDate);
 
                 for (UserDetails employee : employees) {
                     EmployeeAttendance attendance = new EmployeeAttendance();
@@ -2392,6 +2373,23 @@ public class UserService {
         attendanceMonthConfigRepository.delete(config);
 
         return "Attendance month deleted successfully.";
+    }
+
+    private Integer calculateWeekNumber(LocalDate fromDate, LocalDate currentDate) {
+
+        int weekNumber = 1;
+        LocalDate tempDate = fromDate;
+
+        while (tempDate.isBefore(currentDate)) {
+
+            if (tempDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+                weekNumber++;
+            }
+
+            tempDate = tempDate.plusDays(1);
+        }
+
+        return weekNumber;
     }
 }
 
