@@ -242,7 +242,8 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
     FROM UserDetails u
     WHERE u.entity = :entity
     AND u.status = 'ACTIVE'
-    AND u.designation <> 'testuser'
+    AND LOWER(u.designation) <> 'candidate'
+    AND LOWER(u.designation) <> 'testuser'
     ORDER BY u.userId
     """)
     List<UserDetails> findAllAttendanceEmployeesByEntity(
