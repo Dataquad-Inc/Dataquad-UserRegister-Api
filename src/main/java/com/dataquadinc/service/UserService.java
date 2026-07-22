@@ -2260,7 +2260,7 @@ public class UserService {
         }
 
         totalPaidDays += casualLeaves;
-        totalPaidDays -= unpaidLeaves;
+       // totalPaidDays -= unpaidLeaves;
         totalPaidDays -= totalLopLeaves;
         totalPaidDays -= halfDayDeduction;
         totalPaidDays -= sandwichDeductionDates.size();
