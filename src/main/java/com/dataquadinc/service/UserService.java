@@ -2071,6 +2071,7 @@ public class UserService {
         double totalPaidDays = 0.0;
         int totalWeekendDays = 0;
         int totalWorkingDays = 0;
+        double halfDayDeduction = 0.0;   // NEW
 
         dto.setSerialNo(serialNo);
         dto.setEmployeeId(employee.getUserId());
@@ -2153,11 +2154,16 @@ public class UserService {
                     String.valueOf(day),
                     attendanceStatus);
 
-            if ("P".equalsIgnoreCase(attendanceStatus)
+            // ===== Modified Present Calculation =====
+            if ("HD".equalsIgnoreCase(attendanceStatus)) {
+
+                totalPresentDays += 0.5;
+                halfDayDeduction += 0.5;
+
+            } else if ("P".equalsIgnoreCase(attendanceStatus)
                     || "WH".equalsIgnoreCase(attendanceStatus)
                     || "WFH".equalsIgnoreCase(attendanceStatus)
                     || "LL".equalsIgnoreCase(attendanceStatus)
-                    || "HD".equalsIgnoreCase(attendanceStatus)
                     || "SP".equalsIgnoreCase(attendanceStatus)) {
 
                 totalPresentDays += 1;
@@ -2182,37 +2188,41 @@ public class UserService {
         int allowedCasualLeave =
                 isProbationEmployee ? 0 : 1;
 
-        Set<LocalDate> sandwichDeductionDates =
-                new HashSet<>();
+        Set<LocalDate> sandwichDeductionDates = new HashSet<>();
 
-        for (EmployeeAttendance attendance : attendanceList) {
+        Set<LocalDate> leaveDates = attendanceList.stream()
+                .filter(a -> "L".equalsIgnoreCase(a.getAttendanceStatus()))
+                .map(EmployeeAttendance::getAttendanceDate)
+                .collect(Collectors.toSet());
 
-            if (!"L".equalsIgnoreCase(
-                    attendance.getAttendanceStatus())) {
-                continue;
+        for (LocalDate leaveDate : leaveDates) {
+
+            if (leaveDate.getDayOfWeek() == DayOfWeek.FRIDAY) {
+
+                LocalDate saturday = leaveDate.plusDays(1);
+                LocalDate sunday = leaveDate.plusDays(2);
+
+                if (!leaveDates.contains(saturday)) {
+                    sandwichDeductionDates.add(saturday);
+                }
+
+                if (!leaveDates.contains(sunday)) {
+                    sandwichDeductionDates.add(sunday);
+                }
             }
 
-            LocalDate leaveDate =
-                    attendance.getAttendanceDate();
+            if (leaveDate.getDayOfWeek() == DayOfWeek.MONDAY) {
 
-            if (leaveDate.getDayOfWeek()
-                    == DayOfWeek.FRIDAY) {
+                LocalDate saturday = leaveDate.minusDays(2);
+                LocalDate sunday = leaveDate.minusDays(1);
 
-                sandwichDeductionDates.add(
-                        leaveDate.plusDays(1));
+                if (!leaveDates.contains(saturday)) {
+                    sandwichDeductionDates.add(saturday);
+                }
 
-                sandwichDeductionDates.add(
-                        leaveDate.plusDays(2));
-            }
-
-            if (leaveDate.getDayOfWeek()
-                    == DayOfWeek.MONDAY) {
-
-                sandwichDeductionDates.add(
-                        leaveDate.minusDays(2));
-
-                sandwichDeductionDates.add(
-                        leaveDate.minusDays(1));
+                if (!leaveDates.contains(sunday)) {
+                    sandwichDeductionDates.add(sunday);
+                }
             }
         }
 
@@ -2252,6 +2262,7 @@ public class UserService {
         totalPaidDays += casualLeaves;
         totalPaidDays -= unpaidLeaves;
         totalPaidDays -= totalLopLeaves;
+        totalPaidDays -= halfDayDeduction;
         totalPaidDays -= sandwichDeductionDates.size();
 
         if (totalPaidDays < 0) {
