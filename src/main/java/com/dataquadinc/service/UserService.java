@@ -2071,7 +2071,7 @@ public class UserService {
         double totalPaidDays = 0.0;
         int totalWeekendDays = 0;
         int totalWorkingDays = 0;
-        double halfDayDeduction = 0.0;   // NEW
+        // double halfDayDeduction = 0.0;   // NEW
 
         dto.setSerialNo(serialNo);
         dto.setEmployeeId(employee.getUserId());
@@ -2158,7 +2158,7 @@ public class UserService {
             if ("HD".equalsIgnoreCase(attendanceStatus)) {
 
                 totalPresentDays += 0.5;
-                halfDayDeduction += 0.5;
+                //halfDayDeduction += 0.5;
 
             } else if ("P".equalsIgnoreCase(attendanceStatus)
                     || "WH".equalsIgnoreCase(attendanceStatus)
@@ -2262,7 +2262,7 @@ public class UserService {
         totalPaidDays += casualLeaves;
        // totalPaidDays -= unpaidLeaves;
         totalPaidDays -= totalLopLeaves;
-        totalPaidDays -= halfDayDeduction;
+       // totalPaidDays -= halfDayDeduction;
         totalPaidDays -= sandwichDeductionDates.size();
 
         if (totalPaidDays < 0) {
