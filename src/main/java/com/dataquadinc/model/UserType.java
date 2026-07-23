@@ -21,7 +21,7 @@ public enum UserType {
     RECRUITER,
     SALESEXECUTIVE,
     GRANDSALES,
-    SUPERSALES;
+    SUPERACCOUNTS;
 
     @JsonCreator
     public static UserType fromValue(String value) {
