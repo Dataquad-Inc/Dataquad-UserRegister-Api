@@ -461,14 +461,29 @@ public class UserService {
             updateFieldIfSubmitted(formFields, "ifscCode", existingUser::setIfscCode);
             String isEmployeeHavingPF = submittedValue(formFields, "isEmployeeHavingPF");
             if (isEmployeeHavingPF != null) {
-                existingUser.setIsEmployeeHavingPF(Boolean.parseBoolean(isEmployeeHavingPF));
+
+                boolean hasPF = Boolean.parseBoolean(isEmployeeHavingPF);
+                existingUser.setIsEmployeeHavingPF(hasPF);
+
+                if (!hasPF) {
+                    existingUser.setPfNumber(null);
+                    existingUser.setUanNumber(null);
+                } else {
+                    updateFieldIfSubmitted(formFields, "pfNumber", existingUser::setPfNumber);
+                    updateFieldIfSubmitted(formFields, "uanNumber", existingUser::setUanNumber);
+                }
             }
-            updateFieldIfSubmitted(formFields, "uanNumber", existingUser::setUanNumber);
-            updateFieldIfSubmitted(formFields, "pfNumber", existingUser::setPfNumber);
-            updateFieldIfSubmitted(formFields, "esiNumber", existingUser::setEsiNumber);
             String isEmployeeHavingESI = submittedValue(formFields, "isEmployeeHavingESI");
             if (isEmployeeHavingESI != null) {
-                existingUser.setIsEmployeeHavingESI(Boolean.parseBoolean(isEmployeeHavingESI));
+
+                boolean hasESI = Boolean.parseBoolean(isEmployeeHavingESI);
+                existingUser.setIsEmployeeHavingESI(hasESI);
+
+                if (!hasESI) {
+                    existingUser.setEsiNumber(null);
+                } else {
+                    updateFieldIfSubmitted(formFields, "esiNumber", existingUser::setEsiNumber);
+                }
             }
             updateFieldIfSubmitted(formFields, "payrollPanNumber", existingUser::setPayrollPanNumber);
             updateFieldIfSubmitted(formFields, "payrollAadharNumber", existingUser::setPayrollAadharNumber);
