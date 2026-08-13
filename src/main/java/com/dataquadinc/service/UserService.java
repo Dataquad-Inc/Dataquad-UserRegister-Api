@@ -1490,7 +1490,8 @@ public class UserService {
                                 employee,
                                 attendanceList,
                                 monthConfig,
-                                serialNo++);
+                                serialNo++,
+                                false);
 
                 responseList.add(dto);
             }
@@ -2111,7 +2112,8 @@ public class UserService {
             UserDetails employee,
             List<EmployeeAttendance> attendanceList,
             AttendanceMonthConfig monthConfig,
-            Integer serialNo) {
+            Integer serialNo,
+            boolean approvedOnly) {
 
         AttendanceDashboardResponseDto dto =
                 new AttendanceDashboardResponseDto();
@@ -2153,6 +2155,13 @@ public class UserService {
 
             dto.setReportingManager(
                     employee.getReportingManager());
+        }
+        if (approvedOnly) {
+
+            attendanceList = attendanceList.stream()
+                    .filter(a ->
+                            "APPROVED".equalsIgnoreCase(a.getApprovalStatus()))
+                    .toList();
         }
 
         Map<LocalDate, EmployeeAttendance> attendanceMap =
@@ -2404,7 +2413,7 @@ public class UserService {
                             employee,
                             attendanceList,
                             monthConfig,
-                            serialNo++);
+                            serialNo++,false);
 
             responseList.add(dto);
         }
@@ -2455,6 +2464,51 @@ public class UserService {
         }
 
         return weekNumber;
+    }
+
+    public List<AttendanceDashboardResponseDto> getPayrollAttendanceDashboard(
+            Integer month,
+            Integer year,
+            String entity) {
+
+        List<AttendanceDashboardResponseDto> responseList = new ArrayList<>();
+
+        AttendanceMonthConfig monthConfig =
+                attendanceMonthConfigRepository
+                        .findByAttendanceMonthAndAttendanceYearAndEntity(
+                                month,
+                                year,
+                                entity)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Attendance month not configured"));
+
+        List<UserDetails> employees =
+                userDao.findAllAttendanceEmployeesByEntity(entity);
+
+        int serialNo = 1;
+
+        for (UserDetails employee : employees) {
+
+            List<EmployeeAttendance> attendanceList =
+                    attendanceRepository
+                            .getApprovedEmployeeAttendanceMonth(
+                                    employee.getUserId(),
+                                    month,
+                                    year);
+
+            AttendanceDashboardResponseDto dto =
+                    buildAttendanceDashboard(
+                            employee,
+                            attendanceList,
+                            monthConfig,
+                            serialNo++,
+                            true);
+
+            responseList.add(dto);
+        }
+
+        return responseList;
     }
 }
 

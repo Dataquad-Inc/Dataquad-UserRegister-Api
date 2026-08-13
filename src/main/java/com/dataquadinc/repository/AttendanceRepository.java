@@ -371,4 +371,19 @@ AND (
             @Param("month") Integer month,
             @Param("year") Integer year,
             @Param("entity") String entity);
+
+    @Query("""
+       SELECT ea
+       FROM EmployeeAttendance ea
+       WHERE ea.employeeId = :employeeId
+       AND ea.attendanceMonth = :month
+       AND ea.attendanceYear = :year
+       AND ea.approvalStatus = 'APPROVED'
+       ORDER BY ea.attendanceDate
+       """)
+    List<EmployeeAttendance> getApprovedEmployeeAttendanceMonth(
+            @Param("employeeId") String employeeId,
+            @Param("month") Integer month,
+            @Param("year") Integer year
+    );
 }
