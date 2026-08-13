@@ -776,4 +776,34 @@ public class UserController {
                             null));
         }
     }
+
+    @GetMapping("/attendance/approved-summary")
+    public ResponseEntity<?> getPayrollAttendanceDashboard(
+            @RequestParam Integer month,
+            @RequestParam Integer year,
+            @RequestParam String entity) {
+
+        try {
+
+            List<AttendanceDashboardResponseDto> response =
+                    userService.getPayrollAttendanceDashboard(month, year, entity);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            "Payroll attendance fetched successfully",
+                            response,
+                            null
+                    ));
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null));
+        }
+    }
 }
