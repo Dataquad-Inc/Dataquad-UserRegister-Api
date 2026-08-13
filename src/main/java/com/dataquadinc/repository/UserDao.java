@@ -244,7 +244,7 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
     SELECT u
     FROM UserDetails u
     WHERE u.entity = :entity
-    AND u.status IN ('ACTIVE', 'ISOLATE')
+    AND u.status IN ('ACTIVE', 'ISOLATED')
     AND LOWER(u.designation) <> 'candidate'
     AND LOWER(u.designation) <> 'testuser'
     ORDER BY u.userId
