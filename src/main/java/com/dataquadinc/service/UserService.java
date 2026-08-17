@@ -1233,31 +1233,13 @@ public class UserService {
 
                     attendance.setIsProbationEmployee(isProbation);
 
-                    if (isPublicHoliday) {
-
-                        attendance.setAttendanceStatus("PH");
-                        attendance.setAttendanceValue(1.0);
-                        attendance.setIsPublicHoliday(true);
-                        attendance.setIsWeekend(false);
-                        attendance.setIsPaid(true);
-
-                    } else if (isWeekend) {
-
-                        attendance.setAttendanceStatus("WO");
-                        attendance.setAttendanceValue(1.0);
-                        attendance.setIsWeekend(true);
-                        attendance.setIsPublicHoliday(false);
-                        attendance.setIsPaid(true);
-
-                    } else {
-
-                        // Default Present
-                        attendance.setAttendanceStatus("P");
-                        attendance.setAttendanceValue(1.0);
-                        attendance.setIsWeekend(false);
-                        attendance.setIsPublicHoliday(false);
-                        attendance.setIsPaid(true);
-                    }
+                    setDefaultAttendance(
+                            attendance,
+                            employee,
+                            currentDate,
+                            isWeekend,
+                            isPublicHoliday
+                    );
 
                     saveList.add(attendance);
                 }
@@ -1776,27 +1758,13 @@ public class UserService {
 
                     attendance.setIsProbationEmployee(probation);
 
-                    attendance.setAttendanceValue(1.0);
-                    attendance.setIsPaid(true);
-
-                    if (isPublicHoliday) {
-
-                        attendance.setAttendanceStatus("PH");
-                        attendance.setIsPublicHoliday(true);
-                        attendance.setIsWeekend(false);
-
-                    } else if (isWeekend) {
-
-                        attendance.setAttendanceStatus("WO");
-                        attendance.setIsWeekend(true);
-                        attendance.setIsPublicHoliday(false);
-
-                    } else {
-
-                        attendance.setAttendanceStatus("P");
-                        attendance.setIsWeekend(false);
-                        attendance.setIsPublicHoliday(false);
-                    }
+                    setDefaultAttendance(
+                            attendance,
+                            employee,
+                            currentDate,
+                            isWeekend,
+                            isPublicHoliday
+                    );
 
                     saveList.add(attendance);
                 }
@@ -2509,6 +2477,68 @@ public class UserService {
         }
 
         return responseList;
+    }
+
+    private void setDefaultAttendance(
+            EmployeeAttendance attendance,
+            UserDetails employee,
+            LocalDate currentDate,
+            boolean isWeekend,
+            boolean isPublicHoliday) {
+
+        // Public holiday has highest priority
+        if (isPublicHoliday) {
+
+            attendance.setAttendanceStatus("PH");
+            attendance.setAttendanceValue(1.0);
+            attendance.setIsPublicHoliday(true);
+            attendance.setIsWeekend(false);
+            attendance.setIsPaid(true);
+
+            return;
+        }
+
+        // Weekend
+        if (isWeekend) {
+
+            attendance.setAttendanceStatus("WO");
+            attendance.setAttendanceValue(1.0);
+            attendance.setIsWeekend(true);
+            attendance.setIsPublicHoliday(false);
+            attendance.setIsPaid(true);
+
+            return;
+        }
+
+        // Before joining date
+        boolean beforeJoiningDate =
+                employee.getJoiningDate() != null
+                        && currentDate.isBefore(employee.getJoiningDate());
+
+        // Last working day itself and after
+        boolean onOrAfterLastWorkingDay =
+                employee.getLastWorkingDay() != null
+                        && !currentDate.isBefore(employee.getLastWorkingDay());
+
+        // No automatic attendance before joining
+        // No automatic attendance from last working day onwards
+        if (beforeJoiningDate || onOrAfterLastWorkingDay) {
+
+            attendance.setAttendanceStatus(null);
+            attendance.setAttendanceValue(null);
+            attendance.setIsPublicHoliday(false);
+            attendance.setIsWeekend(false);
+            attendance.setIsPaid(false);
+
+            return;
+        }
+
+        // Normal working day
+        attendance.setAttendanceStatus("P");
+        attendance.setAttendanceValue(1.0);
+        attendance.setIsPublicHoliday(false);
+        attendance.setIsWeekend(false);
+        attendance.setIsPaid(true);
     }
 }
 
