@@ -2759,6 +2759,69 @@ public class UserService {
         return responseList;
     }
 
+    public List<ApprovedWeekDto> getApprovedWeeks(
+            Integer month,
+            Integer year,
+            String entity) {
+
+        AttendanceMonthConfig monthConfig =
+                attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYearAndEntity(
+                                month,
+                                year,
+                                entity)
+                        .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
+
+        List<ApprovedWeekDto> response = new ArrayList<>();
+
+        for (int weekNumber = 1; weekNumber <= 6; weekNumber++) {
+
+            List<EmployeeAttendance> weekAttendance = attendanceRepository.findByMonthYearAndWeek(
+                            month,
+                            year,
+                            weekNumber,
+                            entity);
+
+            if (weekAttendance.isEmpty()) {
+                continue;
+            }
+
+            boolean isApproved = weekAttendance.stream().allMatch(a ->
+                    "APPROVED".equalsIgnoreCase(a.getApprovalStatus()));
+
+            if (!isApproved) {
+                continue;
+            }
+
+            LocalDate startDate =
+                    weekAttendance.stream()
+                            .map(EmployeeAttendance::getAttendanceDate)
+                            .min(LocalDate::compareTo)
+                            .orElse(null);
+
+            LocalDate endDate =
+                    weekAttendance.stream()
+                            .map(EmployeeAttendance::getAttendanceDate)
+                            .max(LocalDate::compareTo)
+                            .orElse(null);
+
+            if (startDate.isBefore(monthConfig.getFromDate())) {
+                startDate = monthConfig.getFromDate();
+            }
+
+            if (endDate.isAfter(monthConfig.getToDate())) {
+                endDate = monthConfig.getToDate();
+            }
+
+            ApprovedWeekDto dto = new ApprovedWeekDto();
+
+            dto.setWeekNumber(weekNumber);
+            dto.setStartDate(startDate);
+            dto.setEndDate(endDate);
+            dto.setStatus("APPROVED");
+
+            response.add(dto);
+        }
+        return response;
     private void setDefaultAttendance(
             EmployeeAttendance attendance,
             UserDetails employee,
