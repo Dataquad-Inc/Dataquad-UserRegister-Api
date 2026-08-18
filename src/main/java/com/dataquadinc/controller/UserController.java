@@ -806,4 +806,40 @@ public class UserController {
                             null));
         }
     }
+
+    @GetMapping("/attendance/approved-weeks")
+    public ResponseEntity<?> getApprovedWeeks(
+            @RequestParam Integer month,
+            @RequestParam Integer year,
+            @RequestParam String entity) {
+
+        try {
+
+            List<ApprovedWeekDto> response =
+                    userService.getApprovedWeeks(
+                            month,
+                            year,
+                            entity);
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            "Approved weeks fetched successfully",
+                            response,
+                            null
+                    )
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
 }
