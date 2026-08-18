@@ -2776,10 +2776,10 @@ public class UserService {
         for (int weekNumber = 1; weekNumber <= 6; weekNumber++) {
 
             List<EmployeeAttendance> weekAttendance = attendanceRepository.findByMonthYearAndWeek(
-                            month,
-                            year,
-                            weekNumber,
-                            entity);
+                    month,
+                    year,
+                    weekNumber,
+                    entity);
 
             if (weekAttendance.isEmpty()) {
                 continue;
@@ -2822,6 +2822,7 @@ public class UserService {
             response.add(dto);
         }
         return response;
+    }
     private void setDefaultAttendance(
             EmployeeAttendance attendance,
             UserDetails employee,
