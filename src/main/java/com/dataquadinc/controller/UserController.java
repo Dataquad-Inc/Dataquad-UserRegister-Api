@@ -4,6 +4,7 @@ import com.dataquadinc.dto.*;
 import com.dataquadinc.exceptions.DateRangeValidationException;
 import com.dataquadinc.exceptions.UserNotFoundException;
 
+import com.dataquadinc.model.AttendanceDailyLog;
 import com.dataquadinc.model.EmployeeAttendance;
 import com.dataquadinc.model.UserDetails;
 import com.dataquadinc.service.UserService;
@@ -24,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.management.relation.RoleNotFoundException;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -47,6 +49,9 @@ import java.util.Map;
 public class UserController {
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private UserService pdfParserService;
 
     @PostMapping("/register")
     public ResponseEntity<ResponseBean<UserResponse>> registerUser(@Valid @RequestBody UserDto userDto) throws RoleNotFoundException {
@@ -841,5 +846,22 @@ public class UserController {
                     )
             );
         }
+    }
+
+    @PostMapping("/parse")
+    public ResponseEntity<List<AttendanceDailyLog>> uploadAndSaveAttendance(
+            @RequestParam("file") MultipartFile file) {
+        try {
+            List<AttendanceDailyLog> result = userService.uploadAndSaveAttendance(file);
+            return ResponseEntity.ok(result);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    @GetMapping("/daily-logs")
+    public ResponseEntity<List<AttendanceDailyLog>> getAllAttendanceLogs() {
+        List<AttendanceDailyLog> logs = userService.getAllAttendanceLogs();
+        return ResponseEntity.ok(logs);
     }
 }

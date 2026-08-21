@@ -1,6 +1,7 @@
 package com.dataquadinc.repository;
 
 import com.dataquadinc.dto.UserDto;
+import com.dataquadinc.model.AttendanceDailyLog;
 import com.dataquadinc.model.UserDetails;
 import com.dataquadinc.model.UserType;
 import org.springframework.data.domain.Page;
