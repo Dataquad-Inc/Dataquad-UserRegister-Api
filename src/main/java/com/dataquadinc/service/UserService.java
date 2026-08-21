@@ -11,6 +11,17 @@ import com.dataquadinc.model.*;
 import com.dataquadinc.repository.*;
 
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.InputStream;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.Locale;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +72,9 @@ public class UserService {
 
     @Autowired
     private AttendanceMonthConfigRepository attendanceMonthConfigRepository;
+
+    @Autowired
+    private AttendanceDailyLogRepository attendanceDailyLogRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
@@ -1302,13 +1316,13 @@ public class UserService {
             }
 
             boolean isWeekend = dto.getAttendanceDate().getDayOfWeek()
-                            == DayOfWeek.SATURDAY
-                            || dto.getAttendanceDate().getDayOfWeek()
-                            == DayOfWeek.SUNDAY;
+                    == DayOfWeek.SATURDAY
+                    || dto.getAttendanceDate().getDayOfWeek()
+                    == DayOfWeek.SUNDAY;
 
             boolean isPublicHoliday = monthConfig.getPublicHolidays() != null
-                            && monthConfig.getPublicHolidays()
-                            .contains(dto.getAttendanceDate());
+                    && monthConfig.getPublicHolidays()
+                    .contains(dto.getAttendanceDate());
 
             List<EmployeeAttendance> saveList = new ArrayList<>();
             for (EmployeeAttendanceDto employeeDto : dto.getEmployees()) {
@@ -1332,14 +1346,14 @@ public class UserService {
                                     + employee.getUserId());
                 }
                 boolean onOrAfterLastWorkingDay = employee.getLastWorkingDay() != null
-                                && !dto.getAttendanceDate()
-                                .isBefore(
-                                        employee.getLastWorkingDay());
+                        && !dto.getAttendanceDate()
+                        .isBefore(
+                                employee.getLastWorkingDay());
                 EmployeeAttendance attendance = attendanceRepository
-                                .findByEmployeeIdAndAttendanceDate(
-                                        employee.getUserId(),
-                                        dto.getAttendanceDate())
-                                .orElse(null);
+                        .findByEmployeeIdAndAttendanceDate(
+                                employee.getUserId(),
+                                dto.getAttendanceDate())
+                        .orElse(null);
 
                 if (attendance != null
                         && "APPROVED".equalsIgnoreCase(
@@ -1360,7 +1374,7 @@ public class UserService {
                         if ("SUBMITTED".equalsIgnoreCase(
                                 attendance.getApprovalStatus())) {
                             throw new RuntimeException("Attendance is already submitted for employee : "
-                                            + employee.getUserId());
+                                    + employee.getUserId());
                         }
                         if ("APPROVED".equalsIgnoreCase(attendance.getApprovalStatus())) {
                             throw new RuntimeException(
@@ -1427,9 +1441,7 @@ public class UserService {
                     attendance.setIsWeekend(false);
                     attendance.setIsPaid(true);
                     attendance.setIsLocked(false);
-                }
-
-                else if (isWeekend) {
+                } else if (isWeekend) {
 
                     attendance.setAttendanceStatus("WO");
                     attendance.setAttendanceValue(1.0);
@@ -1438,9 +1450,7 @@ public class UserService {
                     attendance.setIsPaid(true);
 
                     attendance.setIsLocked(false);
-                }
-
-                else {
+                } else {
 
                     attendance.setAttendanceStatus(
                             employeeDto.getAttendanceStatus());
@@ -1489,6 +1499,7 @@ public class UserService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
     public List<AttendanceDashboardResponseDto> getAttendanceDashboard(
             Integer month,
             Integer year,
@@ -1592,6 +1603,7 @@ public class UserService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
     public List<EmployeeAttendanceViewDto> getEmployeeAttendance(
             String employeeId,
             Integer month,
@@ -1701,9 +1713,7 @@ public class UserService {
                 dto.setIsWeekend(false);
                 dto.setIsPublicHoliday(false);
 
-            }
-
-            else if (isPublicHoliday) {
+            } else if (isPublicHoliday) {
 
                 dto.setIsWeekend(false);
                 dto.setIsPublicHoliday(true);
@@ -1711,9 +1721,7 @@ public class UserService {
                 dto.setAttendanceStatus("PH");
                 dto.setAttendanceValue(1.0);
 
-            }
-
-            else if (isWeekend) {
+            } else if (isWeekend) {
 
                 dto.setIsWeekend(true);
                 dto.setIsPublicHoliday(false);
@@ -1721,9 +1729,7 @@ public class UserService {
                 dto.setAttendanceStatus("WO");
                 dto.setAttendanceValue(1.0);
 
-            }
-
-            else if (attendance != null) {
+            } else if (attendance != null) {
 
                 dto.setIsWeekend(false);
                 dto.setIsPublicHoliday(false);
@@ -1895,6 +1901,7 @@ public class UserService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
     @Transactional
     public String editAttendanceMonth(
             AttendanceMonthSetupDto dto,
@@ -2032,13 +2039,14 @@ public class UserService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
     public String unlockRejectedWeek(
             Integer month,
             Integer year,
             Integer weekNumber,
             String entity) {
 
-        List<EmployeeAttendance> attendanceList = attendanceRepository.findByMonthYearAndWeek(month, year, weekNumber,entity);
+        List<EmployeeAttendance> attendanceList = attendanceRepository.findByMonthYearAndWeek(month, year, weekNumber, entity);
 
         if (attendanceList.isEmpty()) {
             throw new RuntimeException("No attendance found");
@@ -2053,6 +2061,7 @@ public class UserService {
         attendanceRepository.saveAll(attendanceList);
         return "Week unlocked successfully";
     }
+
     public List<LocalDate> getAttendanceMonthHolidays(
             Integer month,
             Integer year,
@@ -2086,10 +2095,10 @@ public class UserService {
         try {
 
             AttendanceMonthConfig config = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYearAndEntity(
-                                    month,
-                                    year,
-                                    entity)
-                            .orElseThrow(() -> new RuntimeException("Attendance month configuration not found."));
+                            month,
+                            year,
+                            entity)
+                    .orElseThrow(() -> new RuntimeException("Attendance month configuration not found."));
 
             if (Boolean.TRUE.equals(config.getIsLocked())) {
                 throw new RuntimeException(
@@ -2109,6 +2118,7 @@ public class UserService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
     private List<EmployeeAttendance> getAttendanceForAction(
             AttendanceApprovalDto dto) {
 
@@ -2177,6 +2187,7 @@ public class UserService {
                     "Please submit all weeks before submitting the month.");
         }
     }
+
     public String submitAttendance(
             AttendanceApprovalDto dto) {
 
@@ -2185,7 +2196,7 @@ public class UserService {
             List<EmployeeAttendance> attendanceList =
                     getAttendanceForAction(dto);
 
-            validateAttendanceForSubmit(attendanceList,dto);
+            validateAttendanceForSubmit(attendanceList, dto);
 
             LocalDateTime submittedTime = LocalDateTime.now();
 
@@ -2220,6 +2231,7 @@ public class UserService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
     public String approveAttendance(AttendanceApprovalDto dto) {
 
         try {
@@ -2288,21 +2300,23 @@ public class UserService {
             e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
-    }    public String rejectAttendance(
-            AttendanceApprovalDto dto){
+    }
+
+    public String rejectAttendance(
+            AttendanceApprovalDto dto) {
 
         List<EmployeeAttendance> attendanceList =
                 getAttendanceForAction(dto);
 
-        if(attendanceList.isEmpty()){
+        if (attendanceList.isEmpty()) {
             throw new RuntimeException(
                     "Attendance not found");
         }
 
-        for(EmployeeAttendance attendance:attendanceList){
+        for (EmployeeAttendance attendance : attendanceList) {
 
-            if(!"SUBMITTED".equalsIgnoreCase(
-                    attendance.getApprovalStatus())){
+            if (!"SUBMITTED".equalsIgnoreCase(
+                    attendance.getApprovalStatus())) {
 
                 throw new RuntimeException(
                         "Only submitted attendance can be rejected.");
@@ -2321,7 +2335,7 @@ public class UserService {
 
         attendanceRepository.saveAll(attendanceList);
 
-        return dto.getWeekNumber()==null
+        return dto.getWeekNumber() == null
                 ? "Month rejected successfully."
                 : "Week rejected successfully.";
     }
@@ -2434,17 +2448,12 @@ public class UserService {
 
             if (beforeJoiningDate || onOrAfterLastWorkingDay) {
                 attendanceStatus = "";
-            }
-
-            else if (isPublicHoliday) {
+            } else if (isPublicHoliday) {
                 attendanceStatus = "PH";
 
-            }
-            else if (isWeekend) {
+            } else if (isWeekend) {
                 attendanceStatus = "WO";
-            }
-
-            else if (attendance != null && attendance.getAttendanceStatus() != null) {
+            } else if (attendance != null && attendance.getAttendanceStatus() != null) {
 
                 attendanceStatus = attendance.getAttendanceStatus();
             }
@@ -2491,11 +2500,11 @@ public class UserService {
 
         Set<LocalDate> sandwichDeductionDates = new HashSet<>();
         Set<LocalDate> leaveDates = attendanceList.stream()
-                        .filter(a ->
-                                "L".equalsIgnoreCase(
-                                        a.getAttendanceStatus()))
-                        .map(EmployeeAttendance::getAttendanceDate)
-                        .collect(Collectors.toSet());
+                .filter(a ->
+                        "L".equalsIgnoreCase(
+                                a.getAttendanceStatus()))
+                .map(EmployeeAttendance::getAttendanceDate)
+                .collect(Collectors.toSet());
 
         for (LocalDate leaveDate : leaveDates) {
 
@@ -2547,27 +2556,28 @@ public class UserService {
         while (!date.isAfter(monthConfig.getToDate())) {
 
             boolean beforeJoiningDate = employee.getJoiningDate() != null
-                            && date.isBefore(
-                            employee.getJoiningDate());
+                    && date.isBefore(
+                    employee.getJoiningDate());
 
             boolean onOrAfterLastWorkingDay = employee.getLastWorkingDay() != null
-                            && !date.isBefore(
-                            employee.getLastWorkingDay());
+                    && !date.isBefore(
+                    employee.getLastWorkingDay());
 
             boolean isPH = monthConfig.getPublicHolidays() != null
-                            && monthConfig.getPublicHolidays()
-                            .contains(date);
+                    && monthConfig.getPublicHolidays()
+                    .contains(date);
 
             boolean isWO = date.getDayOfWeek()
-                            == DayOfWeek.SATURDAY
-                            || date.getDayOfWeek()
-                            == DayOfWeek.SUNDAY;
+                    == DayOfWeek.SATURDAY
+                    || date.getDayOfWeek()
+                    == DayOfWeek.SUNDAY;
 
             if (!beforeJoiningDate
                     && !onOrAfterLastWorkingDay) {
 
                 if (isPH || isWO) {
-                    totalPaidDays += 1;}
+                    totalPaidDays += 1;
+                }
             }
 
             date = date.plusDays(1);
@@ -2596,6 +2606,7 @@ public class UserService {
         dto.setTotalPaidDays(totalPaidDays);
         return dto;
     }
+
     public List<AttendanceDashboardResponseDto> getPendingAttendance(
             Integer month,
             Integer year,
@@ -2631,7 +2642,7 @@ public class UserService {
                                 .findSubmittedWeekAttendance(
                                         month,
                                         year,
-                                        weekNumber,entity)
+                                        weekNumber, entity)
                                 .stream()
                                 .filter(a ->
                                         a.getEmployeeId()
@@ -2644,7 +2655,7 @@ public class UserService {
                         attendanceRepository
                                 .findSubmittedMonthAttendance(
                                         month,
-                                        year,entity)
+                                        year, entity)
                                 .stream()
                                 .filter(a ->
                                         a.getEmployeeId()
@@ -2652,7 +2663,7 @@ public class UserService {
                                 .toList();
             }
 
-            if(attendanceList.isEmpty()){
+            if (attendanceList.isEmpty()) {
                 continue;
             }
 
@@ -2661,7 +2672,7 @@ public class UserService {
                             employee,
                             attendanceList,
                             monthConfig,
-                            serialNo++,false);
+                            serialNo++, false);
 
             responseList.add(dto);
         }
@@ -2764,12 +2775,11 @@ public class UserService {
             Integer year,
             String entity) {
 
-        AttendanceMonthConfig monthConfig =
-                attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYearAndEntity(
-                                month,
-                                year,
-                                entity)
-                        .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
+        AttendanceMonthConfig monthConfig = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYearAndEntity(
+                        month,
+                        year,
+                        entity)
+                .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
 
         List<ApprovedWeekDto> response = new ArrayList<>();
 
@@ -2823,6 +2833,7 @@ public class UserService {
         }
         return response;
     }
+
     private void setDefaultAttendance(
             EmployeeAttendance attendance,
             UserDetails employee,
@@ -2866,6 +2877,200 @@ public class UserService {
         attendance.setIsPublicHoliday(false);
         attendance.setIsWeekend(false);
         attendance.setIsPaid(true);
+    }
+
+    private static final Pattern TIME_PATTERN = Pattern.compile("\\b(?:[01]?\\d|2[0-3]):[0-5]\\d\\b");
+
+    private static final Pattern DATE_PATTERN = Pattern.compile(
+                    "\\b\\d{1,2}\\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{4}\\b",
+                    Pattern.CASE_INSENSITIVE);
+
+    private static final DateTimeFormatter PDF_DATE_FORMAT = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH);
+    private LocalDate attendanceDate;
+    public List<EmployeeLog> parseAttendancePdf(InputStream inputStream) {
+        List<EmployeeLog> employeeLogs = new ArrayList<>();
+        attendanceDate = null;
+        try (PDDocument document = PDDocument.load(inputStream)) {
+            PDFTextStripper stripper = new PDFTextStripper();
+            String fullText = stripper.getText(document);
+            String[] lines = fullText.split("\\r?\\n");
+            EmployeeLog currentEmp = null;
+            List<String> currentLogs = new ArrayList<>();
+            for (String rawLine : lines) {
+                String line = rawLine.trim();
+                if (line.isEmpty()) {
+                    continue;
+                }
+
+                if (line.contains("Log Date")) {
+                    Matcher dateMatcher = DATE_PATTERN.matcher(line);
+                    if (dateMatcher.find()) {
+                        String dateText = dateMatcher.group();
+                        try {
+                            attendanceDate = LocalDate.parse(dateText, PDF_DATE_FORMAT);
+                        } catch (Exception e) {
+                            throw new IllegalArgumentException("Unable to parse attendance date: " + dateText, e);
+                        }
+                    }
+                    continue;
+                }
+
+                if (shouldSkipLine(line)) {
+                    continue;
+                }
+                List<String> extractedTimes = extractTimesFromLine(line);
+                String employeeCode = extractEmployeeCode(line);
+                if (employeeCode != null) {
+                    if (currentEmp != null) {
+                        setLogTimes(currentEmp, currentLogs);
+                        employeeLogs.add(currentEmp);
+                        currentLogs = new ArrayList<>();
+                    }
+                    currentEmp = new EmployeeLog();
+                    currentEmp.setEmpCode(employeeCode);
+                    String remaining = line.substring(employeeCode.length()).trim();
+                    remaining = removeTimesFromLine(remaining);
+                    String[] parts = remaining.trim().split("\\s+");
+                    if (parts.length > 0) {
+                        StringBuilder name = new StringBuilder();
+                        for (String part : parts) {
+                            if ("Default".equalsIgnoreCase(part)) {
+                                continue;
+                            }
+                            if (name.length() > 0) {
+                                name.append(" ");
+                            }
+                            name.append(part);
+                        }
+                        currentEmp.setEmpName(name.toString().trim());
+                    }
+                    currentEmp.setDepartment("Default");
+                    currentLogs.addAll(extractedTimes);
+                }
+
+                else if (currentEmp != null) {
+                    if (!extractedTimes.isEmpty()) {
+                        currentLogs.addAll(extractedTimes);
+                    }
+                    else if (!isNonEmployeeLine(line) && !line.equalsIgnoreCase("Default")) {
+                        String oldName = currentEmp.getEmpName();
+                        if (oldName == null || oldName.trim().isEmpty()) {
+                            currentEmp.setEmpName(line);
+
+                        } else {
+                            currentEmp.setEmpName(oldName + " " + line);
+                        }
+                    }
+                }
+            }
+            if (currentEmp != null) {
+                setLogTimes(currentEmp, currentLogs);
+                employeeLogs.add(currentEmp);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Error while reading attendance PDF", e);
+        }
+        return employeeLogs;
+    }
+
+    private List<String> extractTimesFromLine(String line) {
+        List<String> times = new ArrayList<>();
+        Matcher matcher = TIME_PATTERN.matcher(line);
+        while (matcher.find()) {times.add(matcher.group());
+        }
+        return times;
+    }
+
+    private String extractEmployeeCode(String line) {
+        String[] parts = line.trim().split("\\s+");
+        if (parts.length == 0) {
+            return null;
+        }
+        String firstToken = parts[0];
+
+        if (firstToken.matches("^[A-Za-z]+[A-Za-z0-9]*\\d+[A-Za-z0-9]*$")) {
+            return firstToken;
+        }
+        return null;
+    }
+
+    private String removeTimesFromLine(String line) {
+        return TIME_PATTERN
+                .matcher(line)
+                .replaceAll("")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private boolean shouldSkipLine(String line) {
+        if (line == null || line.trim().isEmpty()) {
+            return true;
+        }
+        String value = line.trim();
+        return value.startsWith("Company:")
+                || value.startsWith("DefaultCompany:")
+                || value.startsWith("Daily Log Report")
+                || value.startsWith("Emp Code")
+                || value.startsWith("Generated By:")
+                || value.startsWith("Printed On:")
+                || value.equalsIgnoreCase("Page")
+                || value.equalsIgnoreCase("No")
+                || value.matches("^\\d+$")
+                || value.matches(
+                "^Aug\\s+\\d{1,2}\\s+\\d{4}\\s+To.*"
+        );
+    }
+    private boolean isNonEmployeeLine(String line) {
+        String value = line.trim();
+        return value.equalsIgnoreCase("Default")
+                || value.equalsIgnoreCase("Page")
+                || value.equalsIgnoreCase("No")
+                || value.startsWith("Generated By:")
+                || value.startsWith("Company:")
+                || value.startsWith("DefaultCompany:")
+                || value.startsWith("Printed On:")
+                || value.startsWith("Daily Log Report")
+                || value.startsWith("Emp Code");
+    }
+    private void setLogTimes(EmployeeLog emp, List<String> logs) {
+        emp.setRawLogs(new ArrayList<>(logs));
+        if (logs == null || logs.isEmpty()) {
+            emp.setLoginTime(null);
+            emp.setLogoutTime(null);
+        } else {
+            emp.setLoginTime(logs.get(0));
+            if (logs.size() > 1) {
+                emp.setLogoutTime(logs.get(logs.size() - 1));
+            } else {
+                emp.setLogoutTime(null);
+            }
+        }
+    }
+
+    public List<AttendanceDailyLog> uploadAndSaveAttendance(MultipartFile file) throws IOException {
+        List<EmployeeLog> employeeLogs = parseAttendancePdf(file.getInputStream());
+
+        if (attendanceDate == null) {
+            throw new IllegalArgumentException("Attendance date could not be extracted from PDF");
+        }
+        List<AttendanceDailyLog> dailyLogs = new ArrayList<>();
+
+        for (EmployeeLog employee : employeeLogs) {
+            AttendanceDailyLog dailyLog = new AttendanceDailyLog();
+            dailyLog.setAttendanceDate(attendanceDate);
+            dailyLog.setEmployeeId(employee.getEmpCode());
+            dailyLog.setEmployeeName(employee.getEmpName());
+            dailyLog.setDepartment(employee.getDepartment());
+            dailyLog.setLoginTime(employee.getLoginTime());
+            dailyLog.setLogoutTime(employee.getLogoutTime());
+            dailyLog.setRawLogs(employee.getRawLogs());
+            dailyLog.setUploadedFileName(file.getOriginalFilename());
+            dailyLogs.add(dailyLog);
+        }
+        return attendanceDailyLogRepository.saveAll(dailyLogs);
+    }
+    public List<AttendanceDailyLog> getAllAttendanceLogs() {
+        return attendanceDailyLogRepository.findAllByOrderByAttendanceDateDesc();
     }
 }
 
