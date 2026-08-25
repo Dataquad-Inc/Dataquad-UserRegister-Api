@@ -26,6 +26,7 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -1193,72 +1194,13 @@ public class UserService {
             List<UserDetails> employees =
                     userDao.findAllAttendanceEmployeesByEntity(dto.getEntity());
 
+            List<LocalDate> dates = cycleDates(config);
+
             List<EmployeeAttendance> saveList = new ArrayList<>();
 
-            LocalDate currentDate = fromDate;
-
-            while (!currentDate.isAfter(toDate)) {
-
-                boolean isWeekend =
-                        currentDate.getDayOfWeek() == DayOfWeek.SATURDAY
-                                || currentDate.getDayOfWeek() == DayOfWeek.SUNDAY;
-
-                boolean isPublicHoliday =
-                        dto.getPublicHolidays() != null
-                                && dto.getPublicHolidays().contains(currentDate);
-
-                Integer weekNumber = calculateWeekNumber(fromDate, currentDate);
-
-                for (UserDetails employee : employees) {
-
-                    EmployeeAttendance attendance = new EmployeeAttendance();
-
-                    attendance.setEmployeeId(employee.getUserId());
-                    attendance.setEmployeeName(employee.getUserName());
-                    attendance.setAttendanceDate(currentDate);
-                    attendance.setAttendanceMonth(dto.getMonth());
-                    attendance.setAttendanceYear(dto.getYear());
-                    attendance.setWeekNumber(weekNumber);
-                    attendance.setMonthConfig(config);
-                    attendance.setFromDate(fromDate);
-                    attendance.setToDate(toDate);
-                    attendance.setApprovalStatus("DRAFT");
-                    attendance.setCreatedAt(LocalDateTime.now());
-                    attendance.setUpdatedAt(LocalDateTime.now());
-                    attendance.setIsLocked(false);
-                    attendance.setSalaryDeduction(false);
-                    attendance.setCasualLeaveApplied(false);
-                    attendance.setIsSandwichDeduction(false);
-
-                    if (employee.getAssociatedTeamLeadId() != null
-                            && !employee.getAssociatedTeamLeadId().isBlank()) {
-
-                        attendance.setReportingManager(
-                                userDao.getTeamLeadName(
-                                        employee.getAssociatedTeamLeadId()));
-                    } else {
-                        attendance.setReportingManager(
-                                employee.getReportingManager());
-                    }
-
-                    boolean isProbation =
-                            employee.getProbation() == null
-                                    || !employee.getProbation().equalsIgnoreCase("Completed");
-
-                    attendance.setIsProbationEmployee(isProbation);
-
-                    setDefaultAttendance(
-                            attendance,
-                            employee,
-                            currentDate,
-                            isWeekend,
-                            isPublicHoliday
-                    );
-
-                    saveList.add(attendance);
-                }
-
-                currentDate = currentDate.plusDays(1);
+            for (UserDetails employee : employees) {
+                saveList.addAll(
+                        generateAttendanceRows(config, employee, dates));
             }
 
             attendanceRepository.saveAll(saveList);
@@ -1531,6 +1473,12 @@ public class UserService {
                                 employee.getUserId(),
                                 month,
                                 year);
+
+                attendanceList =
+                        backfillMissingAttendance(
+                                monthConfig,
+                                employee,
+                                attendanceList);
 
                 for (EmployeeAttendance attendance : attendanceList) {
 
@@ -1953,80 +1901,13 @@ public class UserService {
             List<UserDetails> employees =
                     userDao.findAllAttendanceEmployeesByEntity(entity);
 
+            List<LocalDate> dates = cycleDates(config);
+
             List<EmployeeAttendance> saveList = new ArrayList<>();
 
-            LocalDate currentDate = fromDate;
-
-            while (!currentDate.isAfter(toDate)) {
-
-                boolean isWeekend =
-                        currentDate.getDayOfWeek() == DayOfWeek.SATURDAY
-                                || currentDate.getDayOfWeek() == DayOfWeek.SUNDAY;
-
-                boolean isPublicHoliday =
-                        dto.getPublicHolidays() != null
-                                && dto.getPublicHolidays().contains(currentDate);
-
-                Integer weekNumber =
-                        calculateWeekNumber(fromDate, currentDate);
-
-                for (UserDetails employee : employees) {
-
-                    EmployeeAttendance attendance =
-                            new EmployeeAttendance();
-
-                    attendance.setEmployeeId(employee.getUserId());
-                    attendance.setEmployeeName(employee.getUserName());
-                    attendance.setAttendanceDate(currentDate);
-                    attendance.setAttendanceMonth(dto.getMonth());
-                    attendance.setAttendanceYear(dto.getYear());
-                    attendance.setWeekNumber(weekNumber);
-                    attendance.setMonthConfig(config);
-                    attendance.setFromDate(fromDate);
-                    attendance.setToDate(toDate);
-
-                    attendance.setApprovalStatus("DRAFT");
-
-                    attendance.setCreatedAt(LocalDateTime.now());
-                    attendance.setUpdatedAt(LocalDateTime.now());
-
-                    attendance.setIsLocked(false);
-                    attendance.setSalaryDeduction(false);
-                    attendance.setCasualLeaveApplied(false);
-                    attendance.setIsSandwichDeduction(false);
-
-                    if (employee.getAssociatedTeamLeadId() != null
-                            && !employee.getAssociatedTeamLeadId().isBlank()) {
-
-                        attendance.setReportingManager(
-                                userDao.getTeamLeadName(
-                                        employee.getAssociatedTeamLeadId()));
-
-                    } else {
-
-                        attendance.setReportingManager(
-                                employee.getReportingManager());
-                    }
-
-                    boolean probation =
-                            employee.getProbation() == null
-                                    || !employee.getProbation()
-                                    .equalsIgnoreCase("Completed");
-
-                    attendance.setIsProbationEmployee(probation);
-
-                    setDefaultAttendance(
-                            attendance,
-                            employee,
-                            currentDate,
-                            isWeekend,
-                            isPublicHoliday
-                    );
-
-                    saveList.add(attendance);
-                }
-
-                currentDate = currentDate.plusDays(1);
+            for (UserDetails employee : employees) {
+                saveList.addAll(
+                        generateAttendanceRows(config, employee, dates));
             }
 
             attendanceRepository.saveAll(saveList);
@@ -2723,6 +2604,134 @@ public class UserService {
         }
 
         return weekNumber;
+    }
+
+    private List<LocalDate> cycleDates(AttendanceMonthConfig config) {
+
+        return config.getFromDate()
+                .datesUntil(config.getToDate().plusDays(1))
+                .toList();
+    }
+
+    /**
+     * Builds attendance rows for one employee across the given dates. Shared by
+     * month setup, month edit and the dashboard back-fill so a row generated
+     * later is indistinguishable from one generated during configuration.
+     */
+    private List<EmployeeAttendance> generateAttendanceRows(
+            AttendanceMonthConfig config,
+            UserDetails employee,
+            List<LocalDate> dates) {
+
+        List<EmployeeAttendance> rows = new ArrayList<>();
+
+        String reportingManager =
+                employee.getAssociatedTeamLeadId() != null
+                        && !employee.getAssociatedTeamLeadId().isBlank()
+                        ? userDao.getTeamLeadName(employee.getAssociatedTeamLeadId())
+                        : employee.getReportingManager();
+
+        boolean isProbation =
+                employee.getProbation() == null
+                        || !employee.getProbation().equalsIgnoreCase("Completed");
+
+        for (LocalDate date : dates) {
+
+            boolean isWeekend =
+                    date.getDayOfWeek() == DayOfWeek.SATURDAY
+                            || date.getDayOfWeek() == DayOfWeek.SUNDAY;
+
+            boolean isPublicHoliday =
+                    config.getPublicHolidays() != null
+                            && config.getPublicHolidays().contains(date);
+
+            EmployeeAttendance attendance = new EmployeeAttendance();
+
+            attendance.setEmployeeId(employee.getUserId());
+            attendance.setEmployeeName(employee.getUserName());
+            attendance.setAttendanceDate(date);
+            attendance.setAttendanceMonth(config.getAttendanceMonth());
+            attendance.setAttendanceYear(config.getAttendanceYear());
+            attendance.setWeekNumber(
+                    calculateWeekNumber(config.getFromDate(), date));
+            attendance.setMonthConfig(config);
+            attendance.setFromDate(config.getFromDate());
+            attendance.setToDate(config.getToDate());
+            attendance.setApprovalStatus("DRAFT");
+            attendance.setCreatedAt(LocalDateTime.now());
+            attendance.setUpdatedAt(LocalDateTime.now());
+            attendance.setIsLocked(false);
+            attendance.setSalaryDeduction(false);
+            attendance.setCasualLeaveApplied(false);
+            attendance.setIsSandwichDeduction(false);
+            attendance.setReportingManager(reportingManager);
+            attendance.setIsProbationEmployee(isProbation);
+
+            setDefaultAttendance(
+                    attendance,
+                    employee,
+                    date,
+                    isWeekend,
+                    isPublicHoliday);
+
+            rows.add(attendance);
+        }
+
+        return rows;
+    }
+
+    /**
+     * An employee who becomes attendance-eligible after the month was configured
+     * has no rows for that cycle, so the grid renders empty. Generate only the
+     * dates that are missing, which also repairs employees holding a partial set
+     * created ad hoc by saveAttendance.
+     */
+    private List<EmployeeAttendance> backfillMissingAttendance(
+            AttendanceMonthConfig config,
+            UserDetails employee,
+            List<EmployeeAttendance> existing) {
+
+        Set<LocalDate> existingDates =
+                existing.stream()
+                        .map(EmployeeAttendance::getAttendanceDate)
+                        .collect(Collectors.toSet());
+
+        List<LocalDate> missing =
+                cycleDates(config).stream()
+                        .filter(date -> !existingDates.contains(date))
+                        .toList();
+
+        if (missing.isEmpty()) {
+            return existing;
+        }
+
+        try {
+            attendanceRepository.saveAll(
+                    generateAttendanceRows(config, employee, missing));
+
+        } catch (DataIntegrityViolationException e) {
+            // A concurrent request generated the same dates. The unique
+            // constraint on (employee_id, attendance_date) guarantees no
+            // duplicates were written, so re-reading below is sufficient.
+            logger.warn(
+                    "Attendance back-fill raced for employee {} in {}/{}: {}",
+                    employee.getUserId(),
+                    config.getAttendanceMonth(),
+                    config.getAttendanceYear(),
+                    e.getMessage());
+        }
+
+        logger.info(
+                "Back-filled {} attendance day(s) for employee {} in {}/{}",
+                missing.size(),
+                employee.getUserId(),
+                config.getAttendanceMonth(),
+                config.getAttendanceYear());
+
+        return attendanceRepository.getEmployeeAttendanceMonth(
+                employee.getUserId(),
+                config.getAttendanceMonth(),
+                config.getAttendanceYear());
     }
 
     public List<AttendanceDashboardResponseDto> getPayrollAttendanceDashboard(
