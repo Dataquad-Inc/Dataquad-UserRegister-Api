@@ -2285,31 +2285,6 @@ public class UserService {
                                 (a, b) -> a
                         ));
 
-        for (EmployeeAttendance attendance : attendanceMap.values()) {
-
-            String status = attendance.getAttendanceStatus();
-
-            if ("LOP".equalsIgnoreCase(status)) {
-                totalLopLeaves++;
-            }
-
-            if ("HD".equalsIgnoreCase(status)) {
-                totalHalfDays++;
-            }
-
-            if ("WFO".equalsIgnoreCase(status)) {
-                totalWfH++;
-            }
-
-            if ("WO".equalsIgnoreCase(status)) {
-                totalWeekOffs++;
-            }
-
-            if ("PH".equalsIgnoreCase(status)) {
-                totalPublicHolidays++;
-            }
-        }
-
         LocalDate currentDate =
                 monthConfig.getFromDate();
 
@@ -2358,36 +2333,52 @@ public class UserService {
 
             } else if (isWeekend) {
                 attendanceStatus = "WO";
-            } else if (attendance != null && attendance.getAttendanceStatus() != null) {
+
+            } else if (attendance != null
+                    && attendance.getAttendanceStatus() != null) {
 
                 attendanceStatus = attendance.getAttendanceStatus();
             }
-            attendanceGrid.put(String.valueOf(day), attendanceStatus);
+
+            if ("LOP".equalsIgnoreCase(attendanceStatus)) {
+                totalLopLeaves++;
+            }
+
+            if ("HD".equalsIgnoreCase(attendanceStatus)) {
+                totalHalfDays++;
+            }
+
+            if ("WFH".equalsIgnoreCase(attendanceStatus)) {
+                totalWfH++;
+            }
+
+            if ("WO".equalsIgnoreCase(attendanceStatus)) {
+                totalWeekOffs++;
+            }
+
+            if ("PH".equalsIgnoreCase(attendanceStatus)) {
+                totalPublicHolidays++;
+            }
+
+            attendanceGrid.put(
+                    String.valueOf(day),
+                    attendanceStatus);
 
             if ("HD".equalsIgnoreCase(attendanceStatus)) {
 
                 totalPresentDays += 0.5;
 
-            } else if ("P".equalsIgnoreCase(
-                    attendanceStatus)
-                    || "WH".equalsIgnoreCase(
-                    attendanceStatus)
-                    || "WFH".equalsIgnoreCase(
-                    attendanceStatus)
-                    || "LL".equalsIgnoreCase(
-                    attendanceStatus)
-                    || "SP".equalsIgnoreCase(
-                    attendanceStatus)) {
+            } else if ("P".equalsIgnoreCase(attendanceStatus)
+                    || "WH".equalsIgnoreCase(attendanceStatus)
+                    || "WFH".equalsIgnoreCase(attendanceStatus)
+                    || "LL".equalsIgnoreCase(attendanceStatus)
+                    || "SP".equalsIgnoreCase(attendanceStatus)) {
 
                 totalPresentDays += 1;
             }
 
             if ("L".equalsIgnoreCase(attendanceStatus)) {
                 totalLeaves++;
-            }
-
-            if ("LOP".equalsIgnoreCase(attendanceStatus)) {
-                totalLopLeaves++;
             }
 
             currentDate = currentDate.plusDays(1);
@@ -2404,12 +2395,11 @@ public class UserService {
                         : 1;
 
         Set<LocalDate> sandwichDeductionDates = new HashSet<>();
-        Set<LocalDate> leaveDates = attendanceList.stream()
-                .filter(a ->
-                        "L".equalsIgnoreCase(
-                                a.getAttendanceStatus()))
-                .map(EmployeeAttendance::getAttendanceDate)
-                .collect(Collectors.toSet());
+
+        Set<LocalDate> leaveDates = attendanceList.stream().filter(a -> "L".equalsIgnoreCase(
+                                        a.getAttendanceStatus()))
+                        .map(EmployeeAttendance::getAttendanceDate)
+                        .collect(Collectors.toSet());
 
         for (LocalDate leaveDate : leaveDates) {
 
@@ -2454,31 +2444,22 @@ public class UserService {
 
         } else {
             casualLeaves = allowedCasualLeave;
+
             unpaidLeaves = totalLeaves - allowedCasualLeave;
         }
         totalPaidDays = totalPresentDays;
         LocalDate date = monthConfig.getFromDate();
         while (!date.isAfter(monthConfig.getToDate())) {
 
-            boolean beforeJoiningDate = employee.getJoiningDate() != null
-                    && date.isBefore(
-                    employee.getJoiningDate());
+            boolean beforeJoiningDate = employee.getJoiningDate() != null && date.isBefore(employee.getJoiningDate());
 
-            boolean onOrAfterLastWorkingDay = employee.getLastWorkingDay() != null
-                    && !date.isBefore(
-                    employee.getLastWorkingDay());
+            boolean onOrAfterLastWorkingDay = employee.getLastWorkingDay() != null && !date.isBefore(employee.getLastWorkingDay());
 
-            boolean isPH = monthConfig.getPublicHolidays() != null
-                    && monthConfig.getPublicHolidays()
-                    .contains(date);
+            boolean isPH = monthConfig.getPublicHolidays() != null && monthConfig.getPublicHolidays().contains(date);
 
-            boolean isWO = date.getDayOfWeek()
-                    == DayOfWeek.SATURDAY
-                    || date.getDayOfWeek()
-                    == DayOfWeek.SUNDAY;
+            boolean isWO = date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY;
 
-            if (!beforeJoiningDate
-                    && !onOrAfterLastWorkingDay) {
+            if (!beforeJoiningDate && !onOrAfterLastWorkingDay) {
 
                 if (isPH || isWO) {
                     totalPaidDays += 1;
@@ -2496,11 +2477,7 @@ public class UserService {
             totalPaidDays = 0;
         }
 
-        int totalDaysInMonth =
-                (int) ChronoUnit.DAYS.between(
-                        monthConfig.getFromDate(),
-                        monthConfig.getToDate()) + 1;
-
+        int totalDaysInMonth = (int) ChronoUnit.DAYS.between(monthConfig.getFromDate(), monthConfig.getToDate()) + 1;
         dto.setAttendanceGrid(attendanceGrid);
         dto.setTotalDaysInMonth(totalDaysInMonth);
         dto.setTotalWorkingDays(totalWorkingDays);
