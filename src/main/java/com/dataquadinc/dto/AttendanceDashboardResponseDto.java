@@ -58,4 +58,14 @@ public class AttendanceDashboardResponseDto {
     private Integer casualLeaves;
 
     private Double totalPaidDays;
+
+    private int totalLop;
+
+    private int totalHalfDays;
+
+    private int totalWfH;
+
+    private int totalPublicHolidays;
+
+    private int totalWeekOffs;
 }
