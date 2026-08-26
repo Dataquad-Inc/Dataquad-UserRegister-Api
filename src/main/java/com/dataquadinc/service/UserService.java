@@ -2285,6 +2285,31 @@ public class UserService {
                                 (a, b) -> a
                         ));
 
+        for (EmployeeAttendance attendance : attendanceMap.values()) {
+
+            String status = attendance.getAttendanceStatus();
+
+            if ("LOP".equalsIgnoreCase(status)) {
+                totalLopLeaves++;
+            }
+
+            if ("HD".equalsIgnoreCase(status)) {
+                totalHalfDays++;
+            }
+
+            if ("WFO".equalsIgnoreCase(status)) {
+                totalWfH++;
+            }
+
+            if ("WO".equalsIgnoreCase(status)) {
+                totalWeekOffs++;
+            }
+
+            if ("PH".equalsIgnoreCase(status)) {
+                totalPublicHolidays++;
+            }
+        }
+
         LocalDate currentDate =
                 monthConfig.getFromDate();
 
@@ -2336,25 +2361,6 @@ public class UserService {
             } else if (attendance != null && attendance.getAttendanceStatus() != null) {
 
                 attendanceStatus = attendance.getAttendanceStatus();
-            }
-            if ("LOP".equalsIgnoreCase(attendanceStatus)) {
-                totalLopLeaves++;
-            }
-
-            if ("HD".equalsIgnoreCase(attendanceStatus)) {
-                totalHalfDays++;
-            }
-
-            if ("WFH".equalsIgnoreCase(attendanceStatus)) {
-                totalWfH++;
-            }
-
-            if ("WO".equalsIgnoreCase(attendanceStatus)) {
-                totalWeekOffs++;
-            }
-
-            if ("PH".equalsIgnoreCase(attendanceStatus)) {
-                totalPublicHolidays++;
             }
             attendanceGrid.put(String.valueOf(day), attendanceStatus);
 
