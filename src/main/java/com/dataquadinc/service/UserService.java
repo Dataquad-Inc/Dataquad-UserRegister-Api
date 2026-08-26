@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,18 +31,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
 import java.util.stream.Collectors;
 import java.util.List;
 import java.util.ArrayList;
@@ -2241,6 +2236,10 @@ public class UserService {
         double totalPaidDays = 0.0;
         int totalWeekendDays = 0;
         int totalWorkingDays = 0;
+        int totalHalfDays = 0;
+        int totalWfH = 0;
+        int totalWeekOffs = 0;
+        int totalPublicHolidays = 0;
 
         dto.setSerialNo(serialNo);
         dto.setEmployeeId(employee.getUserId());
@@ -2337,6 +2336,25 @@ public class UserService {
             } else if (attendance != null && attendance.getAttendanceStatus() != null) {
 
                 attendanceStatus = attendance.getAttendanceStatus();
+            }
+            if ("LOP".equalsIgnoreCase(attendanceStatus)) {
+                totalLopLeaves++;
+            }
+
+            if ("HD".equalsIgnoreCase(attendanceStatus)) {
+                totalHalfDays++;
+            }
+
+            if ("WFH".equalsIgnoreCase(attendanceStatus)) {
+                totalWfH++;
+            }
+
+            if ("WO".equalsIgnoreCase(attendanceStatus)) {
+                totalWeekOffs++;
+            }
+
+            if ("PH".equalsIgnoreCase(attendanceStatus)) {
+                totalPublicHolidays++;
             }
             attendanceGrid.put(String.valueOf(day), attendanceStatus);
 
@@ -2485,6 +2503,11 @@ public class UserService {
         dto.setTotalLeaves(totalLeaves);
         dto.setCasualLeaves(casualLeaves);
         dto.setTotalPaidDays(totalPaidDays);
+        dto.setTotalLop(totalLopLeaves);
+        dto.setTotalHalfDays(totalHalfDays);
+        dto.setTotalWfH(totalWfH);
+        dto.setTotalWeekOffs(totalWeekOffs);
+        dto.setTotalPublicHolidays(totalPublicHolidays);
         return dto;
     }
 
