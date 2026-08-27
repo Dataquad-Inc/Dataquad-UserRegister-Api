@@ -298,6 +298,47 @@ public class UserService {
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
 
+    public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedInternal() {
+
+        List<UserDetails> users = userDao.findAllIsolatedInternalUser();
+
+        List<EmployeeWithRole> employeeRoles = users.stream()
+                .map(user -> {
+                    String rolesString = user.getRoles().stream()
+                            .map(role -> role.getName().name())
+                            .collect(Collectors.joining(", "));
+
+                    return EmployeeWithRole.fromUserDetails(user, rolesString);
+                })
+                .collect(Collectors.toList());
+
+        logger.info("Returning {} isolated internal employee records in response",
+                employeeRoles.size());
+
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
+
+
+    public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedExternal() {
+
+        List<UserDetails> users = userDao.findAllIsolatedExternalUser();
+
+        List<EmployeeWithRole> employeeRoles = users.stream()
+                .map(user -> {
+                    String rolesString = user.getRoles().stream()
+                            .map(role -> role.getName().name())
+                            .collect(Collectors.joining(", "));
+
+                    return EmployeeWithRole.fromUserDetails(user, rolesString);
+                })
+                .collect(Collectors.toList());
+
+        logger.info("Returning {} isolated external employee records in response",
+                employeeRoles.size());
+
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
+
     public ResponseEntity<ResponseBean<UserResponse>> updateUser(String userId, UserDto userDto) {
         Map<String, String> errors = new HashMap<>();
 

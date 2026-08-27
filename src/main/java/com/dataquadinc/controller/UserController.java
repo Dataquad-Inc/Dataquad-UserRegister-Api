@@ -244,6 +244,37 @@ public class UserController {
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
 
+    @GetMapping("/isolated-internal/employee")
+    public ResponseEntity<List<EmployeeWithRole>> getAllIsolatedInternalEmployees() {
+
+        ResponseEntity<List<EmployeeWithRole>> responseEntity =
+                userService.findAllIsolatedInternal();
+
+        List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
+
+        if (employeeRoles == null || employeeRoles.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
+
+
+    @GetMapping("/isolated-external/employee")
+    public ResponseEntity<List<EmployeeWithRole>> getAllIsolatedExternalEmployees() {
+
+        ResponseEntity<List<EmployeeWithRole>> responseEntity =
+                userService.findAllIsolatedExternal();
+
+        List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
+
+        if (employeeRoles == null || employeeRoles.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
+
     @GetMapping("/employee/filterByJoiningDate")
     public ResponseEntity<?> getEmployeesByJoiningDateRange(
             @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
