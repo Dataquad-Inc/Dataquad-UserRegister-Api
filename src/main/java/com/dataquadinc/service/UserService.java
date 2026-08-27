@@ -1323,9 +1323,10 @@ public class UserService {
                             "Attendance cannot be entered before joining date for employee : "
                                     + employee.getUserId());
                 }
-                boolean afterLastWorkingDay = employee.getLastWorkingDay() != null
-                        && dto.getAttendanceDate()
-                        .isAfter(employee.getLastWorkingDay());
+                boolean onOrAfterLastWorkingDay = employee.getLastWorkingDay() != null
+                        && !dto.getAttendanceDate()
+                        .isBefore(
+                                employee.getLastWorkingDay());
                 EmployeeAttendance attendance = attendanceRepository
                         .findByEmployeeIdAndAttendanceDate(
                                 employee.getUserId(),
@@ -1346,7 +1347,7 @@ public class UserService {
                     throw new RuntimeException("Attendance is locked.");
                 }
 
-                if (afterLastWorkingDay) {
+                if (onOrAfterLastWorkingDay) {
                     if (attendance != null) {
                         if ("SUBMITTED".equalsIgnoreCase(
                                 attendance.getApprovalStatus())) {
@@ -1524,13 +1525,14 @@ public class UserService {
                             employee.getJoiningDate() != null
                                     && attendanceDate.isBefore(
                                     employee.getJoiningDate());
-                    boolean afterLastWorkingDay =
+
+                    boolean onOrAfterLastWorkingDay =
                             employee.getLastWorkingDay() != null
-                                    && attendanceDate.isAfter(
+                                    && !attendanceDate.isBefore(
                                     employee.getLastWorkingDay());
 
                     if (beforeJoiningDate
-                            || afterLastWorkingDay)  {
+                            || onOrAfterLastWorkingDay) {
                         if ("DRAFT".equalsIgnoreCase(
                                 attendance.getApprovalStatus())
                                 || "REJECTED".equalsIgnoreCase(
@@ -1653,9 +1655,9 @@ public class UserService {
                             && currentDate.isBefore(
                             employee.getJoiningDate());
 
-            boolean afterLastWorkingDay =
+            boolean onOrAfterLastWorkingDay =
                     employee.getLastWorkingDay() != null
-                            && currentDate.isAfter(
+                            && !currentDate.isBefore(
                             employee.getLastWorkingDay());
 
             EmployeeAttendanceViewDto dto =
@@ -1663,7 +1665,7 @@ public class UserService {
 
             dto.setAttendanceDate(currentDate);
 
-            if (beforeJoiningDate || afterLastWorkingDay) {
+            if (beforeJoiningDate || onOrAfterLastWorkingDay) {
 
                 if (attendance != null
                         && ("DRAFT".equalsIgnoreCase(
@@ -2307,7 +2309,6 @@ public class UserService {
             dto.setReportingManager(
                     employee.getReportingManager());
         }
-
         if (approvedOnly) {
 
             attendanceList = attendanceList.stream()
@@ -2351,17 +2352,13 @@ public class UserService {
                             && currentDate.isBefore(
                             employee.getJoiningDate());
 
-            System.out.println(
-                    "EMPLOYEE: " + employee.getUserId()
-                            + " | LAST WORKING DAY: " + employee.getLastWorkingDay());
-
-            boolean afterLastWorkingDay =
+            boolean onOrAfterLastWorkingDay =
                     employee.getLastWorkingDay() != null
-                            && currentDate.isAfter(
+                            && !currentDate.isBefore(
                             employee.getLastWorkingDay());
 
             if (!beforeJoiningDate
-                    && !afterLastWorkingDay
+                    && !onOrAfterLastWorkingDay
                     && !isWeekend
                     && !isPublicHoliday) {
 
@@ -2370,51 +2367,43 @@ public class UserService {
 
             String attendanceStatus = "";
 
-            if (beforeJoiningDate
-                    || afterLastWorkingDay) {
-
-            if (beforeJoiningDate ||afterLastWorkingDay) {
+            if (beforeJoiningDate || onOrAfterLastWorkingDay) {
                 attendanceStatus = "";
-
             } else if (isPublicHoliday) {
-
                 attendanceStatus = "PH";
 
             } else if (isWeekend) {
-
                 attendanceStatus = "WO";
 
             } else if (attendance != null
                     && attendance.getAttendanceStatus() != null) {
 
-                attendanceStatus =
-                        attendance.getAttendanceStatus();
+                attendanceStatus = attendance.getAttendanceStatus();
             }
 
             if ("LOP".equalsIgnoreCase(attendanceStatus)) {
-
                 totalLopLeaves++;
             }
 
             if ("HD".equalsIgnoreCase(attendanceStatus)) {
-
                 totalHalfDays++;
             }
 
             if ("WFH".equalsIgnoreCase(attendanceStatus)) {
-
                 totalWfH++;
             }
 
             if ("WO".equalsIgnoreCase(attendanceStatus)) {
-
                 totalWeekOffs++;
             }
 
             if ("PH".equalsIgnoreCase(attendanceStatus)) {
-
                 totalPublicHolidays++;
             }
+
+            attendanceGrid.put(
+                    String.valueOf(day),
+                    attendanceStatus);
 
             if ("HD".equalsIgnoreCase(attendanceStatus)) {
 
@@ -2426,49 +2415,110 @@ public class UserService {
                     || "LL".equalsIgnoreCase(attendanceStatus)
                     || "SP".equalsIgnoreCase(attendanceStatus)) {
 
-                totalPresentDays += 1.0;
+                totalPresentDays += 1;
             }
 
-            /*
-             * Count Leave
-             */
             if ("L".equalsIgnoreCase(attendanceStatus)) {
-
                 totalLeaves++;
             }
 
-            /*
-             * Put attendance into grid
-             */
-            attendanceGrid.put(
-                    String.valueOf(day),
-                    attendanceStatus);
-
-            currentDate =
-                    currentDate.plusDays(1);
+            currentDate = currentDate.plusDays(1);
         }
-        boolean isProbationEmployee = employee.getProbation() == null || !employee.getProbation().equalsIgnoreCase("Completed");
 
-        int allowedCasualLeave = isProbationEmployee
-                        ? 1
-                        : 0;
+        boolean isProbationEmployee =
+                employee.getProbation() == null
+                        || !employee.getProbation()
+                        .equalsIgnoreCase("Completed");
 
+        int allowedCasualLeave =
+                isProbationEmployee
+                        ? 0
+                        : 1;
+
+        Set<LocalDate> sandwichDeductionDates = new HashSet<>();
+
+        Set<LocalDate> leaveDates = attendanceList.stream().filter(a -> "L".equalsIgnoreCase(
+                                        a.getAttendanceStatus()))
+                        .map(EmployeeAttendance::getAttendanceDate)
+                        .collect(Collectors.toSet());
+
+        for (LocalDate leaveDate : leaveDates) {
+
+            if (leaveDate.getDayOfWeek()
+                    == DayOfWeek.FRIDAY) {
+
+                LocalDate saturday =
+                        leaveDate.plusDays(1);
+
+                LocalDate sunday =
+                        leaveDate.plusDays(2);
+
+                if (!leaveDates.contains(saturday)) {
+                    sandwichDeductionDates.add(saturday);
+                }
+
+                if (!leaveDates.contains(sunday)) {
+                    sandwichDeductionDates.add(sunday);
+                }
+            }
+
+            if (leaveDate.getDayOfWeek()
+                    == DayOfWeek.MONDAY) {
+
+                LocalDate saturday = leaveDate.minusDays(2);
+
+                LocalDate sunday = leaveDate.minusDays(1);
+
+                if (!leaveDates.contains(saturday)) {
+                    sandwichDeductionDates.add(saturday);
+                }
+
+                if (!leaveDates.contains(sunday)) {
+                    sandwichDeductionDates.add(sunday);
+                }
+            }
+        }
+
+        int unpaidLeaves = 0;
         if (totalLeaves <= allowedCasualLeave) {
             casualLeaves = totalLeaves;
 
         } else {
-
             casualLeaves = allowedCasualLeave;
+
+            unpaidLeaves = totalLeaves - allowedCasualLeave;
+        }
+        totalPaidDays = totalPresentDays;
+        LocalDate date = monthConfig.getFromDate();
+        while (!date.isAfter(monthConfig.getToDate())) {
+
+            boolean beforeJoiningDate = employee.getJoiningDate() != null && date.isBefore(employee.getJoiningDate());
+
+            boolean onOrAfterLastWorkingDay = employee.getLastWorkingDay() != null && !date.isBefore(employee.getLastWorkingDay());
+
+            boolean isPH = monthConfig.getPublicHolidays() != null && monthConfig.getPublicHolidays().contains(date);
+
+            boolean isWO = date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY;
+
+            if (!beforeJoiningDate && !onOrAfterLastWorkingDay) {
+
+                if (isPH || isWO) {
+                    totalPaidDays += 1;
+                }
+            }
+
+            date = date.plusDays(1);
         }
 
-        totalPaidDays = totalPresentDays + totalWeekOffs + totalPublicHolidays;
+        totalPaidDays += casualLeaves;
+        totalPaidDays -= totalLopLeaves;
+        totalPaidDays -= sandwichDeductionDates.size();
 
         if (totalPaidDays < 0) {
             totalPaidDays = 0;
         }
 
         int totalDaysInMonth = (int) ChronoUnit.DAYS.between(monthConfig.getFromDate(), monthConfig.getToDate()) + 1;
-
         dto.setAttendanceGrid(attendanceGrid);
         dto.setTotalDaysInMonth(totalDaysInMonth);
         dto.setTotalWorkingDays(totalWorkingDays);
@@ -2849,9 +2899,9 @@ public class UserService {
 
         boolean beforeJoiningDate = employee.getJoiningDate() != null && currentDate.isBefore(employee.getJoiningDate());
 
-        boolean afterLastWorkingDay = employee.getLastWorkingDay() != null && currentDate.isAfter(employee.getLastWorkingDay());
+        boolean onOrAfterLastWorkingDay = employee.getLastWorkingDay() != null && !currentDate.isBefore(employee.getLastWorkingDay());
 
-        if (beforeJoiningDate || afterLastWorkingDay) {
+        if (beforeJoiningDate || onOrAfterLastWorkingDay) {
 
             attendance.setAttendanceStatus(null);
             attendance.setAttendanceValue(null);
