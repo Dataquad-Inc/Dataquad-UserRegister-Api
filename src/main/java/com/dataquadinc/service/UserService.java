@@ -2360,15 +2360,6 @@ public class UserService {
                             && currentDate.isAfter(
                             employee.getLastWorkingDay());
 
-            /*
-             * Working days
-             *
-             * Exclude:
-             * - Before joining date
-             * - After last working day
-             * - Weekends
-             * - Public holidays
-             */
             if (!beforeJoiningDate
                     && !afterLastWorkingDay
                     && !isWeekend
@@ -2378,6 +2369,9 @@ public class UserService {
             }
 
             String attendanceStatus = "";
+
+            if (beforeJoiningDate
+                    || afterLastWorkingDay) {
 
             if (beforeJoiningDate ||afterLastWorkingDay) {
                 attendanceStatus = "";
@@ -2397,37 +2391,29 @@ public class UserService {
                         attendance.getAttendanceStatus();
             }
 
-            /*
-             * Count attendance types
-             */
             if ("LOP".equalsIgnoreCase(attendanceStatus)) {
 
                 totalLopLeaves++;
-
             }
 
             if ("HD".equalsIgnoreCase(attendanceStatus)) {
 
                 totalHalfDays++;
-
             }
 
             if ("WFH".equalsIgnoreCase(attendanceStatus)) {
 
                 totalWfH++;
-
             }
 
             if ("WO".equalsIgnoreCase(attendanceStatus)) {
 
                 totalWeekOffs++;
-
             }
 
             if ("PH".equalsIgnoreCase(attendanceStatus)) {
 
                 totalPublicHolidays++;
-
             }
 
             if ("HD".equalsIgnoreCase(attendanceStatus)) {
@@ -2443,36 +2429,31 @@ public class UserService {
                 totalPresentDays += 1.0;
             }
 
+            /*
+             * Count Leave
+             */
             if ("L".equalsIgnoreCase(attendanceStatus)) {
 
                 totalLeaves++;
             }
 
-            attendanceGrid.put(String.valueOf(day), attendanceStatus);
+            /*
+             * Put attendance into grid
+             */
+            attendanceGrid.put(
+                    String.valueOf(day),
+                    attendanceStatus);
 
-            currentDate = currentDate.plusDays(1);
+            currentDate =
+                    currentDate.plusDays(1);
         }
+        boolean isProbationEmployee = employee.getProbation() == null || !employee.getProbation().equalsIgnoreCase("Completed");
 
-        /*
-         * =========================================================
-         * CASUAL LEAVE RULE
-         * =========================================================
-         *
-         * Probation employee     -> 1 casual leave
-         * Completed probation    -> 0 casual leave
-         */
-        boolean isProbationEmployee =
-                employee.getProbation() == null
-                        || !employee.getProbation()
-                        .equalsIgnoreCase("Completed");
-
-        int allowedCasualLeave =
-                isProbationEmployee
+        int allowedCasualLeave = isProbationEmployee
                         ? 1
                         : 0;
 
         if (totalLeaves <= allowedCasualLeave) {
-
             casualLeaves = totalLeaves;
 
         } else {
@@ -2480,56 +2461,7 @@ public class UserService {
             casualLeaves = allowedCasualLeave;
         }
 
-        totalPaidDays = 0.0;
-
-        for (LocalDate date = monthConfig.getFromDate(); !date.isAfter(monthConfig.getToDate());
-             date = date.plusDays(1)) {
-
-            boolean beforeJoining = employee.getJoiningDate() != null && date.isBefore(employee.getJoiningDate());
-
-            boolean afterLastWorkingDay = employee.getLastWorkingDay() != null && date.isAfter(employee.getLastWorkingDay());
-
-            if (beforeJoining || afterLastWorkingDay) {
-                continue;
-            }
-
-            boolean isWeekend = date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY;
-
-            boolean isPublicHoliday = monthConfig.getPublicHolidays() != null && monthConfig.getPublicHolidays().contains(date);
-
-            String status;
-
-            EmployeeAttendance attendance = attendanceMap.get(date);
-
-            if (attendance != null && attendance.getAttendanceStatus() != null) {
-
-                status = attendance.getAttendanceStatus();
-
-            } else if (isPublicHoliday) {
-                status = "PH";
-            } else if (isWeekend) {
-                status = "WO";
-
-            } else {
-                continue;
-            }
-
-            if ("P".equalsIgnoreCase(status)
-                    || "WFH".equalsIgnoreCase(status)
-                    || "WO".equalsIgnoreCase(status)
-                    || "PH".equalsIgnoreCase(status)
-                    || "SP".equalsIgnoreCase(status)
-                    || "WH".equalsIgnoreCase(status)) {
-
-                totalPaidDays += 1.0;
-
-            } else if ("HD".equalsIgnoreCase(status)) {totalPaidDays += 0.5;
-
-            } else if ("L".equalsIgnoreCase(status) || "LOP".equalsIgnoreCase(status)) {
-
-                totalPaidDays -= 1.0;
-            }
-        }
+        totalPaidDays = totalPresentDays + totalWeekOffs + totalPublicHolidays;
 
         if (totalPaidDays < 0) {
             totalPaidDays = 0;
