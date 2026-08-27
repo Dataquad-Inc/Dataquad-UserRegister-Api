@@ -37,6 +37,17 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
     List<UserDetails> findAllInActiveExternalUser();
 
     @Query("SELECT u FROM UserDetails u " +
+            "WHERE u.status = 'ISOLATED' " +
+            "AND u.designation <> 'Candidate'")
+    List<UserDetails> findAllIsolatedInternalUser();
+
+
+    @Query("SELECT u FROM UserDetails u " +
+            "WHERE u.status = 'ISOLATED' " +
+            "AND u.designation = 'Candidate'")
+    List<UserDetails> findAllIsolatedExternalUser();
+
+    @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
             "AND u.status = 'INACTIVE' AND u.designation <> 'Candidate'")
     List<UserDetails> findAllInActiveNotExternalUser();
