@@ -54,10 +54,28 @@ public class UserProfileService {
         updateField(dto.getGender(), user.getGender(), "Gender", user::setGender, updatedFields);
         updateField(dto.getMaritalStatus(), user.getMaritalStatus(), "Marital Status", user::setMaritalStatus, updatedFields);
         updateField(firstNonNull(dto.getPersonal_email(), dto.getPersonalEmail()), user.getPersonalemail(), "Personal Email", user::setPersonalemail, updatedFields);
+        // 🔹 Joining Date
         if (dto.getJoining_date() != null && !Objects.equals(dto.getJoining_date(), user.getJoiningDate())) {
             user.setJoiningDate(dto.getJoining_date());
             updatedFields.put("Joining Date", dto.getJoining_date().toString());
             logger.debug("Updated field: Joining Date -> {}", dto.getJoining_date());
+        }
+        // 🔹 Probation calculation based on Joining Date
+        if (user.getJoiningDate() != null) {
+            LocalDate probationEndDate = user.getJoiningDate().plusMonths(3);
+            String probationStatus = !LocalDate.now().isBefore(probationEndDate) ? "Completed" : "Not Completed";
+
+            if (!Objects.equals(user.getProbation(), probationStatus)) {
+                user.setProbation(probationStatus);
+                updatedFields.put("Probation", probationStatus);
+                logger.info("Probation status updated for user {}: Joining Date = {}, Probation End Date = {}, Status = {}", userId, user.getJoiningDate(), probationEndDate, probationStatus);
+            }
+        } else {
+            if (user.getProbation() != null) {
+                user.setProbation(null);
+                updatedFields.put("Probation", "Cleared");
+                logger.info("Joining date is null for user {}. Probation cleared.", userId);
+            }
         }
         updateField(dto.getEmergencyContactNumber(), user.getEmergencyContactNumber(), "Emergency Contact No", user::setEmergencyContactNumber, updatedFields);
         updateField(dto.getCurrentAddress(), user.getCurrentAddress(), "Current Address", user::setCurrentAddress, updatedFields);
@@ -66,7 +84,6 @@ public class UserProfileService {
         updateDateField(dto.getDoj(), user.getDoj(), "DOJ", user::setDoj, updatedFields);
         updateField(dto.getOfficialNumber(), user.getOfficialNumber(), "Official Number", user::setOfficialNumber, updatedFields);
         updateField(dto.getOfficialEmailId(), user.getOfficialEmailId(), "Official Email ID", user::setOfficialEmailId, updatedFields);
-        updateField(dto.getProbation(), user.getProbation(), "Probation", user::setProbation, updatedFields);
         updateField(dto.getReportingManager(), user.getReportingManager(), "Reporting Manager", user::setReportingManager, updatedFields);
         updateField(dto.getDepartment(), user.getDepartment(), "Department", user::setDepartment, updatedFields);
         updateField(dto.getBankName(), user.getBankName(), "Bank Name", user::setBankName, updatedFields);

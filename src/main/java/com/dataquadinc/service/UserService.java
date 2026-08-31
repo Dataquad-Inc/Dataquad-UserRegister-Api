@@ -33,6 +33,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.MultiValueMap;
+import org.springframework.scheduling.annotation.Scheduled;
+import java.time.LocalDate;
+import java.util.List;
 
 import java.io.IOException;
 import java.time.DayOfWeek;
@@ -109,11 +112,39 @@ public class UserService {
         user.setEncryptionKey("MyMulya@1234");
         user.setPrimarySuperAdmin(false);
 
+
+        if (user.getJoiningDate() != null) {
+
+            LocalDate probationEndDate = user.getJoiningDate().plusMonths(3);
+
+            String probationStatus =
+                    !LocalDate.now().isBefore(probationEndDate)
+                            ? "Completed"
+                            : "Not Completed";
+
+            user.setProbation(probationStatus);
+
+            logger.info(
+                    "Probation calculated for user {}: Joining Date = {}, Probation End Date = {}, Status = {}",
+                    user.getUserId(),
+                    user.getJoiningDate(),
+                    probationEndDate,
+                    probationStatus
+            );
+        } else {
+            // No joining date, so probation cannot be calculated
+            user.setProbation(null);
+
+            logger.info(
+                    "Joining date is not available for user {}. Probation remains null.",
+                    user.getUserId()
+            );
+        }
+
         Set<Roles> roles = userDto.getRoles().stream()
                 .map(role -> {
                     try {
-                        return rolesDao.findByName(role)
-                                .orElseThrow(() -> new ValidationException(Map.of("role", "roleNotFound")));
+                        return rolesDao.findByName(role).orElseThrow(() -> new ValidationException(Map.of("role", "roleNotFound")));
                     } catch (ValidationException e) {
                         throw new RuntimeException(e);
                     }
@@ -123,7 +154,11 @@ public class UserService {
         user.setRoles(roles);
 
         UserDetails dbUser = userDao.save(user);
-        logger.info("User {} saved successfully", dbUser.getUserId());
+
+        logger.info("User {} saved successfully with probation status: {}",
+                dbUser.getUserId(),
+                dbUser.getProbation()
+        );
 
         UserResponse res = new UserResponse();
         res.setUserName(dbUser.getUserName());
@@ -132,16 +167,28 @@ public class UserService {
 
         // Check and send email for EMPLOYEE role only
         boolean onlyEmployee = roles.size() == 1 && roles.stream()
-                .allMatch(r -> UserType.EMPLOYEE.name().equalsIgnoreCase(r.getName().name()));
+                .allMatch(r ->
+                        UserType.EMPLOYEE.name().equalsIgnoreCase(r.getName().name())
+                );
 
         if (onlyEmployee) {
             try {
                 logger.info("Sending credentials email to {}", dbUser.getEmail());
-                emailService.sendPasswordEmailHtml(dbUser.getEmail(), dbUser.getUserName(), plainPassword);
+
+                emailService.sendPasswordEmailHtml(
+                        dbUser.getEmail(),
+                        dbUser.getUserName(),
+                        plainPassword
+                );
+
                 logger.info("Email sent successfully to {}", dbUser.getEmail());
             } catch (Exception e) {
-                logger.error("Failed to send email to {}: {}", dbUser.getEmail(), e.getMessage(), e);
-                // Optionally: handle or rethrow exception as needed
+                logger.error(
+                        "Failed to send email to {}: {}",
+                        dbUser.getEmail(),
+                        e.getMessage(),
+                        e
+                );
             }
         } else {
             logger.info("Not sending email; user role is not EMPLOYEE only");
@@ -3127,6 +3174,62 @@ public class UserService {
     }
     public List<AttendanceDailyLog> getAllAttendanceLogs() {
         return attendanceDailyLogRepository.findAllByOrderByAttendanceDateDesc();
+    }
+
+    @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
+    public void updateCompletedProbationStatus() {
+
+        LocalDate today = LocalDate.now();
+        LocalDate probationCutoffDate = today.minusMonths(3);
+
+        logger.info(
+                "Starting probation status check. Today: {}, Cutoff Date: {}",
+                today,
+                probationCutoffDate
+        );
+
+        List<UserDetails> employees = userDao.findEmployeesWhoseProbationCompleted(probationCutoffDate);
+
+        if (employees.isEmpty()) {
+            logger.info("No employees found whose probation is completed.");
+            return;
+        }
+
+        int updatedCount = 0;
+
+        for (UserDetails user : employees) {
+
+            if (user.getJoiningDate() == null) {
+                continue;
+            }
+
+            LocalDate probationEndDate =
+                    user.getJoiningDate().plusMonths(3);
+
+            if (!today.isBefore(probationEndDate)
+                    && !"Completed".equalsIgnoreCase(user.getProbation())) {
+
+                user.setProbation("Completed");
+                updatedCount++;
+
+                logger.info(
+                        "Probation completed for user {}. Joining Date: {}, Probation End Date: {}",
+                        user.getUserId(),
+                        user.getJoiningDate(),
+                        probationEndDate
+                );
+            }
+        }
+
+        if (updatedCount > 0) {
+            userDao.saveAll(employees);
+        }
+
+        logger.info(
+                "Probation status check completed. {} employees updated.",
+                updatedCount
+        );
     }
 }
 
