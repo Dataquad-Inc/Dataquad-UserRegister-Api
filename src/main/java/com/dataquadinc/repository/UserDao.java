@@ -485,6 +485,17 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             Pageable pageable);
 
     @Query("""
+    SELECT u
+    FROM UserDetails u
+    WHERE u.joiningDate IS NOT NULL
+      AND u.probation = 'Not Completed'
+      AND u.joiningDate <= :probationCutoffDate
+""")
+    List<UserDetails> findEmployeesWhoseProbationCompleted(
+            @Param("probationCutoffDate") LocalDate probationCutoffDate
+    );
+
+    @Query("""
             SELECT u.department, COUNT(u) 
             FROM UserDetails u 
             WHERE u.entity = 'IN' 
