@@ -1370,10 +1370,10 @@ public class UserService {
                             "Attendance cannot be entered before joining date for employee : "
                                     + employee.getUserId());
                 }
-                boolean onOrAfterLastWorkingDay = employee.getLastWorkingDay() != null
-                        && !dto.getAttendanceDate()
-                        .isBefore(
-                                employee.getLastWorkingDay());
+                boolean afterLastWorkingDay =
+                        employee.getLastWorkingDay() != null
+                                && dto.getAttendanceDate()
+                                .isAfter(employee.getLastWorkingDay());
                 EmployeeAttendance attendance = attendanceRepository
                         .findByEmployeeIdAndAttendanceDate(
                                 employee.getUserId(),
@@ -1394,7 +1394,7 @@ public class UserService {
                     throw new RuntimeException("Attendance is locked.");
                 }
 
-                if (onOrAfterLastWorkingDay) {
+                if (afterLastWorkingDay) {
                     if (attendance != null) {
                         if ("SUBMITTED".equalsIgnoreCase(
                                 attendance.getApprovalStatus())) {
@@ -1573,13 +1573,13 @@ public class UserService {
                                     && attendanceDate.isBefore(
                                     employee.getJoiningDate());
 
-                    boolean onOrAfterLastWorkingDay =
+                    boolean afterLastWorkingDay =
                             employee.getLastWorkingDay() != null
-                                    && !attendanceDate.isBefore(
+                                    && attendanceDate.isAfter(
                                     employee.getLastWorkingDay());
 
                     if (beforeJoiningDate
-                            || onOrAfterLastWorkingDay) {
+                            || afterLastWorkingDay) {
                         if ("DRAFT".equalsIgnoreCase(
                                 attendance.getApprovalStatus())
                                 || "REJECTED".equalsIgnoreCase(
@@ -1702,9 +1702,9 @@ public class UserService {
                             && currentDate.isBefore(
                             employee.getJoiningDate());
 
-            boolean onOrAfterLastWorkingDay =
+            boolean afterLastWorkingDay =
                     employee.getLastWorkingDay() != null
-                            && !currentDate.isBefore(
+                            && currentDate.isAfter(
                             employee.getLastWorkingDay());
 
             EmployeeAttendanceViewDto dto =
@@ -1712,7 +1712,7 @@ public class UserService {
 
             dto.setAttendanceDate(currentDate);
 
-            if (beforeJoiningDate || onOrAfterLastWorkingDay) {
+            if (beforeJoiningDate || afterLastWorkingDay) {
 
                 if (attendance != null
                         && ("DRAFT".equalsIgnoreCase(
@@ -1832,10 +1832,9 @@ public class UserService {
                                     + employee.getUserId());
                 }
 
-                boolean onOrAfterLastWorkingDay =
-                        employee.getLastWorkingDay() != null
-                                && !dto.getAttendanceDate()
-                                .isBefore(employee.getLastWorkingDay());
+                boolean afterLastWorkingDay = employee.getLastWorkingDay() != null
+                                && dto.getAttendanceDate()
+                                .isAfter(employee.getLastWorkingDay());
 
 
                 EmployeeAttendance attendance =
@@ -1865,7 +1864,7 @@ public class UserService {
                 String requestedStatus =
                         employeeDto.getAttendanceStatus();
 
-                if (onOrAfterLastWorkingDay
+                if (afterLastWorkingDay
                         && "P".equalsIgnoreCase(requestedStatus)) {
 
                     throw new RuntimeException(
@@ -2362,20 +2361,20 @@ public class UserService {
             EmployeeAttendance attendance = attendanceMap.get(currentDate);
 
             boolean beforeJoiningDate = employee.getJoiningDate() != null && currentDate.isBefore(employee.getJoiningDate());
-            boolean onOrAfterLastWorkingDay = employee.getLastWorkingDay() != null && !currentDate.isBefore(employee.getLastWorkingDay());
+            boolean afterLastWorkingDay = employee.getLastWorkingDay() != null && currentDate.isAfter(employee.getLastWorkingDay());
 
             boolean isWeekend = currentDate.getDayOfWeek() == DayOfWeek.SATURDAY || currentDate.getDayOfWeek() == DayOfWeek.SUNDAY;
 
             boolean isPublicHoliday = monthConfig.getPublicHolidays() != null && monthConfig.getPublicHolidays().contains(currentDate);
 
-            if (!beforeJoiningDate && !onOrAfterLastWorkingDay && !isWeekend && !isPublicHoliday) {
+            if (!beforeJoiningDate && !afterLastWorkingDay && !isWeekend && !isPublicHoliday) {
 
                 totalWorkingDays++;
             }
 
             String attendanceStatus = "";
 
-            if (beforeJoiningDate || onOrAfterLastWorkingDay) {attendanceStatus = "";
+            if (beforeJoiningDate || afterLastWorkingDay) {attendanceStatus = "";
             }
             else if (isPublicHoliday) {
                 attendanceStatus = "PH";
@@ -2819,9 +2818,9 @@ public class UserService {
 
         boolean beforeJoiningDate = employee.getJoiningDate() != null && currentDate.isBefore(employee.getJoiningDate());
 
-        boolean onOrAfterLastWorkingDay = employee.getLastWorkingDay() != null && !currentDate.isBefore(employee.getLastWorkingDay());
+        boolean afterLastWorkingDay = employee.getLastWorkingDay() != null && currentDate.isAfter(employee.getLastWorkingDay());
 
-        if (beforeJoiningDate || onOrAfterLastWorkingDay) {
+        if (beforeJoiningDate || afterLastWorkingDay) {
 
             attendance.setAttendanceStatus(null);
             attendance.setAttendanceValue(null);
