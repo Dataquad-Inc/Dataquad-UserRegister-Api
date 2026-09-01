@@ -1578,36 +1578,51 @@ public class UserService {
                                     && attendanceDate.isAfter(
                                     employee.getLastWorkingDay());
 
-                    if (beforeJoiningDate
-                            || afterLastWorkingDay) {
-                        if ("DRAFT".equalsIgnoreCase(
-                                attendance.getApprovalStatus())
-                                || "REJECTED".equalsIgnoreCase(
-                                attendance.getApprovalStatus())) {
+                    if (beforeJoiningDate || afterLastWorkingDay) {
 
-                            if (attendance.getAttendanceStatus() != null
-                                    || attendance.getAttendanceValue() != null
-                                    || attendance.getRemarks() != null) {
+                        if ("DRAFT".equalsIgnoreCase(attendance.getApprovalStatus())
+                                || "REJECTED".equalsIgnoreCase(attendance.getApprovalStatus())) {
 
-                                attendance.setAttendanceStatus(null);
-                                attendance.setAttendanceValue(null);
-                                attendance.setRemarks(null);
+                            attendance.setAttendanceStatus(null);
+                            attendance.setAttendanceValue(null);
+                            attendance.setRemarks(null);
 
-                                attendance.setIsWeekend(false);
-                                attendance.setIsPublicHoliday(false);
-                                attendance.setIsPaid(false);
+                            attendance.setIsWeekend(false);
+                            attendance.setIsPublicHoliday(false);
+                            attendance.setIsPaid(false);
 
-                                attendance.setSalaryDeduction(false);
-                                attendance.setCasualLeaveApplied(false);
-                                attendance.setIsSandwichDeduction(false);
+                            attendance.setSalaryDeduction(false);
+                            attendance.setCasualLeaveApplied(false);
+                            attendance.setIsSandwichDeduction(false);
 
-                                attendance.setIsLocked(false);
-                                attendance.setUpdatedAt(
-                                        LocalDateTime.now());
+                            attendance.setIsLocked(false);
+                            attendance.setUpdatedAt(LocalDateTime.now());
 
-                                updateList.add(attendance);
-                            }
+                            updateList.add(attendance);
                         }
+
+                    } else if (attendance.getAttendanceStatus() == null
+                            && "DRAFT".equalsIgnoreCase(attendance.getApprovalStatus())) {
+
+                        boolean isWeekend =
+                                attendanceDate.getDayOfWeek() == DayOfWeek.SATURDAY
+                                        || attendanceDate.getDayOfWeek() == DayOfWeek.SUNDAY;
+
+                        boolean isPublicHoliday =
+                                monthConfig.getPublicHolidays() != null
+                                        && monthConfig.getPublicHolidays()
+                                        .contains(attendanceDate);
+
+                        setDefaultAttendance(
+                                attendance,
+                                employee,
+                                attendanceDate,
+                                isWeekend,
+                                isPublicHoliday);
+
+                        attendance.setUpdatedAt(LocalDateTime.now());
+
+                        updateList.add(attendance);
                     }
                 }
 
