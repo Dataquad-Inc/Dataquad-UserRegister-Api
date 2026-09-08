@@ -296,22 +296,6 @@ AND ea.monthConfig.entity = :entity
             @Param("year") Integer year,
             @Param("entity") String entity);
 
-    @Query("""
-       SELECT ea
-       FROM EmployeeAttendance ea
-       WHERE ea.attendanceMonth=:month
-       AND ea.attendanceYear=:year
-       AND ea.weekNumber=:weekNumber
-       AND ea.monthConfig.entity = :entity
-       AND ea.approvalStatus='SUBMITTED'
-       ORDER BY ea.employeeId,
-                ea.attendanceDate
-       """)
-    List<EmployeeAttendance> findSubmittedWeekAttendance(
-            @Param("month") Integer month,
-            @Param("year") Integer year,
-            @Param("weekNumber") Integer weekNumber,
-            @Param("entity") String entity);
 
     @Query("""
        SELECT COUNT(ea)

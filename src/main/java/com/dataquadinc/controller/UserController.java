@@ -698,35 +698,23 @@ public class UserController {
     public ResponseEntity<?> getPendingAttendance(
             @RequestParam Integer month,
             @RequestParam Integer year,
-            @RequestParam(required = false) Integer weekNumber,
             @RequestParam String entity) {
 
         try {
-
-            List<AttendanceDashboardResponseDto> response =
-                    userService.getPendingAttendance(
+            List<PendingAttendanceResponseDto> response = userService.getPendingAttendance(
                             month,
                             year,
-                            weekNumber,
                             entity);
 
             return ResponseEntity.ok(
-                    new ApiResponse<>(
-                            true,
-                            "Pending attendance fetched successfully",
-                            response,
-                            null));
+                    new ApiResponse<>(true, "Pending attendance fetched successfully", response, null));
 
         } catch (Exception e) {
 
-            return ResponseEntity.internalServerError().body(
-                    new ApiResponse<>(
-                            false,
-                            e.getMessage(),
+            return ResponseEntity.internalServerError().body(new ApiResponse<>(false, e.getMessage(),
                             null,
                             null));
         }
-
     }
 
     @PutMapping("/attendance/approve")
