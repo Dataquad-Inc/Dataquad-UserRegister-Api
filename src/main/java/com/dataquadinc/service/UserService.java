@@ -2469,72 +2469,54 @@ public class UserService {
         return dto;
     }
 
-    public List<AttendanceDashboardResponseDto> getPendingAttendance(
+    public List<PendingAttendanceResponseDto> getPendingAttendance(
             Integer month,
             Integer year,
-            Integer weekNumber,
             String entity) {
 
-        List<AttendanceDashboardResponseDto> responseList =
-                new ArrayList<>();
+        List<PendingAttendanceResponseDto> responseList = new ArrayList<>();
 
-        AttendanceMonthConfig monthConfig =
-                attendanceMonthConfigRepository
-                        .findByAttendanceMonthAndAttendanceYearAndEntity(
-                                month,
-                                year,
-                                entity)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Attendance month not configured"));
+        // Check month configuration exists
+        attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYearAndEntity(
+                        month,
+                        year,
+                        entity)
+                .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
 
-        List<UserDetails> employees =
-                userDao.findAllAttendanceEmployeesByEntity(entity);
+        List<EmployeeAttendance> submittedAttendance =attendanceRepository.findSubmittedMonthAttendance(
+                        month,
+                        year,
+                        entity);
 
-        int serialNo = 1;
+
+        Map<String, List<EmployeeAttendance>> employeeAttendanceMap = submittedAttendance.stream().collect(Collectors.groupingBy(
+                                EmployeeAttendance::getEmployeeId,
+                                LinkedHashMap::new,
+                                Collectors.toList()));
+
+        List<UserDetails> employees = userDao.findAllAttendanceEmployeesByEntity(entity);
 
         for (UserDetails employee : employees) {
 
-            List<EmployeeAttendance> attendanceList;
+            List<EmployeeAttendance> attendanceList = employeeAttendanceMap.get(employee.getUserId());
 
-            if (weekNumber != null) {
-
-                attendanceList =
-                        attendanceRepository
-                                .findSubmittedWeekAttendance(
-                                        month,
-                                        year,
-                                        weekNumber, entity)
-                                .stream()
-                                .filter(a ->
-                                        a.getEmployeeId()
-                                                .equals(employee.getUserId()))
-                                .toList();
-
-            } else {
-
-                attendanceList =
-                        attendanceRepository
-                                .findSubmittedMonthAttendance(
-                                        month,
-                                        year, entity)
-                                .stream()
-                                .filter(a ->
-                                        a.getEmployeeId()
-                                                .equals(employee.getUserId()))
-                                .toList();
-            }
-
-            if (attendanceList.isEmpty()) {
+            if (attendanceList == null || attendanceList.isEmpty()) {
                 continue;
             }
 
-            AttendanceDashboardResponseDto dto =
-                    buildAttendanceDashboard(
-                            employee,
-                            attendanceList,
-                            monthConfig,
-                            serialNo++, false);
+            Map<String, String> submittedDates = new LinkedHashMap<>();
+
+            for (EmployeeAttendance attendance : attendanceList) {
+
+                submittedDates.put(String.valueOf(attendance.getAttendanceDate().getDayOfMonth()), attendance.getAttendanceStatus());
+            }
+
+            PendingAttendanceResponseDto dto = new PendingAttendanceResponseDto();
+
+            dto.setEmployeeId(employee.getUserId());
+            dto.setEmployeeName(employee.getUserName());
+            dto.setDesignation(employee.getDesignation());
+            dto.setSubmittedDates(submittedDates);
 
             responseList.add(dto);
         }

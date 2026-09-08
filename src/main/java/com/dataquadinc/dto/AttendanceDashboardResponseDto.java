@@ -68,4 +68,6 @@ public class AttendanceDashboardResponseDto {
     private int totalPublicHolidays;
 
     private int totalWeekOffs;
+
+    private Integer weekNumber;
 }
