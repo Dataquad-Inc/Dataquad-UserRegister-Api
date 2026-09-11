@@ -208,12 +208,14 @@ public class TeamService {
             throw new UserNotFoundException("No User Found With ID " + teamLeadId);
         }
 
-        // Iterate all users and check if they belong to this team lead
-        List<UserDetails> allUsers = userDao.findAll();
-        for (UserDetails user : allUsers) {
+        List<UserDetails> activeUsers = userDao.findAll().stream().filter(this::isActiveUser).toList();
+
+        // Iterate only active users and check if they belong to this team lead
+        for (UserDetails user : activeUsers) {
+
             if (user.getTeamAssignments() != null) {
-                boolean assignedToThisLead = user.getTeamAssignments().stream()
-                        .anyMatch(t -> t.getTeamLeadId().equals(teamLeadId));
+                boolean assignedToThisLead = user.getTeamAssignments().stream().
+                        anyMatch(t -> t.getTeamLeadId() != null && t.getTeamLeadId().equalsIgnoreCase(teamLeadId));
                 if (assignedToThisLead) {
                     Set<UserType> roles = user.getRoles().stream()
                             .map(Roles::getName)
