@@ -63,6 +63,8 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
 
     UserDetails findByUserId(String userId);
 
+    UserDetails findByInviteToken(String inviteToken);
+
     @Query("SELECT DISTINCT u FROM UserDetails u JOIN u.roles r " +
             "WHERE (:userId IS NULL OR u.userId = :userId) " +
             "AND (:roleEnum IS NULL OR r.name = :roleEnum) " +

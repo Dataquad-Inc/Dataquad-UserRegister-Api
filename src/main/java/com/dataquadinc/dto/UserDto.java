@@ -37,6 +37,8 @@ public class UserDto {
         @JsonDeserialize(using = RoleDeserializer.class)
         private Set<UserType> roles;
          private String status;
+        private String onboardingStatus;
+        private String placementId;
         private String entity;
         private String teamName;
         private List<TeamAssignment> teamAssignments;

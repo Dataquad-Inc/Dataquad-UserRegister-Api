@@ -31,6 +31,70 @@ public class EmailService {
 
 
 
+    public void sendOnboardingInviteEmail(String to, String userName, String inviteLink) {
+        try {
+            logger.info("Preparing to send onboarding invite email to {}", to);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            String subject = "Complete Your MyMulya Onboarding";
+            String htmlBody = buildOnboardingInviteEmailBody(userName, inviteLink);
+            helper.setFrom(FROM_EMAIL);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
+            mailSender.send(message);
+
+            logger.info("Onboarding invite email sent successfully to {}", to);
+        } catch (Exception e) {
+            logger.error("Failed to send onboarding invite email to {}", to, e);
+            throw new RuntimeException("Failed to send invite email to " + to, e);
+        }
+    }
+
+    private String buildOnboardingInviteEmailBody(String userName, String inviteLink) {
+        return "<!DOCTYPE html><html><head><style>"
+                + "body {font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f6f8fa; margin: 0; padding: 0;}"
+                + ".email-container {max-width: 520px; background-color: #fff; margin: 40px auto; border-radius: 8px; "
+                + "box-shadow: 0 2px 18px rgba(32, 82, 138, 0.13); border: 1px solid #eeeeee; padding: 24px;}"
+                + "h2 {font-size: 1.3rem; color: #0056b3; text-align: center; margin-bottom: 20px;}"
+                + "p {color: #1b243a; font-size: 1rem; line-height: 1.5; margin: 14px 0;}"
+                + ".action-btn {background: #007bff; color: #ffffff; font-size: 1.05rem; padding: 12px 28px; border-radius: 7px;"
+                + " text-decoration: none; font-weight: 600; display: block; margin: 24px auto; text-align: center; width: fit-content;}"
+                + ".footer {font-size: 0.9rem; color: #5e6b8b; text-align: center; margin-top: 30px; padding-top: 10px; border-top: 1px solid #eee;}"
+                + "</style></head><body>"
+                + "<div class='email-container'>"
+                + "<h2>MyMulya Onboarding Invitation</h2>"
+                + "<p>Hi " + (userName != null ? userName : "Candidate") + ",</p>"
+                + "<p>You have been invited to complete your onboarding on the MyMulya portal.</p>"
+                + "<p>Please register, fill in your details, and upload the required documents using the link below.</p>"
+                + "<a href='" + inviteLink + "' class='action-btn' target='_blank'>Complete Onboarding</a>"
+                + "<p>This link expires in 7 days. If you need a new link, please contact HR.</p>"
+                + "<p>Regards,<br/>Mulya HR Team</p>"
+                + "<div class='footer'>This is an automated message, please do not reply.</div>"
+                + "</div></body></html>";
+    }
+
+    public void sendOnboardingRemarksEmail(String to, String userName, String remarks, String inviteLink) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(FROM_EMAIL);
+            helper.setTo(to);
+            helper.setSubject("Additional details required for MyMulya onboarding");
+            String body = "<p>Hi " + (userName != null ? userName : "Candidate") + ",</p>"
+                    + "<p>HR has requested additional details for your onboarding:</p>"
+                    + "<p><strong>" + remarks + "</strong></p>"
+                    + "<p><a href='" + inviteLink + "'>Update your onboarding form</a></p>";
+            helper.setText(body, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            logger.error("Failed to send onboarding remarks email to {}", to, e);
+            throw new RuntimeException("Failed to send remarks email to " + to, e);
+        }
+    }
+
     public void sendPasswordEmailHtml(String to, String userName, String password) {
         try {
             logger.info("Preparing to send password email to {}", to);

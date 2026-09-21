@@ -78,6 +78,28 @@ public class UserDetails {
     private Set<Roles> roles = new HashSet<>();
     private String status;
 
+    /** Onboarding invite token for placed external candidates */
+    @Column(name = "invite_token")
+    private String inviteToken;
+
+    @Column(name = "invite_token_expiry")
+    private LocalDateTime inviteTokenExpiry;
+
+    @Column(name = "invite_sent_at")
+    private LocalDateTime inviteSentAt;
+
+    /**
+     * PENDING_INVITE | INVITED | SUBMITTED | REMARKS_REQUESTED | APPROVED
+     */
+    @Column(name = "onboarding_status")
+    private String onboardingStatus;
+
+    @Column(name = "onboarding_remarks", length = 2000)
+    private String onboardingRemarks;
+
+    @Column(name = "placement_id")
+    private String placementId;
+
     private String encryptionKey;
 
     private boolean primarySuperAdmin;
@@ -319,7 +341,55 @@ public class UserDetails {
     }
 
     public void setStatus(String status) {
-        this.status = status.toUpperCase();
+        this.status = status == null ? null : status.toUpperCase();
+    }
+
+    public String getInviteToken() {
+        return inviteToken;
+    }
+
+    public void setInviteToken(String inviteToken) {
+        this.inviteToken = inviteToken;
+    }
+
+    public LocalDateTime getInviteTokenExpiry() {
+        return inviteTokenExpiry;
+    }
+
+    public void setInviteTokenExpiry(LocalDateTime inviteTokenExpiry) {
+        this.inviteTokenExpiry = inviteTokenExpiry;
+    }
+
+    public LocalDateTime getInviteSentAt() {
+        return inviteSentAt;
+    }
+
+    public void setInviteSentAt(LocalDateTime inviteSentAt) {
+        this.inviteSentAt = inviteSentAt;
+    }
+
+    public String getOnboardingStatus() {
+        return onboardingStatus;
+    }
+
+    public void setOnboardingStatus(String onboardingStatus) {
+        this.onboardingStatus = onboardingStatus;
+    }
+
+    public String getOnboardingRemarks() {
+        return onboardingRemarks;
+    }
+
+    public void setOnboardingRemarks(String onboardingRemarks) {
+        this.onboardingRemarks = onboardingRemarks;
+    }
+
+    public String getPlacementId() {
+        return placementId;
+    }
+
+    public void setPlacementId(String placementId) {
+        this.placementId = placementId;
     }
 
     public String getEncryptionKey() {

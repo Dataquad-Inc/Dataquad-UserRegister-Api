@@ -69,6 +69,11 @@ public class EmployeeWithRole
     private String entity;
     @JsonProperty("last_login_time")
     private LocalDateTime lastLoginTime;
+    private String onboardingStatus;
+    private String onboardingRemarks;
+    private LocalDateTime inviteSentAt;
+    private String placementId;
+    private Boolean invitePending;
 
 
 //    public EmployeeWithRole(String employeeId, String employeeName, String roles,String email) {
@@ -141,6 +146,16 @@ public class EmployeeWithRole
         employee.setAdhar(user.getAdhar());
         employee.setEntity(user.getEntity());
         employee.setLastLoginTime(user.getLastLoginTime());
+        employee.setOnboardingStatus(user.getOnboardingStatus());
+        employee.setOnboardingRemarks(user.getOnboardingRemarks());
+        employee.setInviteSentAt(user.getInviteSentAt());
+        employee.setPlacementId(user.getPlacementId());
+        employee.setInvitePending(
+                user.getOnboardingStatus() == null
+                        || "PENDING_INVITE".equalsIgnoreCase(user.getOnboardingStatus())
+                        || "INVITED".equalsIgnoreCase(user.getOnboardingStatus())
+                        || "REMARKS_REQUESTED".equalsIgnoreCase(user.getOnboardingStatus())
+        );
         return employee;
     }
 

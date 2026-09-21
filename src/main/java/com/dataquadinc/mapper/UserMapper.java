@@ -27,6 +27,8 @@ public class UserMapper {
         user.setGender(userDto.getGender());
         user.setJoiningDate(userDto.getJoiningDate());
         user.setStatus(userDto.getStatus());
+        user.setOnboardingStatus(userDto.getOnboardingStatus());
+        user.setPlacementId(userDto.getPlacementId());
         user.setEntity(userDto.getEntity());
         user.setPan(userDto.getPan());
         user.setAdhar(userDto.getAdhar());
