@@ -509,6 +509,42 @@ public class UserController {
             );
         }
     }
+    @GetMapping("/attendance/dashboard/approved-summary")
+    public ResponseEntity<?> getApprovedAttendanceSummary(
+            @RequestParam Integer month,
+            @RequestParam Integer year,
+            @RequestParam String entity) {
+
+        try {
+
+            List<ApprovedAttendanceSummaryDto> response =
+                    userService.getApprovedAttendanceSummary(
+                            month,
+                            year,
+                            entity
+                    );
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            "Approved attendance summary fetched successfully",
+                            response,
+                            null
+                    )
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
     @GetMapping("/attendance/employee")
     public ResponseEntity<?> getEmployeeAttendance(
             @RequestParam String employeeId,
