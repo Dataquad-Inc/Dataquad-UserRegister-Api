@@ -1650,6 +1650,305 @@ public class UserService {
         }
     }
 
+    public List<ApprovedAttendanceSummaryDto> getApprovedAttendanceSummary(
+            Integer month,
+            Integer year,
+            String entity) {
+
+        try {
+
+            List<ApprovedAttendanceSummaryDto> responseList =
+                    new ArrayList<>();
+
+            AttendanceMonthConfig monthConfig =
+                    attendanceMonthConfigRepository
+                            .findByAttendanceMonthAndAttendanceYearAndEntity(
+                                    month,
+                                    year,
+                                    entity
+                            )
+                            .orElseThrow(() ->
+                                    new RuntimeException(
+                                            "Attendance month not configured"
+                                    )
+                            );
+
+            List<UserDetails> employees =
+                    userDao.findAllAttendanceEmployeesByEntity(entity);
+
+            int serialNo = 1;
+
+            for (UserDetails employee : employees) {
+
+                List<EmployeeAttendance> approvedAttendanceList =
+                        attendanceRepository
+                                .getApprovedEmployeeAttendanceMonth(
+                                        employee.getUserId(),
+                                        month,
+                                        year
+                                );
+
+                ApprovedAttendanceSummaryDto dto =
+                        buildApprovedAttendanceSummary(
+                                employee,
+                                approvedAttendanceList,
+                                monthConfig,
+                                serialNo++
+                        );
+
+                responseList.add(dto);
+            }
+
+            return responseList;
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    private ApprovedAttendanceSummaryDto buildApprovedAttendanceSummary(
+            UserDetails employee,
+            List<EmployeeAttendance> approvedAttendanceList,
+            AttendanceMonthConfig monthConfig,
+            Integer serialNo) {
+
+        ApprovedAttendanceSummaryDto dto =
+                new ApprovedAttendanceSummaryDto();
+
+        // ================= EMPLOYEE DETAILS =================
+
+        dto.setSerialNo(serialNo);
+        dto.setEmployeeId(employee.getUserId());
+        dto.setEmployeeName(employee.getUserName());
+        dto.setDesignation(employee.getDesignation());
+        dto.setJoiningDate(employee.getJoiningDate());
+        dto.setProbation(employee.getProbation());
+
+        dto.setPf(
+                Boolean.TRUE.equals(employee.getIsEmployeeHavingPF())
+                        ? "YES"
+                        : "NO"
+        );
+
+        dto.setEsi(
+                Boolean.TRUE.equals(employee.getIsEmployeeHavingESI())
+                        ? "YES"
+                        : "NO"
+        );
+
+        if (employee.getAssociatedTeamLeadId() != null
+                && !employee.getAssociatedTeamLeadId().isBlank()) {
+
+            dto.setReportingManager(
+                    userDao.getTeamLeadName(
+                            employee.getAssociatedTeamLeadId()
+                    )
+            );
+
+        } else {
+
+            dto.setReportingManager(
+                    employee.getReportingManager()
+            );
+        }
+
+
+        // ================= COUNTERS =================
+
+        int totalLeaves = 0;
+        int totalLopLeaves = 0;
+        int casualLeaves = 0;
+
+        double totalPresentDays = 0.0;
+        double totalPaidDays = 0.0;
+
+        int totalWorkingDays = 0;
+        int totalHalfDays = 0;
+        int totalWfH = 0;
+        int totalWeekOffs = 0;
+        int totalPublicHolidays = 0;
+
+
+        // ================= APPROVED ATTENDANCE =================
+
+        for (EmployeeAttendance attendance : approvedAttendanceList) {
+
+            LocalDate attendanceDate =
+                    attendance.getAttendanceDate();
+
+            // Ignore dates outside employee working period
+            boolean beforeJoiningDate =
+                    employee.getJoiningDate() != null
+                            && attendanceDate.isBefore(
+                            employee.getJoiningDate()
+                    );
+
+            boolean afterLastWorkingDay =
+                    employee.getLastWorkingDay() != null
+                            && attendanceDate.isAfter(
+                            employee.getLastWorkingDay()
+                    );
+
+            if (beforeJoiningDate || afterLastWorkingDay) {
+                continue;
+            }
+
+
+            boolean isWeekend =
+                    attendanceDate.getDayOfWeek() == DayOfWeek.SATURDAY
+                            || attendanceDate.getDayOfWeek() == DayOfWeek.SUNDAY;
+
+            boolean isPublicHoliday =
+                    monthConfig.getPublicHolidays() != null
+                            && monthConfig.getPublicHolidays()
+                            .contains(attendanceDate);
+
+
+            String attendanceStatus =
+                    attendance.getAttendanceStatus();
+
+
+            if (attendanceStatus == null
+                    || attendanceStatus.isBlank()) {
+                continue;
+            }
+
+
+            // ================= WORKING DAYS =================
+
+            if (!isWeekend && !isPublicHoliday) {
+                totalWorkingDays++;
+            }
+
+
+            // ================= LEAVE =================
+
+            if ("L".equalsIgnoreCase(attendanceStatus)) {
+                totalLeaves++;
+            }
+
+
+            // ================= LOP =================
+
+            if ("LOP".equalsIgnoreCase(attendanceStatus)) {
+                totalLopLeaves++;
+            }
+
+
+            // ================= HALF DAY =================
+
+            if ("HD".equalsIgnoreCase(attendanceStatus)) {
+
+                totalHalfDays++;
+
+                totalPresentDays += 0.5;
+            }
+
+
+            // ================= WFH =================
+
+            if ("WFH".equalsIgnoreCase(attendanceStatus)) {
+
+                totalWfH++;
+
+                totalPresentDays += 1;
+            }
+
+
+            // ================= WEEK OFF =================
+
+            if ("WO".equalsIgnoreCase(attendanceStatus)) {
+                totalWeekOffs++;
+            }
+
+
+            // ================= PUBLIC HOLIDAY =================
+
+            if ("PH".equalsIgnoreCase(attendanceStatus)) {
+                totalPublicHolidays++;
+            }
+
+
+            // ================= PRESENT =================
+
+            if ("P".equalsIgnoreCase(attendanceStatus)
+                    || "WH".equalsIgnoreCase(attendanceStatus)
+                    || "WFH".equalsIgnoreCase(attendanceStatus)
+                    || "LL".equalsIgnoreCase(attendanceStatus)
+                    || "SP".equalsIgnoreCase(attendanceStatus)) {
+
+                totalPresentDays += 1;
+            }
+        }
+
+
+        // ================= CASUAL LEAVE =================
+
+        boolean isProbationEmployee =
+                employee.getProbation() == null
+                        || !employee.getProbation()
+                        .equalsIgnoreCase("Completed");
+
+        int allowedCasualLeave =
+                isProbationEmployee ? 0 : 1;
+
+        if (totalLeaves <= allowedCasualLeave) {
+            casualLeaves = totalLeaves;
+        } else {
+            casualLeaves = allowedCasualLeave;
+        }
+
+
+        // ================= PAID DAYS =================
+
+        totalPaidDays =
+                totalPresentDays
+                        + totalWeekOffs
+                        + totalPublicHolidays
+                        + casualLeaves;
+
+
+        // ================= TOTAL DAYS =================
+
+        int totalDaysInMonth =
+                (int) ChronoUnit.DAYS.between(
+                        monthConfig.getFromDate(),
+                        monthConfig.getToDate()
+                ) + 1;
+
+
+        // ================= RESPONSE =================
+
+        dto.setTotalDaysInMonth(totalDaysInMonth);
+
+        dto.setTotalWorkingDays(totalWorkingDays);
+
+        // You specifically wanted this as null
+        dto.setTotalWeekendDays(null);
+
+        dto.setTotalPresentDays(totalPresentDays);
+
+        dto.setTotalLeaves(totalLeaves);
+
+        dto.setCasualLeaves(casualLeaves);
+
+        dto.setTotalPaidDays(totalPaidDays);
+
+        dto.setTotalLop(totalLopLeaves);
+
+        dto.setTotalHalfDays(totalHalfDays);
+
+        dto.setTotalWfH(totalWfH);
+
+        dto.setTotalPublicHolidays(totalPublicHolidays);
+
+        dto.setTotalWeekOffs(totalWeekOffs);
+
+        return dto;
+    }
+
     public List<EmployeeAttendanceViewDto> getEmployeeAttendance(
             String employeeId,
             Integer month,
