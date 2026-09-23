@@ -273,27 +273,9 @@ public class UserService {
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
 
-    public ResponseEntity<List<EmployeeWithRole>> findAllActiveInternal() {
+    public ResponseEntity<List<EmployeeWithRole>> findAllActiveInternal(String entity) {
 
-        List<UserDetails> users = userDao.findAllActiveNotExternalUser();
-
-        List<EmployeeWithRole> employeeRoles = users.stream()
-                .map(user -> {
-                    String rolesString = user.getRoles().stream()
-                            .map(role -> role.getName().name())
-                            .collect(Collectors.joining(", "));
-
-                    return EmployeeWithRole.fromUserDetails(user, rolesString);
-                })
-                .collect(Collectors.toList());
-
-        logger.info("Returning {} employee records in response", employeeRoles.size());
-        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
-    }
-
-    public ResponseEntity<List<EmployeeWithRole>> findAllActiveExternal() {
-
-        List<UserDetails> users = userDao.findAllActiveExternalUser();
+        List<UserDetails> users = userDao.findAllActiveNotExternalUser(entity);
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -309,27 +291,9 @@ public class UserService {
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
 
-    public ResponseEntity<List<EmployeeWithRole>> findAllInActiveInternal() {
+    public ResponseEntity<List<EmployeeWithRole>> findAllActiveExternal(String entity) {
 
-        List<UserDetails> users = userDao.findAllInActiveNotExternalUser();
-
-        List<EmployeeWithRole> employeeRoles = users.stream()
-                .map(user -> {
-                    String rolesString = user.getRoles().stream()
-                            .map(role -> role.getName().name())
-                            .collect(Collectors.joining(", "));
-
-                    return EmployeeWithRole.fromUserDetails(user, rolesString);
-                })
-                .collect(Collectors.toList());
-
-        logger.info("Returning {} employee records in response", employeeRoles.size());
-        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
-    }
-
-    public ResponseEntity<List<EmployeeWithRole>> findAllInActiveExternal() {
-
-        List<UserDetails> users = userDao.findAllInActiveExternalUser();
+        List<UserDetails> users = userDao.findAllActiveExternalUser(entity);
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -345,9 +309,45 @@ public class UserService {
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
 
-    public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedInternal() {
+    public ResponseEntity<List<EmployeeWithRole>> findAllInActiveInternal(String entity) {
 
-        List<UserDetails> users = userDao.findAllIsolatedInternalUser();
+        List<UserDetails> users = userDao.findAllInActiveNotExternalUser(entity);
+
+        List<EmployeeWithRole> employeeRoles = users.stream()
+                .map(user -> {
+                    String rolesString = user.getRoles().stream()
+                            .map(role -> role.getName().name())
+                            .collect(Collectors.joining(", "));
+
+                    return EmployeeWithRole.fromUserDetails(user, rolesString);
+                })
+                .collect(Collectors.toList());
+
+        logger.info("Returning {} employee records in response", employeeRoles.size());
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
+
+    public ResponseEntity<List<EmployeeWithRole>> findAllInActiveExternal(String entity) {
+
+        List<UserDetails> users = userDao.findAllInActiveExternalUser(entity);
+
+        List<EmployeeWithRole> employeeRoles = users.stream()
+                .map(user -> {
+                    String rolesString = user.getRoles().stream()
+                            .map(role -> role.getName().name())
+                            .collect(Collectors.joining(", "));
+
+                    return EmployeeWithRole.fromUserDetails(user, rolesString);
+                })
+                .collect(Collectors.toList());
+
+        logger.info("Returning {} employee records in response", employeeRoles.size());
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
+
+    public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedInternal(String entity) {
+
+        List<UserDetails> users = userDao.findAllIsolatedInternalUser(entity);
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -366,9 +366,9 @@ public class UserService {
     }
 
 
-    public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedExternal() {
+    public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedExternal(String entity) {
 
-        List<UserDetails> users = userDao.findAllIsolatedExternalUser();
+        List<UserDetails> users = userDao.findAllIsolatedExternalUser(entity);
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
