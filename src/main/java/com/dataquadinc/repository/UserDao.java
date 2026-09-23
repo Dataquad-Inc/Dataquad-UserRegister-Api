@@ -22,37 +22,37 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
     // ============ EXISTING METHODS ============
 
     @Query("SELECT u FROM UserDetails u " +
-            "WHERE u.entity = 'IN' " +
+            "WHERE u.entity = :entity " +
             "AND u.status = 'ACTIVE' AND u.designation = 'Candidate'")
-    List<UserDetails> findAllActiveExternalUser();
+    List<UserDetails> findAllActiveExternalUser(  @Param("entity") String entity);
 
     @Query("SELECT u FROM UserDetails u " +
-            "WHERE u.entity = 'IN' " +
+            "WHERE u.entity = :entity " +
             "AND u.status = 'ACTIVE' AND u.designation <> 'Candidate'")
-    List<UserDetails> findAllActiveNotExternalUser();
+    List<UserDetails> findAllActiveNotExternalUser(  @Param("entity") String entity);
 
     @Query("SELECT u FROM UserDetails u " +
-            "WHERE u.entity = 'IN' " +
+            "WHERE u.entity = :entity " +
             "AND u.status = 'INACTIVE' AND u.designation = 'Candidate'")
-    List<UserDetails> findAllInActiveExternalUser();
+    List<UserDetails> findAllInActiveExternalUser(  @Param("entity") String entity);
 
     @Query("SELECT u FROM UserDetails u " +
-            "WHERE u.entity = 'IN' " +
+            "WHERE u.entity = :entity " +
             "AND u.status = 'ISOLATED' " +
             "AND u.designation <> 'Candidate'")
-    List<UserDetails> findAllIsolatedInternalUser();
+    List<UserDetails> findAllIsolatedInternalUser(  @Param("entity") String entity);
 
 
     @Query("SELECT u FROM UserDetails u " +
-            "WHERE u.entity = 'IN' " +
+            "WHERE u.entity = :entity " +
             "AND u.status = 'ISOLATED' " +
             "AND u.designation = 'Candidate'")
-    List<UserDetails> findAllIsolatedExternalUser();
+    List<UserDetails> findAllIsolatedExternalUser(  @Param("entity") String entity);
 
     @Query("SELECT u FROM UserDetails u " +
-            "WHERE u.entity = 'IN' " +
+            "WHERE u.entity = :entity " +
             "AND u.status = 'INACTIVE' AND u.designation <> 'Candidate'")
-    List<UserDetails> findAllInActiveNotExternalUser();
+    List<UserDetails> findAllInActiveNotExternalUser(  @Param("entity") String entity);
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
