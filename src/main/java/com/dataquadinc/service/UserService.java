@@ -2247,67 +2247,74 @@ public class UserService {
     }
 
     @Transactional
-    public String editAttendanceMonth(
-            AttendanceMonthSetupDto dto,
-            String entity) {
-
+    public String editAttendanceMonth(AttendanceMonthSetupDto dto, String entity) {
         try {
+            AttendanceMonthConfig config = attendanceMonthConfigRepository
+                            .findByAttendanceMonthAndAttendanceYearAndEntity(dto.getMonth(), dto.getYear(), entity)
+                            .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
 
-            AttendanceMonthConfig config =
-                    attendanceMonthConfigRepository
-                            .findByAttendanceMonthAndAttendanceYearAndEntity(
-                                    dto.getMonth(),
-                                    dto.getYear(),
-                                    entity)
-                            .orElseThrow(() ->
-                                    new RuntimeException(
-                                            "Attendance month not configured"));
-
-            Long attendanceCount =
-                    attendanceRepository.countSubmittedOrApprovedAttendance(
-                            dto.getMonth(),
-                            dto.getYear(),
-                            entity);
-
-            if (attendanceCount > 0) {
-
-                throw new RuntimeException(
-                        "Attendance has already been submitted/approved. Month cannot be edited.");
-            }
-
-            LocalDate fromDate =
-                    LocalDate.of(dto.getYear(), dto.getMonth(), 1)
+            LocalDate fromDate = LocalDate.of(dto.getYear(), dto.getMonth(), 1)
                             .minusMonths(1)
                             .withDayOfMonth(26);
 
-            LocalDate toDate =
-                    LocalDate.of(dto.getYear(), dto.getMonth(), 25);
+            LocalDate toDate = LocalDate.of(dto.getYear(), dto.getMonth(), 25);
 
             config.setFromDate(fromDate);
             config.setToDate(toDate);
             config.setPublicHolidays(dto.getPublicHolidays());
-
             attendanceMonthConfigRepository.save(config);
 
-            attendanceRepository.deleteAttendanceByMonth(
-                    dto.getMonth(),
-                    dto.getYear(),
-                    entity);
+            List<UserDetails> employees = userDao.findAllAttendanceEmployeesByEntity(entity);
+            List<EmployeeAttendance> existingAttendance = attendanceRepository.findMonthAttendance(dto.getMonth(), dto.getYear(), entity);
 
-            List<UserDetails> employees =
-                    userDao.findAllAttendanceEmployeesByEntity(entity);
-
-            List<LocalDate> dates = cycleDates(config);
+            Map<String, EmployeeAttendance> attendanceMap = existingAttendance.stream().collect(Collectors.toMap(
+                    a -> a.getEmployeeId() + "_" + a.getAttendanceDate(),
+                    a -> a, (a, b) -> a));
 
             List<EmployeeAttendance> saveList = new ArrayList<>();
+            List<LocalDate> dates = cycleDates(config);
 
             for (UserDetails employee : employees) {
-                saveList.addAll(
-                        generateAttendanceRows(config, employee, dates));
+                for (LocalDate date : dates) {
+                    String key = employee.getUserId() + "_" + date;
+                    EmployeeAttendance existing = attendanceMap.get(key);
+
+                    if (existing != null
+                            && ("SUBMITTED".equalsIgnoreCase(
+                            existing.getApprovalStatus())
+                            || "APPROVED".equalsIgnoreCase(
+                            existing.getApprovalStatus()))) {
+
+                        saveList.add(existing);
+                        continue;
+                    }
+
+                    if (existing != null) {
+
+                        boolean isWeekend = date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY;
+                        boolean isPublicHoliday = config.getPublicHolidays() != null && config.getPublicHolidays().contains(date);
+
+                        existing.setMonthConfig(config);
+                        existing.setAttendanceMonth(config.getAttendanceMonth());
+                        existing.setAttendanceYear(config.getAttendanceYear());
+                        existing.setFromDate(config.getFromDate());
+                        existing.setToDate(config.getToDate());
+                        existing.setWeekNumber(calculateWeekNumber(config.getFromDate(), date));
+
+                        setDefaultAttendance(existing, employee, date, isWeekend, isPublicHoliday);
+                        existing.setIsLocked(false);
+                        existing.setUpdatedAt(LocalDateTime.now());
+                        saveList.add(existing);
+                        continue;
+                    }
+
+                    List<EmployeeAttendance> generatedRows = generateAttendanceRows(config, employee, List.of(date));
+                    saveList.addAll(generatedRows);
+                }
             }
-
-            attendanceRepository.saveAll(saveList);
-
+            if (!saveList.isEmpty()) {
+                attendanceRepository.saveAll(saveList);
+            }
             return "Attendance month updated successfully.";
 
         } catch (Exception e) {
