@@ -15,4 +15,6 @@ public class AttendanceMonthSetupDto {
     private List<LocalDate> publicHolidays;
 
     private String entity;
+
+    private List<AttendanceMonthEditDto> attendanceEdits;
 }
