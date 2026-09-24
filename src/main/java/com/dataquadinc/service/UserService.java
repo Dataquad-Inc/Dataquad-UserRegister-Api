@@ -2245,81 +2245,150 @@ public class UserService {
             throw new RuntimeException(e.getMessage());
         }
     }
-
     @Transactional
     public String editAttendanceMonth(AttendanceMonthSetupDto dto, String entity) {
-        try {
-            AttendanceMonthConfig config = attendanceMonthConfigRepository
-                            .findByAttendanceMonthAndAttendanceYearAndEntity(dto.getMonth(), dto.getYear(), entity)
-                            .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
 
-            LocalDate fromDate = LocalDate.of(dto.getYear(), dto.getMonth(), 1)
-                            .minusMonths(1)
-                            .withDayOfMonth(26);
+        try {
+            AttendanceMonthConfig config = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYearAndEntity(
+                                    dto.getMonth(), dto.getYear(), entity)
+                            .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
+            LocalDate fromDate = LocalDate.of(dto.getYear(), dto.getMonth(), 1).minusMonths(1).withDayOfMonth(26);
 
             LocalDate toDate = LocalDate.of(dto.getYear(), dto.getMonth(), 25);
-
             config.setFromDate(fromDate);
             config.setToDate(toDate);
-            config.setPublicHolidays(dto.getPublicHolidays());
-            attendanceMonthConfigRepository.save(config);
+
+            Map<LocalDate, AttendanceMonthEditDto> attendanceEditMap = new HashMap<>();
+
+            if (dto.getAttendanceEdits() != null) {
+                for (AttendanceMonthEditDto edit
+                        : dto.getAttendanceEdits()) {
+
+                    if (edit.getDate() != null && edit.getAttendanceStatus() != null && !edit.getAttendanceStatus().isBlank()) {
+
+                        attendanceEditMap.put(edit.getDate(), edit);
+                    }
+                }
+            }
 
             List<UserDetails> employees = userDao.findAllAttendanceEmployeesByEntity(entity);
             List<EmployeeAttendance> existingAttendance = attendanceRepository.findMonthAttendance(dto.getMonth(), dto.getYear(), entity);
 
             Map<String, EmployeeAttendance> attendanceMap = existingAttendance.stream().collect(Collectors.toMap(
-                    a -> a.getEmployeeId() + "_" + a.getAttendanceDate(),
-                    a -> a, (a, b) -> a));
+                                    a -> a.getEmployeeId() + "_" + a.getAttendanceDate(),
+                                    a -> a,
+                                    (a, b) -> a));
+
+            Set<Integer> protectedWeeks = existingAttendance.stream()
+                            .filter(a -> "SUBMITTED".equalsIgnoreCase(
+                                    a.getApprovalStatus()) || "APPROVED".equalsIgnoreCase(a.getApprovalStatus()))
+                            .map(EmployeeAttendance::getWeekNumber).filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
 
             List<EmployeeAttendance> saveList = new ArrayList<>();
             List<LocalDate> dates = cycleDates(config);
 
             for (UserDetails employee : employees) {
                 for (LocalDate date : dates) {
+
+                    int weekNumber = calculateWeekNumber(config.getFromDate(), date);
+
+                    if (protectedWeeks.contains(weekNumber)) {
+                        continue;
+                    }
                     String key = employee.getUserId() + "_" + date;
                     EmployeeAttendance existing = attendanceMap.get(key);
+                    boolean beforeJoiningDate = employee.getJoiningDate() != null && date.isBefore(employee.getJoiningDate());
+                    boolean afterLastWorkingDay = employee.getLastWorkingDay() != null && date.isAfter(employee.getLastWorkingDay());
 
-                    if (existing != null
-                            && ("SUBMITTED".equalsIgnoreCase(
-                            existing.getApprovalStatus())
-                            || "APPROVED".equalsIgnoreCase(
-                            existing.getApprovalStatus()))) {
+                    if (beforeJoiningDate || afterLastWorkingDay) {
 
-                        saveList.add(existing);
+                        if (existing != null) {
+                            existing.setAttendanceStatus(null);
+                            existing.setAttendanceValue(null);
+                            existing.setRemarks(null);
+                            existing.setIsWeekend(false);
+                            existing.setIsPublicHoliday(false);
+                            existing.setIsPaid(false);
+                            existing.setSalaryDeduction(false);
+                            existing.setCasualLeaveApplied(false);
+                            existing.setIsSandwichDeduction(false);
+                            existing.setIsLocked(false);
+                            existing.setUpdatedAt(LocalDateTime.now());
+                            saveList.add(existing);
+                        }
+
                         continue;
                     }
 
-                    if (existing != null) {
+                    if (existing == null) {
+
+                        List<EmployeeAttendance> generatedRows = generateAttendanceRows(config, employee, List.of(date));
+                        existing = generatedRows.get(0);
+                    }
+                    existing.setMonthConfig(config);
+                    existing.setAttendanceMonth(config.getAttendanceMonth());
+                    existing.setAttendanceYear(config.getAttendanceYear());
+                    existing.setFromDate(config.getFromDate());
+                    existing.setToDate(config.getToDate());
+                    existing.setWeekNumber(weekNumber);
+
+                    AttendanceMonthEditDto monthEdit = attendanceEditMap.get(date);
+
+                    if (monthEdit != null) {
+                        String status = monthEdit.getAttendanceStatus().trim().toUpperCase();
+                        existing.setAttendanceStatus(status);
+
+                        if (monthEdit.getAttendanceValue() != null) {
+                            existing.setAttendanceValue(monthEdit.getAttendanceValue());
+                        } else if ("HD".equalsIgnoreCase(status)) {
+                            existing.setAttendanceValue(0.5);
+                        } else {
+                            existing.setAttendanceValue(1.0);
+                        }
+                        existing.setRemarks(monthEdit.getRemarks());
+
+                        if ("PH".equalsIgnoreCase(status)) {
+                            existing.setIsPublicHoliday(true);
+                            existing.setIsWeekend(false);
+                            existing.setIsPaid(true);
+
+                        }
+                        else if ("WO".equalsIgnoreCase(status)) {
+
+                            existing.setIsPublicHoliday(false);
+                            existing.setIsWeekend(true);
+                            existing.setIsPaid(true);
+
+                        }
+
+                        else {
+                            existing.setIsPublicHoliday(false);
+                            existing.setIsWeekend(false);
+                            existing.setIsPaid(!"LOP".equalsIgnoreCase(status));
+                        }
+
+                    } else {
 
                         boolean isWeekend = date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY;
                         boolean isPublicHoliday = config.getPublicHolidays() != null && config.getPublicHolidays().contains(date);
-
-                        existing.setMonthConfig(config);
-                        existing.setAttendanceMonth(config.getAttendanceMonth());
-                        existing.setAttendanceYear(config.getAttendanceYear());
-                        existing.setFromDate(config.getFromDate());
-                        existing.setToDate(config.getToDate());
-                        existing.setWeekNumber(calculateWeekNumber(config.getFromDate(), date));
-
                         setDefaultAttendance(existing, employee, date, isWeekend, isPublicHoliday);
-                        existing.setIsLocked(false);
-                        existing.setUpdatedAt(LocalDateTime.now());
-                        saveList.add(existing);
-                        continue;
                     }
 
-                    List<EmployeeAttendance> generatedRows = generateAttendanceRows(config, employee, List.of(date));
-                    saveList.addAll(generatedRows);
+                    existing.setIsLocked(false);
+                    existing.setUpdatedAt(LocalDateTime.now());
+                    saveList.add(existing);
                 }
             }
+            config.setPublicHolidays(dto.getPublicHolidays());
+            attendanceMonthConfigRepository.save(config);
+
             if (!saveList.isEmpty()) {
                 attendanceRepository.saveAll(saveList);
             }
             return "Attendance month updated successfully.";
 
-        } catch (Exception e) {
-
-            e.printStackTrace();
+        } catch (Exception e) {e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
     }
