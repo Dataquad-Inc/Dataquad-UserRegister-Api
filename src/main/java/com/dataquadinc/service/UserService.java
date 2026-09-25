@@ -2719,7 +2719,17 @@ public class UserService {
         dto.setEmployeeName(employee.getUserName());
         dto.setDesignation(employee.getDesignation());
         dto.setJoiningDate(employee.getJoiningDate());
-        dto.setProbation(employee.getProbation());
+        dto.setJoiningDate(employee.getJoiningDate());
+
+        String probation = employee.getProbation();
+
+        if ("Completed".equalsIgnoreCase(probation)) {
+            dto.setProbation("OUT");
+        } else if ("Not Completed".equalsIgnoreCase(probation)) {
+            dto.setProbation("IN");
+        } else {
+            dto.setProbation(probation);
+        }
 
         dto.setPf(Boolean.TRUE.equals(employee.getIsEmployeeHavingPF()) ? "YES" : "NO");
         dto.setEsi(Boolean.TRUE.equals(employee.getIsEmployeeHavingESI()) ? "YES" : "NO");
