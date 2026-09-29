@@ -1714,10 +1714,7 @@ public class UserService {
             AttendanceMonthConfig monthConfig,
             Integer serialNo) {
 
-        ApprovedAttendanceSummaryDto dto =
-                new ApprovedAttendanceSummaryDto();
-
-        // ================= EMPLOYEE DETAILS =================
+        ApprovedAttendanceSummaryDto dto = new ApprovedAttendanceSummaryDto();
 
         dto.setSerialNo(serialNo);
         dto.setEmployeeId(employee.getUserId());
@@ -1725,174 +1722,100 @@ public class UserService {
         dto.setDesignation(employee.getDesignation());
         dto.setJoiningDate(employee.getJoiningDate());
         dto.setProbation(employee.getProbation());
-
-        dto.setPf(
-                Boolean.TRUE.equals(employee.getIsEmployeeHavingPF())
-                        ? "YES"
-                        : "NO"
-        );
-
-        dto.setEsi(
-                Boolean.TRUE.equals(employee.getIsEmployeeHavingESI())
-                        ? "YES"
-                        : "NO"
-        );
+        dto.setPf(Boolean.TRUE.equals(employee.getIsEmployeeHavingPF()) ? "YES" : "NO");
+        dto.setEsi(Boolean.TRUE.equals(employee.getIsEmployeeHavingESI()) ? "YES" : "NO");
 
         if (employee.getAssociatedTeamLeadId() != null
                 && !employee.getAssociatedTeamLeadId().isBlank()) {
 
-            dto.setReportingManager(
-                    userDao.getTeamLeadName(
-                            employee.getAssociatedTeamLeadId()
-                    )
-            );
+            dto.setReportingManager(userDao.getTeamLeadName(employee.getAssociatedTeamLeadId()));
 
         } else {
-
-            dto.setReportingManager(
-                    employee.getReportingManager()
-            );
+            dto.setReportingManager(employee.getReportingManager());
         }
-
-
-        // ================= COUNTERS =================
 
         int totalLeaves = 0;
         int totalLopLeaves = 0;
         int casualLeaves = 0;
-
         double totalPresentDays = 0.0;
         double totalPaidDays = 0.0;
-
         int totalWorkingDays = 0;
         int totalHalfDays = 0;
         int totalWfH = 0;
         int totalWeekOffs = 0;
         int totalPublicHolidays = 0;
 
+        List<EmployeeAttendance> attendanceList = approvedAttendanceList == null ? Collections.emptyList() : approvedAttendanceList;
 
-        // ================= APPROVED ATTENDANCE =================
+        Map<LocalDate, EmployeeAttendance> attendanceMap = attendanceList.stream()
+                        .filter(Objects::nonNull)
+                        .filter(a -> "APPROVED".equalsIgnoreCase(a.getApprovalStatus()))
+                        .filter(a -> a.getAttendanceDate() != null)
+                        .collect(Collectors.toMap(EmployeeAttendance::getAttendanceDate,
+                                a -> a, (a, b) -> a));
 
-        for (EmployeeAttendance attendance : approvedAttendanceList) {
+        int totalDaysInMonth = (int) ChronoUnit.DAYS.between(monthConfig.getFromDate(), monthConfig.getToDate()) + 1;
 
-            LocalDate attendanceDate =
-                    attendance.getAttendanceDate();
+        LocalDate currentDate = monthConfig.getFromDate();
 
-            // Ignore dates outside employee working period
-            boolean beforeJoiningDate =
-                    employee.getJoiningDate() != null
-                            && attendanceDate.isBefore(
-                            employee.getJoiningDate()
-                    );
+        while (!currentDate.isAfter(monthConfig.getToDate())) {
 
-            boolean afterLastWorkingDay =
-                    employee.getLastWorkingDay() != null
-                            && attendanceDate.isAfter(
-                            employee.getLastWorkingDay()
-                    );
+            EmployeeAttendance attendance = attendanceMap.get(currentDate);
+
+            boolean beforeJoiningDate = employee.getJoiningDate() != null && currentDate.isBefore(employee.getJoiningDate());
+            boolean afterLastWorkingDay = employee.getLastWorkingDay() != null && currentDate.isAfter(employee.getLastWorkingDay());
 
             if (beforeJoiningDate || afterLastWorkingDay) {
+                currentDate = currentDate.plusDays(1);
                 continue;
             }
-
-
-            boolean isWeekend =
-                    attendanceDate.getDayOfWeek() == DayOfWeek.SATURDAY
-                            || attendanceDate.getDayOfWeek() == DayOfWeek.SUNDAY;
-
-            boolean isPublicHoliday =
-                    monthConfig.getPublicHolidays() != null
-                            && monthConfig.getPublicHolidays()
-                            .contains(attendanceDate);
-
-
-            String attendanceStatus =
-                    attendance.getAttendanceStatus();
-
-
-            if (attendanceStatus == null
-                    || attendanceStatus.isBlank()) {
-                continue;
-            }
-
-
-            // ================= WORKING DAYS =================
+            boolean isWeekend = currentDate.getDayOfWeek() == DayOfWeek.SATURDAY || currentDate.getDayOfWeek() == DayOfWeek.SUNDAY;
+            boolean isPublicHoliday = monthConfig.getPublicHolidays() != null && monthConfig.getPublicHolidays().contains(currentDate);
 
             if (!isWeekend && !isPublicHoliday) {
                 totalWorkingDays++;
             }
+            String attendanceStatus;
 
+            if (isPublicHoliday) { attendanceStatus = "PH";
 
-            // ================= LEAVE =================
+            } else if (isWeekend) { attendanceStatus = "WO";
 
+            } else if (attendance != null && attendance.getAttendanceStatus() != null) {
+                attendanceStatus = attendance.getAttendanceStatus();
+
+            } else {
+                attendanceStatus = "";
+            }
             if ("L".equalsIgnoreCase(attendanceStatus)) {
                 totalLeaves++;
             }
-
-
-            // ================= LOP =================
-
             if ("LOP".equalsIgnoreCase(attendanceStatus)) {
                 totalLopLeaves++;
             }
-
-
-            // ================= HALF DAY =================
-
-            if ("HD".equalsIgnoreCase(attendanceStatus)) {
-
-                totalHalfDays++;
-
-                totalPresentDays += 0.5;
-            }
-
-
-            // ================= WFH =================
-
-            if ("WFH".equalsIgnoreCase(attendanceStatus)) {
-
-                totalWfH++;
-
+            if ("P".equalsIgnoreCase(attendanceStatus)) {
                 totalPresentDays += 1;
             }
-
-
-            // ================= WEEK OFF =================
-
+            if ("WFH".equalsIgnoreCase(attendanceStatus)) {
+                totalWfH++;
+                totalPresentDays += 1;
+            }
+            if ("HD".equalsIgnoreCase(attendanceStatus)) {
+                totalHalfDays++;
+                totalPresentDays += 0.5;
+            }
             if ("WO".equalsIgnoreCase(attendanceStatus)) {
                 totalWeekOffs++;
             }
-
-
-            // ================= PUBLIC HOLIDAY =================
-
             if ("PH".equalsIgnoreCase(attendanceStatus)) {
                 totalPublicHolidays++;
             }
-
-
-            // ================= PRESENT =================
-
-            if ("P".equalsIgnoreCase(attendanceStatus)
-                    || "WH".equalsIgnoreCase(attendanceStatus)
-                    || "WFH".equalsIgnoreCase(attendanceStatus)
-                    || "LL".equalsIgnoreCase(attendanceStatus)
-                    || "SP".equalsIgnoreCase(attendanceStatus)) {
-
-                totalPresentDays += 1;
-            }
+            currentDate = currentDate.plusDays(1);
         }
 
+        boolean isProbationEmployee = employee.getProbation() == null || !employee.getProbation().equalsIgnoreCase("Completed");
 
-        // ================= CASUAL LEAVE =================
-
-        boolean isProbationEmployee =
-                employee.getProbation() == null
-                        || !employee.getProbation()
-                        .equalsIgnoreCase("Completed");
-
-        int allowedCasualLeave =
-                isProbationEmployee ? 0 : 1;
+        int allowedCasualLeave = isProbationEmployee ? 0 : 1;
 
         if (totalLeaves <= allowedCasualLeave) {
             casualLeaves = totalLeaves;
@@ -1900,50 +1823,18 @@ public class UserService {
             casualLeaves = allowedCasualLeave;
         }
 
-
-        // ================= PAID DAYS =================
-
-        totalPaidDays =
-                totalPresentDays
-                        + totalWeekOffs
-                        + totalPublicHolidays
-                        + casualLeaves;
-
-
-        // ================= TOTAL DAYS =================
-
-        int totalDaysInMonth =
-                (int) ChronoUnit.DAYS.between(
-                        monthConfig.getFromDate(),
-                        monthConfig.getToDate()
-                ) + 1;
-
-
-        // ================= RESPONSE =================
+        totalPaidDays = totalPresentDays + totalWeekOffs + totalPublicHolidays;
 
         dto.setTotalDaysInMonth(totalDaysInMonth);
-
         dto.setTotalWorkingDays(totalWorkingDays);
-
-        // You specifically wanted this as null
-        dto.setTotalWeekendDays(null);
-
         dto.setTotalPresentDays(totalPresentDays);
-
         dto.setTotalLeaves(totalLeaves);
-
         dto.setCasualLeaves(casualLeaves);
-
         dto.setTotalPaidDays(totalPaidDays);
-
         dto.setTotalLop(totalLopLeaves);
-
         dto.setTotalHalfDays(totalHalfDays);
-
         dto.setTotalWfH(totalWfH);
-
         dto.setTotalPublicHolidays(totalPublicHolidays);
-
         dto.setTotalWeekOffs(totalWeekOffs);
 
         return dto;
