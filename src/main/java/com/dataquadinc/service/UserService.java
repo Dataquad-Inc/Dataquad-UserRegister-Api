@@ -1721,7 +1721,14 @@ public class UserService {
         dto.setEmployeeName(employee.getUserName());
         dto.setDesignation(employee.getDesignation());
         dto.setJoiningDate(employee.getJoiningDate());
-        dto.setProbation(employee.getProbation());
+        String probation = employee.getProbation();
+        if ("Completed".equalsIgnoreCase(probation)) {
+            dto.setProbation("OUT");
+        } else if ("Not Completed".equalsIgnoreCase(probation)) {
+            dto.setProbation("IN");
+        } else {
+            dto.setProbation(probation);
+        }
         dto.setPf(Boolean.TRUE.equals(employee.getIsEmployeeHavingPF()) ? "YES" : "NO");
         dto.setEsi(Boolean.TRUE.equals(employee.getIsEmployeeHavingESI()) ? "YES" : "NO");
 
@@ -1823,7 +1830,7 @@ public class UserService {
             casualLeaves = allowedCasualLeave;
         }
 
-        totalPaidDays = totalPresentDays + totalWeekOffs + totalPublicHolidays;
+        totalPaidDays = totalPresentDays + totalWeekOffs + totalPublicHolidays + casualLeaves;
 
         dto.setTotalDaysInMonth(totalDaysInMonth);
         dto.setTotalWorkingDays(totalWorkingDays);
