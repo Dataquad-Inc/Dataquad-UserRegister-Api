@@ -69,7 +69,7 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "WHERE (:userId IS NULL OR u.userId = :userId) " +
             "AND (:roleEnum IS NULL OR r.name = :roleEnum) " +
             "AND u.entity = :entity " +
-            "AND u.status IN ('ACTIVE', 'ISOLATED') " +
+            "AND u.status IN ('ACTIVE', 'ISOLATED', 'INACTIVE') " +
             "AND u.designation <> 'testuser'")
     List<UserDetails> findByUserIdAndRole(@Param("userId") String userId,
             @Param("roleEnum") UserType roleEnum,
@@ -78,7 +78,7 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
     @Query("SELECT DISTINCT u FROM UserDetails u " +
             "WHERE (:userId IS NULL OR u.userId = :userId) " +
             "AND u.entity = :entity " +
-            "AND u.status IN ('ACTIVE', 'ISOLATED') " +
+            "AND u.status IN ('ACTIVE', 'ISOLATED', 'INACTIVE') " +
             "AND u.designation <> 'testuser' " +
             "AND (:excludeRole IS NULL OR NOT EXISTS (" +
             "   SELECT 1 FROM u.roles r2 WHERE r2.name = :excludeRole" +
@@ -89,7 +89,7 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = :entity " +
-            "AND u.status IN ('ACTIVE', 'ISOLATED') " +
+            "AND u.status IN ('ACTIVE', 'ISOLATED', 'INACTIVE') " +
             "AND u.designation <> 'testuser'")
     List<UserDetails> findAllActiveNonTestUsersByEntity(@Param("entity") String entity);
 
