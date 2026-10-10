@@ -64,7 +64,32 @@ public class PayslipPdfService {
     }
 
     private float drawHeader(PDDocument doc, PDPageContentStream cs, float x, float y, float contentW) throws IOException {
-        float leftW = contentW * 0.68f;
+        float headerTop = y;
+
+        // Logo top-right, aligned with company name (same placement as sample)
+        float logoW = 130f;
+        float logoH = 40f;
+        float logoX = x + contentW - logoW;
+        float logoBottom = headerTop - logoH + 6;
+        boolean logoDrawn = false;
+        try {
+            ClassPathResource logoRes = new ClassPathResource("static/dataquad-logo.png");
+            if (logoRes.exists()) {
+                try (InputStream in = logoRes.getInputStream()) {
+                    PDImageXObject img = PDImageXObject.createFromByteArray(doc, in.readAllBytes(), "logo");
+                    logoH = logoW * img.getHeight() / (float) img.getWidth();
+                    logoBottom = headerTop - logoH + 8;
+                    cs.drawImage(img, logoX, logoBottom, logoW, logoH);
+                    logoDrawn = true;
+                }
+            }
+        } catch (Exception ignored) {
+            // fall through to vector logo
+        }
+        if (!logoDrawn) {
+            drawTextLogo(cs, logoX, headerTop - 8);
+        }
+
         writeText(cs, PDType1Font.HELVETICA_BOLD, 12, x, y, "DATAQUAD IT SOLUTIONS PRIVATE LIMITED");
         y -= 14;
         writeText(cs, PDType1Font.HELVETICA, 9, x, y, "Level 2, Block D, CYBER GATEWAY, Wing 1/B,");
@@ -75,36 +100,23 @@ public class PayslipPdfService {
         y -= 12;
         writeText(cs, PDType1Font.HELVETICA, 9, x, y, "+91-8367643824");
 
-        float logoX = x + leftW + 10;
-        float logoY = y;
-        try {
-            ClassPathResource logoRes = new ClassPathResource("static/dataquad-logo.png");
-            if (logoRes.exists()) {
-                try (InputStream in = logoRes.getInputStream()) {
-                    PDImageXObject img = PDImageXObject.createFromByteArray(doc, in.readAllBytes(), "logo");
-                    float logoW = 110;
-                    float logoH = logoW * img.getHeight() / (float) img.getWidth();
-                    cs.drawImage(img, logoX, logoY - 10, logoW, logoH);
-                }
-            } else {
-                drawTextLogo(cs, logoX, logoY + 28);
-            }
-        } catch (Exception ex) {
-            drawTextLogo(cs, logoX, logoY + 28);
-        }
-        return y - 8;
+        // Keep content below whichever is lower: address block or logo
+        return Math.min(y, logoBottom) - 10;
     }
 
-    private void drawTextLogo(PDPageContentStream cs, float x, float y) throws IOException {
-        cs.setNonStrokingColor(new Color(0xE8, 0x6A, 0x2C));
+    private void drawTextLogo(PDPageContentStream cs, float x, float topY) throws IOException {
+        // Fallback vector mark: large orange D + grey DATAQUAD / IT SOLUTIONS
+        Color orange = new Color(0xED, 0x7D, 0x31);
+        Color grey = new Color(0x5A, 0x5A, 0x5A);
+        cs.setNonStrokingColor(orange);
         cs.beginText();
-        cs.setFont(PDType1Font.HELVETICA_BOLD, 22);
-        cs.newLineAtOffset(x + 4, y);
+        cs.setFont(PDType1Font.HELVETICA_BOLD, 36);
+        cs.newLineAtOffset(x, topY - 30);
         cs.showText("D");
         cs.endText();
-        cs.setNonStrokingColor(Color.DARK_GRAY);
-        writeText(cs, PDType1Font.HELVETICA_BOLD, 8, x + 26, y + 12, "DATAQUAD");
-        writeText(cs, PDType1Font.HELVETICA, 7, x + 26, y + 1, "IT SOLUTIONS");
+        cs.setNonStrokingColor(grey);
+        writeText(cs, PDType1Font.HELVETICA_BOLD, 11, x + 30, topY - 12, "DATAQUAD");
+        writeText(cs, PDType1Font.HELVETICA, 9, x + 30, topY - 26, "IT SOLUTIONS");
         cs.setNonStrokingColor(Color.BLACK);
     }
 
