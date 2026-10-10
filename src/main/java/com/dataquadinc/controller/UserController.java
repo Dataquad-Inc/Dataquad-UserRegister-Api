@@ -185,10 +185,10 @@ public class UserController {
     }
 
     @GetMapping("/active-internal/employee")
-    public ResponseEntity<List<EmployeeWithRole>> getAllInternalEmployees() {
+    public ResponseEntity<List<EmployeeWithRole>> getAllInternalEmployees(@RequestParam String entity) {
 
         ResponseEntity<List<EmployeeWithRole>> responseEntity =
-                userService.findAllActiveInternal();
+                userService.findAllActiveInternal(entity);
 
         List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
 
@@ -200,10 +200,10 @@ public class UserController {
     }
 
     @GetMapping("/active-external/employee")
-    public ResponseEntity<List<EmployeeWithRole>> getAllExtarnalEmployeesV() {
+    public ResponseEntity<List<EmployeeWithRole>> getAllExtarnalEmployeesV(@RequestParam String entity) {
 
         ResponseEntity<List<EmployeeWithRole>> responseEntity =
-                userService.findAllActiveExternal();
+                userService.findAllActiveExternal(entity);
 
         List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
 
@@ -215,10 +215,10 @@ public class UserController {
     }
 
     @GetMapping("/inactive-internal/employee")
-    public ResponseEntity<List<EmployeeWithRole>> getAllInactiveInternalEmployees() {
+    public ResponseEntity<List<EmployeeWithRole>> getAllInactiveInternalEmployees(@RequestParam String entity) {
 
         ResponseEntity<List<EmployeeWithRole>> responseEntity =
-                userService.findAllInActiveInternal();
+                userService.findAllInActiveInternal(entity);
 
         List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
 
@@ -230,10 +230,10 @@ public class UserController {
     }
 
     @GetMapping("/inactive-external/employee")
-    public ResponseEntity<List<EmployeeWithRole>> getAllInactiveExtarnalEmployeesV() {
+    public ResponseEntity<List<EmployeeWithRole>> getAllInactiveExtarnalEmployeesV(@RequestParam String entity) {
 
         ResponseEntity<List<EmployeeWithRole>> responseEntity =
-                userService.findAllInActiveExternal();
+                userService.findAllInActiveExternal(entity);
 
         List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
 
@@ -245,10 +245,10 @@ public class UserController {
     }
 
     @GetMapping("/isolated-internal/employee")
-    public ResponseEntity<List<EmployeeWithRole>> getAllIsolatedInternalEmployees() {
+    public ResponseEntity<List<EmployeeWithRole>> getAllIsolatedInternalEmployees(@RequestParam String entity) {
 
         ResponseEntity<List<EmployeeWithRole>> responseEntity =
-                userService.findAllIsolatedInternal();
+                userService.findAllIsolatedInternal(entity);
 
         List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
 
@@ -261,10 +261,10 @@ public class UserController {
 
 
     @GetMapping("/isolated-external/employee")
-    public ResponseEntity<List<EmployeeWithRole>> getAllIsolatedExternalEmployees() {
+    public ResponseEntity<List<EmployeeWithRole>> getAllIsolatedExternalEmployees(@RequestParam String entity) {
 
         ResponseEntity<List<EmployeeWithRole>> responseEntity =
-                userService.findAllIsolatedExternal();
+                userService.findAllIsolatedExternal(entity);
 
         List<EmployeeWithRole> employeeRoles = responseEntity.getBody();
 
@@ -492,6 +492,42 @@ public class UserController {
                     new ApiResponse<>(
                             true,
                             "Attendance dashboard fetched successfully",
+                            response,
+                            null
+                    )
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.internalServerError().body(
+                    new ApiResponse<>(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    )
+            );
+        }
+    }
+    @GetMapping("/attendance/dashboard/approved-summary")
+    public ResponseEntity<?> getApprovedAttendanceSummary(
+            @RequestParam Integer month,
+            @RequestParam Integer year,
+            @RequestParam String entity) {
+
+        try {
+
+            List<ApprovedAttendanceSummaryDto> response =
+                    userService.getApprovedAttendanceSummary(
+                            month,
+                            year,
+                            entity
+                    );
+
+            return ResponseEntity.ok(
+                    new ApiResponse<>(
+                            true,
+                            "Approved attendance summary fetched successfully",
                             response,
                             null
                     )

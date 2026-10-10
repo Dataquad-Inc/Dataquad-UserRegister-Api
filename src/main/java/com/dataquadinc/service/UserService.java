@@ -273,27 +273,9 @@ public class UserService {
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
 
-    public ResponseEntity<List<EmployeeWithRole>> findAllActiveInternal() {
+    public ResponseEntity<List<EmployeeWithRole>> findAllActiveInternal(String entity) {
 
-        List<UserDetails> users = userDao.findAllActiveNotExternalUser();
-
-        List<EmployeeWithRole> employeeRoles = users.stream()
-                .map(user -> {
-                    String rolesString = user.getRoles().stream()
-                            .map(role -> role.getName().name())
-                            .collect(Collectors.joining(", "));
-
-                    return EmployeeWithRole.fromUserDetails(user, rolesString);
-                })
-                .collect(Collectors.toList());
-
-        logger.info("Returning {} employee records in response", employeeRoles.size());
-        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
-    }
-
-    public ResponseEntity<List<EmployeeWithRole>> findAllActiveExternal() {
-
-        List<UserDetails> users = userDao.findAllActiveExternalUser();
+        List<UserDetails> users = userDao.findAllActiveNotExternalUser(entity);
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -309,27 +291,9 @@ public class UserService {
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
 
-    public ResponseEntity<List<EmployeeWithRole>> findAllInActiveInternal() {
+    public ResponseEntity<List<EmployeeWithRole>> findAllActiveExternal(String entity) {
 
-        List<UserDetails> users = userDao.findAllInActiveNotExternalUser();
-
-        List<EmployeeWithRole> employeeRoles = users.stream()
-                .map(user -> {
-                    String rolesString = user.getRoles().stream()
-                            .map(role -> role.getName().name())
-                            .collect(Collectors.joining(", "));
-
-                    return EmployeeWithRole.fromUserDetails(user, rolesString);
-                })
-                .collect(Collectors.toList());
-
-        logger.info("Returning {} employee records in response", employeeRoles.size());
-        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
-    }
-
-    public ResponseEntity<List<EmployeeWithRole>> findAllInActiveExternal() {
-
-        List<UserDetails> users = userDao.findAllInActiveExternalUser();
+        List<UserDetails> users = userDao.findAllActiveExternalUser(entity);
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -345,9 +309,45 @@ public class UserService {
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
 
-    public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedInternal() {
+    public ResponseEntity<List<EmployeeWithRole>> findAllInActiveInternal(String entity) {
 
-        List<UserDetails> users = userDao.findAllIsolatedInternalUser();
+        List<UserDetails> users = userDao.findAllInActiveNotExternalUser(entity);
+
+        List<EmployeeWithRole> employeeRoles = users.stream()
+                .map(user -> {
+                    String rolesString = user.getRoles().stream()
+                            .map(role -> role.getName().name())
+                            .collect(Collectors.joining(", "));
+
+                    return EmployeeWithRole.fromUserDetails(user, rolesString);
+                })
+                .collect(Collectors.toList());
+
+        logger.info("Returning {} employee records in response", employeeRoles.size());
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
+
+    public ResponseEntity<List<EmployeeWithRole>> findAllInActiveExternal(String entity) {
+
+        List<UserDetails> users = userDao.findAllInActiveExternalUser(entity);
+
+        List<EmployeeWithRole> employeeRoles = users.stream()
+                .map(user -> {
+                    String rolesString = user.getRoles().stream()
+                            .map(role -> role.getName().name())
+                            .collect(Collectors.joining(", "));
+
+                    return EmployeeWithRole.fromUserDetails(user, rolesString);
+                })
+                .collect(Collectors.toList());
+
+        logger.info("Returning {} employee records in response", employeeRoles.size());
+        return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
+    }
+
+    public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedInternal(String entity) {
+
+        List<UserDetails> users = userDao.findAllIsolatedInternalUser(entity);
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -366,9 +366,9 @@ public class UserService {
     }
 
 
-    public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedExternal() {
+    public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedExternal(String entity) {
 
-        List<UserDetails> users = userDao.findAllIsolatedExternalUser();
+        List<UserDetails> users = userDao.findAllIsolatedExternalUser(entity);
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -1650,6 +1650,203 @@ public class UserService {
         }
     }
 
+    public List<ApprovedAttendanceSummaryDto> getApprovedAttendanceSummary(
+            Integer month,
+            Integer year,
+            String entity) {
+
+        try {
+
+            List<ApprovedAttendanceSummaryDto> responseList =
+                    new ArrayList<>();
+
+            AttendanceMonthConfig monthConfig =
+                    attendanceMonthConfigRepository
+                            .findByAttendanceMonthAndAttendanceYearAndEntity(
+                                    month,
+                                    year,
+                                    entity
+                            )
+                            .orElseThrow(() ->
+                                    new RuntimeException(
+                                            "Attendance month not configured"
+                                    )
+                            );
+
+            List<UserDetails> employees =
+                    userDao.findAllAttendanceEmployeesByEntity(entity);
+
+            int serialNo = 1;
+
+            for (UserDetails employee : employees) {
+
+                List<EmployeeAttendance> approvedAttendanceList =
+                        attendanceRepository
+                                .getApprovedEmployeeAttendanceMonth(
+                                        employee.getUserId(),
+                                        month,
+                                        year
+                                );
+
+                ApprovedAttendanceSummaryDto dto =
+                        buildApprovedAttendanceSummary(
+                                employee,
+                                approvedAttendanceList,
+                                monthConfig,
+                                serialNo++
+                        );
+
+                responseList.add(dto);
+            }
+
+            return responseList;
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    private ApprovedAttendanceSummaryDto buildApprovedAttendanceSummary(
+            UserDetails employee,
+            List<EmployeeAttendance> approvedAttendanceList,
+            AttendanceMonthConfig monthConfig,
+            Integer serialNo) {
+
+        ApprovedAttendanceSummaryDto dto = new ApprovedAttendanceSummaryDto();
+
+        dto.setSerialNo(serialNo);
+        dto.setEmployeeId(employee.getUserId());
+        dto.setEmployeeName(employee.getUserName());
+        dto.setDesignation(employee.getDesignation());
+        dto.setJoiningDate(employee.getJoiningDate());
+        String probation = employee.getProbation();
+        if ("Completed".equalsIgnoreCase(probation)) {
+            dto.setProbation("OUT");
+        } else if ("Not Completed".equalsIgnoreCase(probation)) {
+            dto.setProbation("IN");
+        } else {
+            dto.setProbation(probation);
+        }
+        dto.setPf(Boolean.TRUE.equals(employee.getIsEmployeeHavingPF()) ? "YES" : "NO");
+        dto.setEsi(Boolean.TRUE.equals(employee.getIsEmployeeHavingESI()) ? "YES" : "NO");
+
+        if (employee.getAssociatedTeamLeadId() != null
+                && !employee.getAssociatedTeamLeadId().isBlank()) {
+
+            dto.setReportingManager(userDao.getTeamLeadName(employee.getAssociatedTeamLeadId()));
+
+        } else {
+            dto.setReportingManager(employee.getReportingManager());
+        }
+
+        int totalLeaves = 0;
+        int totalLopLeaves = 0;
+        int casualLeaves = 0;
+        double totalPresentDays = 0.0;
+        double totalPaidDays = 0.0;
+        int totalWorkingDays = 0;
+        int totalHalfDays = 0;
+        int totalWfH = 0;
+        int totalWeekOffs = 0;
+        int totalPublicHolidays = 0;
+
+        List<EmployeeAttendance> attendanceList = approvedAttendanceList == null ? Collections.emptyList() : approvedAttendanceList;
+
+        Map<LocalDate, EmployeeAttendance> attendanceMap = attendanceList.stream()
+                        .filter(Objects::nonNull)
+                        .filter(a -> "APPROVED".equalsIgnoreCase(a.getApprovalStatus()))
+                        .filter(a -> a.getAttendanceDate() != null)
+                        .collect(Collectors.toMap(EmployeeAttendance::getAttendanceDate,
+                                a -> a, (a, b) -> a));
+
+        int totalDaysInMonth = (int) ChronoUnit.DAYS.between(monthConfig.getFromDate(), monthConfig.getToDate()) + 1;
+
+        LocalDate currentDate = monthConfig.getFromDate();
+
+        while (!currentDate.isAfter(monthConfig.getToDate())) {
+
+            EmployeeAttendance attendance = attendanceMap.get(currentDate);
+
+            boolean beforeJoiningDate = employee.getJoiningDate() != null && currentDate.isBefore(employee.getJoiningDate());
+            boolean afterLastWorkingDay = employee.getLastWorkingDay() != null && currentDate.isAfter(employee.getLastWorkingDay());
+
+            if (beforeJoiningDate || afterLastWorkingDay) {
+                currentDate = currentDate.plusDays(1);
+                continue;
+            }
+            boolean isWeekend = currentDate.getDayOfWeek() == DayOfWeek.SATURDAY || currentDate.getDayOfWeek() == DayOfWeek.SUNDAY;
+            boolean isPublicHoliday = monthConfig.getPublicHolidays() != null && monthConfig.getPublicHolidays().contains(currentDate);
+
+            if (!isWeekend && !isPublicHoliday) {
+                totalWorkingDays++;
+            }
+            String attendanceStatus;
+
+            if (isPublicHoliday) { attendanceStatus = "PH";
+
+            } else if (isWeekend) { attendanceStatus = "WO";
+
+            } else if (attendance != null && attendance.getAttendanceStatus() != null) {
+                attendanceStatus = attendance.getAttendanceStatus();
+
+            } else {
+                attendanceStatus = "";
+            }
+            if ("L".equalsIgnoreCase(attendanceStatus)) {
+                totalLeaves++;
+            }
+            if ("LOP".equalsIgnoreCase(attendanceStatus)) {
+                totalLopLeaves++;
+            }
+            if ("P".equalsIgnoreCase(attendanceStatus)) {
+                totalPresentDays += 1;
+            }
+            if ("WFH".equalsIgnoreCase(attendanceStatus)) {
+                totalWfH++;
+                totalPresentDays += 1;
+            }
+            if ("HD".equalsIgnoreCase(attendanceStatus)) {
+                totalHalfDays++;
+                totalPresentDays += 0.5;
+            }
+            if ("WO".equalsIgnoreCase(attendanceStatus)) {
+                totalWeekOffs++;
+            }
+            if ("PH".equalsIgnoreCase(attendanceStatus)) {
+                totalPublicHolidays++;
+            }
+            currentDate = currentDate.plusDays(1);
+        }
+
+        boolean isProbationEmployee = employee.getProbation() == null || !employee.getProbation().equalsIgnoreCase("Completed");
+
+        int allowedCasualLeave = isProbationEmployee ? 0 : 1;
+
+        if (totalLeaves <= allowedCasualLeave) {
+            casualLeaves = totalLeaves;
+        } else {
+            casualLeaves = allowedCasualLeave;
+        }
+
+        totalPaidDays = totalPresentDays + totalWeekOffs + totalPublicHolidays + casualLeaves;
+
+        dto.setTotalDaysInMonth(totalDaysInMonth);
+        dto.setTotalWorkingDays(totalWorkingDays);
+        dto.setTotalPresentDays(totalPresentDays);
+        dto.setTotalLeaves(totalLeaves);
+        dto.setCasualLeaves(casualLeaves);
+        dto.setTotalPaidDays(totalPaidDays);
+        dto.setTotalLop(totalLopLeaves);
+        dto.setTotalHalfDays(totalHalfDays);
+        dto.setTotalWfH(totalWfH);
+        dto.setTotalPublicHolidays(totalPublicHolidays);
+        dto.setTotalWeekOffs(totalWeekOffs);
+
+        return dto;
+    }
+
     public List<EmployeeAttendanceViewDto> getEmployeeAttendance(
             String employeeId,
             Integer month,
@@ -1946,74 +2143,150 @@ public class UserService {
             throw new RuntimeException(e.getMessage());
         }
     }
-
     @Transactional
-    public String editAttendanceMonth(
-            AttendanceMonthSetupDto dto,
-            String entity) {
+    public String editAttendanceMonth(AttendanceMonthSetupDto dto, String entity) {
 
         try {
+            AttendanceMonthConfig config = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYearAndEntity(
+                                    dto.getMonth(), dto.getYear(), entity)
+                            .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
+            LocalDate fromDate = LocalDate.of(dto.getYear(), dto.getMonth(), 1).minusMonths(1).withDayOfMonth(26);
 
-            AttendanceMonthConfig config =
-                    attendanceMonthConfigRepository
-                            .findByAttendanceMonthAndAttendanceYearAndEntity(
-                                    dto.getMonth(),
-                                    dto.getYear(),
-                                    entity)
-                            .orElseThrow(() ->
-                                    new RuntimeException(
-                                            "Attendance month not configured"));
-
-            Long attendanceCount =
-                    attendanceRepository.countSubmittedOrApprovedAttendance(
-                            dto.getMonth(),
-                            dto.getYear(),
-                            entity);
-
-            if (attendanceCount > 0) {
-
-                throw new RuntimeException(
-                        "Attendance has already been submitted/approved. Month cannot be edited.");
-            }
-
-            LocalDate fromDate =
-                    LocalDate.of(dto.getYear(), dto.getMonth(), 1)
-                            .minusMonths(1)
-                            .withDayOfMonth(26);
-
-            LocalDate toDate =
-                    LocalDate.of(dto.getYear(), dto.getMonth(), 25);
-
+            LocalDate toDate = LocalDate.of(dto.getYear(), dto.getMonth(), 25);
             config.setFromDate(fromDate);
             config.setToDate(toDate);
-            config.setPublicHolidays(dto.getPublicHolidays());
 
-            attendanceMonthConfigRepository.save(config);
+            Map<LocalDate, AttendanceMonthEditDto> attendanceEditMap = new HashMap<>();
 
-            attendanceRepository.deleteAttendanceByMonth(
-                    dto.getMonth(),
-                    dto.getYear(),
-                    entity);
+            if (dto.getAttendanceEdits() != null) {
+                for (AttendanceMonthEditDto edit
+                        : dto.getAttendanceEdits()) {
 
-            List<UserDetails> employees =
-                    userDao.findAllAttendanceEmployeesByEntity(entity);
+                    if (edit.getDate() != null && edit.getAttendanceStatus() != null && !edit.getAttendanceStatus().isBlank()) {
 
-            List<LocalDate> dates = cycleDates(config);
-
-            List<EmployeeAttendance> saveList = new ArrayList<>();
-
-            for (UserDetails employee : employees) {
-                saveList.addAll(
-                        generateAttendanceRows(config, employee, dates));
+                        attendanceEditMap.put(edit.getDate(), edit);
+                    }
+                }
             }
 
-            attendanceRepository.saveAll(saveList);
+            List<UserDetails> employees = userDao.findAllAttendanceEmployeesByEntity(entity);
+            List<EmployeeAttendance> existingAttendance = attendanceRepository.findMonthAttendance(dto.getMonth(), dto.getYear(), entity);
 
+            Map<String, EmployeeAttendance> attendanceMap = existingAttendance.stream().collect(Collectors.toMap(
+                                    a -> a.getEmployeeId() + "_" + a.getAttendanceDate(),
+                                    a -> a,
+                                    (a, b) -> a));
+
+            Set<Integer> protectedWeeks = existingAttendance.stream()
+                            .filter(a -> "SUBMITTED".equalsIgnoreCase(
+                                    a.getApprovalStatus()) || "APPROVED".equalsIgnoreCase(a.getApprovalStatus()))
+                            .map(EmployeeAttendance::getWeekNumber).filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
+
+            List<EmployeeAttendance> saveList = new ArrayList<>();
+            List<LocalDate> dates = cycleDates(config);
+
+            for (UserDetails employee : employees) {
+                for (LocalDate date : dates) {
+
+                    int weekNumber = calculateWeekNumber(config.getFromDate(), date);
+
+                    if (protectedWeeks.contains(weekNumber)) {
+                        continue;
+                    }
+                    String key = employee.getUserId() + "_" + date;
+                    EmployeeAttendance existing = attendanceMap.get(key);
+                    boolean beforeJoiningDate = employee.getJoiningDate() != null && date.isBefore(employee.getJoiningDate());
+                    boolean afterLastWorkingDay = employee.getLastWorkingDay() != null && date.isAfter(employee.getLastWorkingDay());
+
+                    if (beforeJoiningDate || afterLastWorkingDay) {
+
+                        if (existing != null) {
+                            existing.setAttendanceStatus(null);
+                            existing.setAttendanceValue(null);
+                            existing.setRemarks(null);
+                            existing.setIsWeekend(false);
+                            existing.setIsPublicHoliday(false);
+                            existing.setIsPaid(false);
+                            existing.setSalaryDeduction(false);
+                            existing.setCasualLeaveApplied(false);
+                            existing.setIsSandwichDeduction(false);
+                            existing.setIsLocked(false);
+                            existing.setUpdatedAt(LocalDateTime.now());
+                            saveList.add(existing);
+                        }
+
+                        continue;
+                    }
+
+                    if (existing == null) {
+
+                        List<EmployeeAttendance> generatedRows = generateAttendanceRows(config, employee, List.of(date));
+                        existing = generatedRows.get(0);
+                    }
+                    existing.setMonthConfig(config);
+                    existing.setAttendanceMonth(config.getAttendanceMonth());
+                    existing.setAttendanceYear(config.getAttendanceYear());
+                    existing.setFromDate(config.getFromDate());
+                    existing.setToDate(config.getToDate());
+                    existing.setWeekNumber(weekNumber);
+
+                    AttendanceMonthEditDto monthEdit = attendanceEditMap.get(date);
+
+                    if (monthEdit != null) {
+                        String status = monthEdit.getAttendanceStatus().trim().toUpperCase();
+                        existing.setAttendanceStatus(status);
+
+                        if (monthEdit.getAttendanceValue() != null) {
+                            existing.setAttendanceValue(monthEdit.getAttendanceValue());
+                        } else if ("HD".equalsIgnoreCase(status)) {
+                            existing.setAttendanceValue(0.5);
+                        } else {
+                            existing.setAttendanceValue(1.0);
+                        }
+                        existing.setRemarks(monthEdit.getRemarks());
+
+                        if ("PH".equalsIgnoreCase(status)) {
+                            existing.setIsPublicHoliday(true);
+                            existing.setIsWeekend(false);
+                            existing.setIsPaid(true);
+
+                        }
+                        else if ("WO".equalsIgnoreCase(status)) {
+
+                            existing.setIsPublicHoliday(false);
+                            existing.setIsWeekend(true);
+                            existing.setIsPaid(true);
+
+                        }
+
+                        else {
+                            existing.setIsPublicHoliday(false);
+                            existing.setIsWeekend(false);
+                            existing.setIsPaid(!"LOP".equalsIgnoreCase(status));
+                        }
+
+                    } else {
+
+                        boolean isWeekend = date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY;
+                        boolean isPublicHoliday = config.getPublicHolidays() != null && config.getPublicHolidays().contains(date);
+                        setDefaultAttendance(existing, employee, date, isWeekend, isPublicHoliday);
+                    }
+
+                    existing.setIsLocked(false);
+                    existing.setUpdatedAt(LocalDateTime.now());
+                    saveList.add(existing);
+                }
+            }
+            config.setPublicHolidays(dto.getPublicHolidays());
+            attendanceMonthConfigRepository.save(config);
+
+            if (!saveList.isEmpty()) {
+                attendanceRepository.saveAll(saveList);
+            }
             return "Attendance month updated successfully.";
 
-        } catch (Exception e) {
-
-            e.printStackTrace();
+        } catch (Exception e) {e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
     }
@@ -2344,7 +2617,17 @@ public class UserService {
         dto.setEmployeeName(employee.getUserName());
         dto.setDesignation(employee.getDesignation());
         dto.setJoiningDate(employee.getJoiningDate());
-        dto.setProbation(employee.getProbation());
+        dto.setJoiningDate(employee.getJoiningDate());
+
+        String probation = employee.getProbation();
+
+        if ("Completed".equalsIgnoreCase(probation)) {
+            dto.setProbation("OUT");
+        } else if ("Not Completed".equalsIgnoreCase(probation)) {
+            dto.setProbation("IN");
+        } else {
+            dto.setProbation(probation);
+        }
 
         dto.setPf(Boolean.TRUE.equals(employee.getIsEmployeeHavingPF()) ? "YES" : "NO");
         dto.setEsi(Boolean.TRUE.equals(employee.getIsEmployeeHavingESI()) ? "YES" : "NO");
