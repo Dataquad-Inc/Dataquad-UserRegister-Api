@@ -18,6 +18,9 @@ import java.util.Set;
 
 @Entity
 @Data
+@Table(uniqueConstraints = {
+        @UniqueConstraint(name = "uk_user_tenant_email", columnNames = {"tenant_id", "email"})
+})
 public class UserDetails {
 
     @Id
@@ -30,8 +33,11 @@ public class UserDetails {
 
     private String confirmPassword;
 
+    /** Tenant this user belongs to (mymulya, aventra, …). */
+    @Column(name = "tenant_id", length = 64)
+    private String tenantId = "mymulya";
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String email;
 
     private String personalemail;

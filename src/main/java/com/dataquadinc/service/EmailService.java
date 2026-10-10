@@ -32,14 +32,19 @@ public class EmailService {
 
 
     public void sendOnboardingInviteEmail(String to, String userName, String inviteLink) {
+        sendOnboardingInviteEmail(to, userName, inviteLink, "MyMulya");
+    }
+
+    public void sendOnboardingInviteEmail(String to, String userName, String inviteLink, String brandName) {
         try {
             logger.info("Preparing to send onboarding invite email to {}", to);
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            String subject = "Complete Your MyMulya Onboarding";
-            String htmlBody = buildOnboardingInviteEmailBody(userName, inviteLink);
+            String brand = (brandName == null || brandName.isBlank()) ? "MyMulya" : brandName;
+            String subject = "Complete Your " + brand + " Onboarding";
+            String htmlBody = buildOnboardingInviteEmailBody(userName, inviteLink, brand);
             helper.setFrom(FROM_EMAIL);
             helper.setTo(to);
             helper.setSubject(subject);
@@ -53,7 +58,7 @@ public class EmailService {
         }
     }
 
-    private String buildOnboardingInviteEmailBody(String userName, String inviteLink) {
+    private String buildOnboardingInviteEmailBody(String userName, String inviteLink, String brandName) {
         return "<!DOCTYPE html><html><head><style>"
                 + "body {font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f6f8fa; margin: 0; padding: 0;}"
                 + ".email-container {max-width: 520px; background-color: #fff; margin: 40px auto; border-radius: 8px; "
@@ -65,13 +70,13 @@ public class EmailService {
                 + ".footer {font-size: 0.9rem; color: #5e6b8b; text-align: center; margin-top: 30px; padding-top: 10px; border-top: 1px solid #eee;}"
                 + "</style></head><body>"
                 + "<div class='email-container'>"
-                + "<h2>MyMulya Onboarding Invitation</h2>"
+                + "<h2>" + brandName + " Onboarding Invitation</h2>"
                 + "<p>Hi " + (userName != null ? userName : "Candidate") + ",</p>"
-                + "<p>You have been invited to complete your onboarding on the MyMulya portal.</p>"
+                + "<p>You have been invited to complete your onboarding on the " + brandName + " portal.</p>"
                 + "<p>Please register, fill in your details, and upload the required documents using the link below.</p>"
                 + "<a href='" + inviteLink + "' class='action-btn' target='_blank'>Complete Onboarding</a>"
                 + "<p>This link expires in 7 days. If you need a new link, please contact HR.</p>"
-                + "<p>Regards,<br/>Mulya HR Team</p>"
+                + "<p>Regards,<br/>" + brandName + " HR Team</p>"
                 + "<div class='footer'>This is an automated message, please do not reply.</div>"
                 + "</div></body></html>";
     }

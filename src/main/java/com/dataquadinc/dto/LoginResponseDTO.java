@@ -55,6 +55,7 @@ public class LoginResponseDTO {
         private LocalDateTime loginTimestamp;
         private String encryptionKey;
         private String entity;
+        private String tenantId;
 
         // Add a constructor to accept these parameters
 
@@ -63,6 +64,14 @@ public class LoginResponseDTO {
                        String email, UserType roleType,
                        LocalDateTime loginTimestamp,
                        String encryptionKey, String entity) {
+            this(userId, userName, email, roleType, loginTimestamp, encryptionKey, entity, null);
+        }
+
+        public Payload(String userId, String userName,
+                       String email, UserType roleType,
+                       LocalDateTime loginTimestamp,
+                       String encryptionKey, String entity,
+                       String tenantId) {
             this.userId = userId;
             this.userName = userName;
             this.email = email;
@@ -70,6 +79,7 @@ public class LoginResponseDTO {
             this.loginTimestamp = loginTimestamp;
             this.encryptionKey = encryptionKey;
             this.entity = entity;
+            this.tenantId = tenantId;
         }
     }
     @Data

@@ -23,43 +23,57 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
+            "AND u.tenantId = :tenantId " +
             "AND u.status = 'ACTIVE' AND u.designation = 'Candidate'")
-    List<UserDetails> findAllActiveExternalUser();
+    List<UserDetails> findAllActiveExternalUser(@Param("tenantId") String tenantId);
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
+            "AND u.tenantId = :tenantId " +
             "AND u.status = 'ACTIVE' AND u.designation <> 'Candidate'")
-    List<UserDetails> findAllActiveNotExternalUser();
+    List<UserDetails> findAllActiveNotExternalUser(@Param("tenantId") String tenantId);
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
+            "AND u.tenantId = :tenantId " +
             "AND u.status = 'INACTIVE' AND u.designation = 'Candidate'")
-    List<UserDetails> findAllInActiveExternalUser();
+    List<UserDetails> findAllInActiveExternalUser(@Param("tenantId") String tenantId);
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
+            "AND u.tenantId = :tenantId " +
             "AND u.status = 'ISOLATED' " +
             "AND u.designation <> 'Candidate'")
-    List<UserDetails> findAllIsolatedInternalUser();
+    List<UserDetails> findAllIsolatedInternalUser(@Param("tenantId") String tenantId);
 
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
+            "AND u.tenantId = :tenantId " +
             "AND u.status = 'ISOLATED' " +
             "AND u.designation = 'Candidate'")
-    List<UserDetails> findAllIsolatedExternalUser();
+    List<UserDetails> findAllIsolatedExternalUser(@Param("tenantId") String tenantId);
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
+            "AND u.tenantId = :tenantId " +
             "AND u.status = 'INACTIVE' AND u.designation <> 'Candidate'")
-    List<UserDetails> findAllInActiveNotExternalUser();
+    List<UserDetails> findAllInActiveNotExternalUser(@Param("tenantId") String tenantId);
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = 'IN' " +
+            "AND u.tenantId = :tenantId " +
             "AND u.status = 'ACTIVE' AND u.designation <> 'testuser'")
-    List<UserDetails> findAllActiveNonTestUsers();
+    List<UserDetails> findAllActiveNonTestUsers(@Param("tenantId") String tenantId);
+
+    @Query("SELECT u FROM UserDetails u " +
+            "WHERE u.tenantId = :tenantId " +
+            "AND u.status IN ('ACTIVE', 'ISOLATED')")
+    List<UserDetails> findActiveUsersByTenant(@Param("tenantId") String tenantId);
 
     UserDetails findByEmail(String email);
+
+    UserDetails findByEmailAndTenantId(String email, String tenantId);
 
     UserDetails findByUserId(String userId);
 
@@ -69,15 +83,18 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "WHERE (:userId IS NULL OR u.userId = :userId) " +
             "AND (:roleEnum IS NULL OR r.name = :roleEnum) " +
             "AND u.entity = :entity " +
+            "AND u.tenantId = :tenantId " +
             "AND u.status IN ('ACTIVE', 'ISOLATED') " +
             "AND u.designation <> 'testuser'")
     List<UserDetails> findByUserIdAndRole(@Param("userId") String userId,
             @Param("roleEnum") UserType roleEnum,
-            @Param("entity") String entity);
+            @Param("entity") String entity,
+            @Param("tenantId") String tenantId);
 
     @Query("SELECT DISTINCT u FROM UserDetails u " +
             "WHERE (:userId IS NULL OR u.userId = :userId) " +
             "AND u.entity = :entity " +
+            "AND u.tenantId = :tenantId " +
             "AND u.status IN ('ACTIVE', 'ISOLATED') " +
             "AND u.designation <> 'testuser' " +
             "AND (:excludeRole IS NULL OR NOT EXISTS (" +
@@ -85,13 +102,16 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             "))")
     List<UserDetails> findByUserIdAndRoleNot(@Param("userId") String userId,
             @Param("excludeRole") UserType excludeRole,
-            @Param("entity") String entity);
+            @Param("entity") String entity,
+            @Param("tenantId") String tenantId);
 
     @Query("SELECT u FROM UserDetails u " +
             "WHERE u.entity = :entity " +
+            "AND u.tenantId = :tenantId " +
             "AND u.status IN ('ACTIVE', 'ISOLATED') " +
             "AND u.designation <> 'testuser'")
-    List<UserDetails> findAllActiveNonTestUsersByEntity(@Param("entity") String entity);
+    List<UserDetails> findAllActiveNonTestUsersByEntity(@Param("entity") String entity,
+                                                        @Param("tenantId") String tenantId);
 
     @Query("SELECT u FROM UserDetails u JOIN u.roles r WHERE r.name = 'BDM'")
     List<UserDetails> findBdmEmployees();
@@ -156,9 +176,19 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
     """, nativeQuery = true)
     long countRequirementsByClientName(@Param("clientName") String clientName);
 
-    @Query(value = "SELECT * FROM user_details WHERE joining_date BETWEEN :startDate AND :endDate", nativeQuery = true)
+    @Query(value = """
+            SELECT * FROM user_details
+            WHERE joining_date BETWEEN :startDate AND :endDate
+              AND tenant_id = :tenantId
+            """, nativeQuery = true)
     List<UserDetails> findEmployeesByJoiningDateRange(@Param("startDate") LocalDate startDate,
-                                                      @Param("endDate") LocalDate endDate);
+                                                      @Param("endDate") LocalDate endDate,
+                                                      @Param("tenantId") String tenantId);
+
+    UserDetails findByUserIdAndTenantId(String userId, String tenantId);
+
+    @Query("SELECT u FROM UserDetails u WHERE u.tenantId = :tenantId")
+    List<UserDetails> findAllByTenantId(@Param("tenantId") String tenantId);
 
     @Query(value = """
     SELECT COUNT(*) 

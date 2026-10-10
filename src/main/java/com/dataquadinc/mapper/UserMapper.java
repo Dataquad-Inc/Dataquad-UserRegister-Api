@@ -37,7 +37,9 @@ public class UserMapper {
         user.setEmergencyContactNumber(resolveEmergencyContactNumber(userDto));
         user.setIsEmployeeHavingPF(Boolean.TRUE.equals(userDto.getIsEmployeeHavingPF()));
         user.setIsEditable(Boolean.TRUE.equals(userDto.getIsEditable()));
-
+        if (userDto.getTenantId() != null && !userDto.getTenantId().isBlank()) {
+            user.setTenantId(userDto.getTenantId());
+        }
 
         return user;
     }

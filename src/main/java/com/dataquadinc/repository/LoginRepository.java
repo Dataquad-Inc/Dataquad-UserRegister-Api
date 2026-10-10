@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface LoginRepository extends JpaRepository<UserDetails, Long> {
     UserDetails findByEmail(String email);
+
+    UserDetails findByEmailAndTenantId(String email, String tenantId);
 }

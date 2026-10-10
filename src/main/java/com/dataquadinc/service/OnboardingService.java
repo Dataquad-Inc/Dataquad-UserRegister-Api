@@ -2,10 +2,13 @@ package com.dataquadinc.service;
 
 import com.dataquadinc.dto.EmployeeWithRole;
 import com.dataquadinc.dto.ResponseBean;
+import com.dataquadinc.model.Tenant;
 import com.dataquadinc.model.UserDetails;
 import com.dataquadinc.model.UserProfileDocument;
+import com.dataquadinc.repository.TenantRepository;
 import com.dataquadinc.repository.UserDao;
 import com.dataquadinc.repository.UserProfileDocumentRepository;
+import com.dataquadinc.tenant.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,12 +45,18 @@ public class OnboardingService {
     @Autowired
     private UserProfileDocumentRepository documentRepo;
 
+    @Autowired
+    private TenantRepository tenantRepository;
+
     @Value("${app.frontend.url:https://mymulya.com}")
     private String frontendUrl;
 
     public ResponseEntity<ResponseBean<Map<String, Object>>> sendInvite(String userId) {
         UserDetails user = userDao.findByUserId(userId);
         if (user == null) {
+            return error("User not found", HttpStatus.NOT_FOUND);
+        }
+        if (!sameTenant(user)) {
             return error("User not found", HttpStatus.NOT_FOUND);
         }
 
@@ -61,7 +70,12 @@ public class OnboardingService {
         }
         userDao.save(user);
 
-        String inviteLink = frontendUrl.replaceAll("/$", "") + "/onboarding/" + token;
+        Tenant tenant = resolveTenant(user);
+        // Same MyMulya product UI — only tenant data differs. Prefer tenant portal URL if set.
+        String baseUrl = tenant != null && tenant.getFrontendUrl() != null
+                ? tenant.getFrontendUrl()
+                : frontendUrl;
+        String inviteLink = baseUrl.replaceAll("/$", "") + "/onboarding/" + token;
         emailService.sendOnboardingInviteEmail(user.getEmail(), user.getUserName(), inviteLink);
 
         Map<String, Object> data = new HashMap<>();
@@ -69,7 +83,19 @@ public class OnboardingService {
         data.put("email", user.getEmail());
         data.put("onboardingStatus", user.getOnboardingStatus());
         data.put("inviteSentAt", user.getInviteSentAt());
+        data.put("tenantId", user.getTenantId());
         return success("Invitation sent successfully", data);
+    }
+
+    private boolean sameTenant(UserDetails user) {
+        String requestTenant = TenantContext.getTenantId();
+        String userTenant = user.getTenantId() != null ? user.getTenantId() : TenantContext.DEFAULT_TENANT;
+        return requestTenant.equalsIgnoreCase(userTenant);
+    }
+
+    private Tenant resolveTenant(UserDetails user) {
+        String tid = user.getTenantId() != null ? user.getTenantId() : TenantContext.DEFAULT_TENANT;
+        return tenantRepository.findById(tid).orElse(null);
     }
 
     public ResponseEntity<ResponseBean<Map<String, Object>>> validateToken(String token) {
@@ -92,6 +118,7 @@ public class OnboardingService {
         data.put("adhar", user.getAdhar());
         data.put("onboardingStatus", user.getOnboardingStatus());
         data.put("onboardingRemarks", user.getOnboardingRemarks());
+        data.put("tenantId", user.getTenantId());
         return success("Invitation valid", data);
     }
 
@@ -247,7 +274,8 @@ public class OnboardingService {
     }
 
     public ResponseEntity<List<EmployeeWithRole>> pendingReview() {
-        List<UserDetails> users = userDao.findAll().stream()
+        String tenantId = TenantContext.getTenantId();
+        List<UserDetails> users = userDao.findAllByTenantId(tenantId).stream()
                 .filter(u -> "Candidate".equalsIgnoreCase(u.getDesignation()))
                 .filter(u -> {
                     String s = u.getOnboardingStatus();

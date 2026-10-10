@@ -83,9 +83,10 @@ public class UserService {
 
         logger.info("New User Registering ...{}", userDto.getUserId());
 
-        // Check for existing email
-        if (userDao.findByEmail(userDto.getEmail()) != null) {
-            logger.warn("Email {} is already in use", userDto.getEmail());
+        // Check for existing email within the same tenant
+        String tenantId = com.dataquadinc.tenant.TenantContext.getTenantId();
+        if (userDao.findByEmailAndTenantId(userDto.getEmail(), tenantId) != null) {
+            logger.warn("Email {} is already in use for tenant {}", userDto.getEmail(), tenantId);
             errors.put("errormessage", userDto.getEmail() + " is already in use");
         }
 
@@ -109,6 +110,7 @@ public class UserService {
 
         // Map DTO to entity
         UserDetails user = userMapper.toEntity(userDto);
+        user.setTenantId(tenantId);
         user.setEncryptionKey("MyMulya@1234");
         user.setPrimarySuperAdmin(false);
 
@@ -230,25 +232,26 @@ public class UserService {
             }
         }
 
+        String tenantId = com.dataquadinc.tenant.TenantContext.getTenantId();
         List<UserDetails> users;
 
         if (excludeRole != null) {
             // ✅ Proper "NOT EXISTS" exclusion, also applies entity='IN'
-            users = userDao.findByUserIdAndRoleNot(userId, excludeRole, requestedEntity);
+            users = userDao.findByUserIdAndRoleNot(userId, excludeRole, requestedEntity, tenantId);
             logger.info("Fetched {} users with userId={} excluding role={}, entity={}",
                     users.size(), userId, excludeRole, requestedEntity);
 
         } else if (includeRole != null) {
             // ✅ Include specific role, entity='IN'
-            users = userDao.findByUserIdAndRole(userId, includeRole, requestedEntity);
+            users = userDao.findByUserIdAndRole(userId, includeRole, requestedEntity, tenantId);
             logger.info("Fetched {} users with userId={} and role={}, entity={}",
                     users.size(), userId, includeRole, requestedEntity);
 
         } else {
             // ✅ No role filter, still entity='IN'
             users = (userId == null || userId.isBlank())
-                    ? userDao.findAllActiveNonTestUsersByEntity(requestedEntity)
-                    : userDao.findByUserIdAndRole(userId, null, requestedEntity);
+                    ? userDao.findAllActiveNonTestUsersByEntity(requestedEntity, tenantId)
+                    : userDao.findByUserIdAndRole(userId, null, requestedEntity, tenantId);
 
             logger.info("Fetched {} users with userId={}, no role filter, entity={}",
                     users.size(), userId, requestedEntity);
@@ -275,7 +278,8 @@ public class UserService {
 
     public ResponseEntity<List<EmployeeWithRole>> findAllActiveInternal() {
 
-        List<UserDetails> users = userDao.findAllActiveNotExternalUser();
+        List<UserDetails> users = userDao.findAllActiveNotExternalUser(
+                com.dataquadinc.tenant.TenantContext.getTenantId());
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -293,7 +297,8 @@ public class UserService {
 
     public ResponseEntity<List<EmployeeWithRole>> findAllActiveExternal() {
 
-        List<UserDetails> users = userDao.findAllActiveExternalUser();
+        List<UserDetails> users = userDao.findAllActiveExternalUser(
+                com.dataquadinc.tenant.TenantContext.getTenantId());
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -311,7 +316,8 @@ public class UserService {
 
     public ResponseEntity<List<EmployeeWithRole>> findAllInActiveInternal() {
 
-        List<UserDetails> users = userDao.findAllInActiveNotExternalUser();
+        List<UserDetails> users = userDao.findAllInActiveNotExternalUser(
+                com.dataquadinc.tenant.TenantContext.getTenantId());
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -329,7 +335,8 @@ public class UserService {
 
     public ResponseEntity<List<EmployeeWithRole>> findAllInActiveExternal() {
 
-        List<UserDetails> users = userDao.findAllInActiveExternalUser();
+        List<UserDetails> users = userDao.findAllInActiveExternalUser(
+                com.dataquadinc.tenant.TenantContext.getTenantId());
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -347,7 +354,8 @@ public class UserService {
 
     public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedInternal() {
 
-        List<UserDetails> users = userDao.findAllIsolatedInternalUser();
+        List<UserDetails> users = userDao.findAllIsolatedInternalUser(
+                com.dataquadinc.tenant.TenantContext.getTenantId());
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -368,7 +376,8 @@ public class UserService {
 
     public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedExternal() {
 
-        List<UserDetails> users = userDao.findAllIsolatedExternalUser();
+        List<UserDetails> users = userDao.findAllIsolatedExternalUser(
+                com.dataquadinc.tenant.TenantContext.getTenantId());
 
         List<EmployeeWithRole> employeeRoles = users.stream()
                 .map(user -> {
@@ -907,7 +916,8 @@ public class UserService {
             throw new DateRangeValidationException("Start date must not be after end date.");
         }
 
-        List<UserDetails> users = userDao.findEmployeesByJoiningDateRange(startDate, endDate);
+        List<UserDetails> users = userDao.findEmployeesByJoiningDateRange(
+                startDate, endDate, com.dataquadinc.tenant.TenantContext.getTenantId());
 
         return users.stream().map(user -> {
             String roleName = Optional.ofNullable(user.getRoles())
@@ -1059,7 +1069,8 @@ public class UserService {
     }
 
     public List<UserDto> getAllUsers() {
-        List<UserDetails> users = userDao.findAll();
+        List<UserDetails> users = userDao.findAllByTenantId(
+                com.dataquadinc.tenant.TenantContext.getTenantId());
 
         List<UserDto> employees = users.stream()
                 .map(UserService::convertEntityToDto)
@@ -1084,13 +1095,16 @@ public class UserService {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("joiningDate"), joiningDate));
         }
 
+        String tenantId = com.dataquadinc.tenant.TenantContext.getTenantId();
+        spec = spec.and((root, query, cb) -> cb.equal(root.get("tenantId"), tenantId));
+
         Page<UserDetails> userPage = userDao.findAll(spec, pageable);
         return userPage.map(this::convertToDtoUs);
     }
 
     public UserDto getUserByUserId(String userId) {
-
-        UserDetails userDetails = userDao.findByUserId(userId);
+        String tenantId = com.dataquadinc.tenant.TenantContext.getTenantId();
+        UserDetails userDetails = userDao.findByUserIdAndTenantId(userId, tenantId);
         if (userDetails == null) {
             throw new NoSuchUserException("No User Found With ID :" + userId);
         }
@@ -1189,8 +1203,12 @@ public class UserService {
 
 
     public List<UserAssignment> getUserIdsAndUserNames(List<String> userIds) {
-
-        List<UserDetails> users = userDao.findByUserIdIn(userIds);
+        String tenantId = com.dataquadinc.tenant.TenantContext.getTenantId();
+        List<UserDetails> users = userDao.findByUserIdIn(userIds).stream()
+                .filter(u -> tenantId.equalsIgnoreCase(
+                        u.getTenantId() != null && !u.getTenantId().isBlank()
+                                ? u.getTenantId() : com.dataquadinc.tenant.TenantContext.DEFAULT_TENANT))
+                .toList();
         List<UserAssignment> userAssignments = users.stream()
                 .map(userDetails -> {
                     UserAssignment userAssignment = new UserAssignment();
@@ -1203,7 +1221,8 @@ public class UserService {
 
     public List<UserAssignment> getUsersDropdown() {
         List<UserAssignment> usersDropDown = new ArrayList<>();
-        userDao.findAll().stream()
+        String tenantId = com.dataquadinc.tenant.TenantContext.getTenantId();
+        userDao.findAllByTenantId(tenantId).stream()
                 .filter(userDetails ->
                         userDetails.getRoles().stream().anyMatch(roles -> roles.getName() == UserType.SUPERADMIN) ||
                                 userDetails.getEntity().equalsIgnoreCase("US"))

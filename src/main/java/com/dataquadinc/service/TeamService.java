@@ -8,6 +8,7 @@ import com.dataquadinc.model.Roles;
 import com.dataquadinc.model.UserDetails;
 import com.dataquadinc.model.UserType;
 import com.dataquadinc.repository.UserDao;
+import com.dataquadinc.tenant.TenantContext;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,7 @@ public class TeamService {
         if (userDetails == null) {
             throw new UserNotFoundException("No User Found With Id :" + userId);
         }
+        assertUserInCurrentTenant(userDetails);
 
         // Check if the acting user has permission (keeping SUPERADMIN check for authorization)
         boolean isSuperAdmin = userDetails.getRoles().stream()
@@ -202,13 +204,13 @@ public class TeamService {
         List<AssociatedUser> bdms = new ArrayList<>();
         List<AssociatedUser> teamLeads = new ArrayList<>();
 
-        // Validate team lead exists
         UserDetails teamLead = userDao.findByUserId(teamLeadId);
         if (teamLead == null) {
             throw new UserNotFoundException("No User Found With ID " + teamLeadId);
         }
+        assertUserInCurrentTenant(teamLead);
 
-        List<UserDetails> activeUsers = userDao.findAll().stream().filter(this::isActiveUser).toList();
+        List<UserDetails> activeUsers = activeUsersInCurrentTenant();
 
         // Iterate only active users and check if they belong to this team lead
         for (UserDetails user : activeUsers) {
@@ -264,9 +266,7 @@ public class TeamService {
     public List<AssociatedToTeamLeadResponse> getAllUsersAssociatedToTeamLead(String entity) {
         List<AssociatedToTeamLeadResponse> result = new ArrayList<>();
 
-        List<UserDetails> activeUsers = userDao.findAll().stream()
-                .filter(this::isActiveUser)
-                .toList();
+        List<UserDetails> activeUsers = activeUsersInCurrentTenant();
 
         // Get all team leads in the entity (including BDMs acting as team leads)
         List<UserDetails> teamLeads = activeUsers.stream()
@@ -352,9 +352,8 @@ public class TeamService {
     }
 
     public String getTeamLeadIdByUserId(String userId) {
-        Optional<UserDetails> userOpt = userDao.findAll().stream()
-                .filter(u -> u.getUserId().equalsIgnoreCase(userId))
-                .findFirst();
+        UserDetails user = userDao.findByUserIdAndTenantId(userId, TenantContext.getTenantId());
+        Optional<UserDetails> userOpt = Optional.ofNullable(user);
 
         if (userOpt.isPresent() && userOpt.get().getTeamAssignments() != null) {
             return userOpt.get().getTeamAssignments().stream()
@@ -529,6 +528,7 @@ public class TeamService {
         if (user == null) {
             throw new UserNotFoundException("No User Found With ID: " + userId);
         }
+        assertUserInCurrentTenant(user);
 
         List<TeamAssignment> assignments = user.getTeamAssignments();
         if (assignments == null || assignments.isEmpty()) {
@@ -556,9 +556,10 @@ public class TeamService {
         if (teamLead == null) {
             throw new UserNotFoundException("No User Found With ID: " + teamLeadId);
         }
+        assertUserInCurrentTenant(teamLead);
 
         List<UserDetails> updatedUsers = new ArrayList<>();
-        for (UserDetails user : userDao.findAll()) {
+        for (UserDetails user : userDao.findAllByTenantId(TenantContext.getTenantId())) {
             boolean updated = false;
             List<TeamAssignment> assignments = user.getTeamAssignments();
 
@@ -593,6 +594,21 @@ public class TeamService {
 
         userDao.saveAll(updatedUsers);
         return "Deleted team for team lead " + teamLeadId + " and removed team lead details from " + updatedUsers.size() + " users";
+    }
+
+    private List<UserDetails> activeUsersInCurrentTenant() {
+        return userDao.findActiveUsersByTenant(TenantContext.getTenantId()).stream()
+                .filter(this::isActiveUser)
+                .toList();
+    }
+
+    private void assertUserInCurrentTenant(UserDetails user) {
+        String userTenant = user.getTenantId() == null || user.getTenantId().isBlank()
+                ? TenantContext.DEFAULT_TENANT
+                : user.getTenantId();
+        if (!userTenant.equalsIgnoreCase(TenantContext.getTenantId())) {
+            throw new UserNotFoundException("No User Found With ID: " + user.getUserId());
+        }
     }
 
 }

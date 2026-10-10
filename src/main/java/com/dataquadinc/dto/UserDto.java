@@ -40,6 +40,7 @@ public class UserDto {
         private String onboardingStatus;
         private String placementId;
         private String entity;
+        private String tenantId;
         private String teamName;
         private List<TeamAssignment> teamAssignments;
         private Boolean isPrimarySuperAdmin;

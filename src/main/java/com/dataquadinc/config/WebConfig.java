@@ -1,13 +1,25 @@
-
 package com.dataquadinc.config;
 
 
+import com.dataquadinc.tenant.TenantInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
+    private final TenantInterceptor tenantInterceptor;
+
+    public WebConfig(TenantInterceptor tenantInterceptor) {
+        this.tenantInterceptor = tenantInterceptor;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(tenantInterceptor).addPathPatterns("/**");
+    }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -22,7 +34,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "http://192.168.0.135",
                         "http://154.210.288.26",
                         "http://192.168.0.203:3000",
-                        "http://192.168.0.167:3000"
+                        "http://192.168.0.167:3000",
+                        "https://portal.aventrainc.ai"
                 )
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")  // Allowed HTTP methods
                 .allowedHeaders("*")                      // Allow all headers
