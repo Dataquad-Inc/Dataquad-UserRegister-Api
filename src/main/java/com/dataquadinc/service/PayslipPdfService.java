@@ -26,7 +26,8 @@ import java.util.Locale;
 @Service
 public class PayslipPdfService {
 
-    private static final Color PEACH = new Color(0xF5, 0xC4, 0xA0);
+    /** Section header fill — light blue from brand screenshot (#BDD7EE). */
+    private static final Color SECTION_HEADER = new Color(0xBD, 0xD7, 0xEE);
     private static final Color LIGHT_GRAY = new Color(0xEE, 0xEE, 0xEE);
     private static final Color ROW_ALT = new Color(0xF7, 0xF7, 0xF7);
     private static final DateTimeFormatter SHORT_DATE = DateTimeFormatter.ofPattern("dd-MMM-yy", Locale.ENGLISH);
@@ -72,19 +73,37 @@ public class PayslipPdfService {
         float logoX = x + contentW - logoW;
         float logoBottom = headerTop - logoH + 6;
         boolean logoDrawn = false;
-        try {
-            ClassPathResource logoRes = new ClassPathResource("static/dataquad-logo.png");
-            if (logoRes.exists()) {
+        // Prefer the real brand mark; also accept accidental double-extension uploads.
+        String[] logoCandidates = {
+                "static/dataquad-logo.png",
+                "static/dataquad-logo.png.png",
+                "static/dataquad-logo.jpg",
+                "static/dataquad-logo.jpeg"
+        };
+        for (String candidate : logoCandidates) {
+            try {
+                ClassPathResource logoRes = new ClassPathResource(candidate);
+                if (!logoRes.exists()) {
+                    continue;
+                }
                 try (InputStream in = logoRes.getInputStream()) {
                     PDImageXObject img = PDImageXObject.createFromByteArray(doc, in.readAllBytes(), "logo");
-                    logoH = logoW * img.getHeight() / (float) img.getWidth();
+                    logoH = logoW * img.getHeight() / (float) Math.max(1, img.getWidth());
+                    // Cap height so header stays balanced
+                    if (logoH > 48f) {
+                        float scale = 48f / logoH;
+                        logoH = 48f;
+                        logoW = logoW * scale;
+                        logoX = x + contentW - logoW;
+                    }
                     logoBottom = headerTop - logoH + 8;
                     cs.drawImage(img, logoX, logoBottom, logoW, logoH);
                     logoDrawn = true;
+                    break;
                 }
+            } catch (Exception ignored) {
+                // try next candidate
             }
-        } catch (Exception ignored) {
-            // fall through to vector logo
         }
         if (!logoDrawn) {
             drawTextLogo(cs, logoX, headerTop - 8);
@@ -96,9 +115,9 @@ public class PayslipPdfService {
         y -= 12;
         writeText(cs, PDType1Font.HELVETICA, 9, x, y, "HITEC City, Hyderabad, Telangana 500081.");
         y -= 12;
-        writeText(cs, PDType1Font.HELVETICA, 9, x, y, "www.adroitinnovative.com");
+        writeText(cs, PDType1Font.HELVETICA, 9, x, y, "https://dataqinc.com/");
         y -= 12;
-        writeText(cs, PDType1Font.HELVETICA, 9, x, y, "+91-8367643824");
+        writeText(cs, PDType1Font.HELVETICA, 9, x, y, "Phone: +91 89794 77577");
 
         // Keep content below whichever is lower: address block or logo
         return Math.min(y, logoBottom) - 10;
@@ -123,7 +142,7 @@ public class PayslipPdfService {
     private float drawConsultantDetails(PDPageContentStream cs, float x, float y, float w,
                                         UserDetails user, Payslip payslip) throws IOException {
         float headerH = 22;
-        fillRect(cs, x, y - headerH, w, headerH, PEACH);
+        fillRect(cs, x, y - headerH, w, headerH, SECTION_HEADER);
         strokeRect(cs, x, y - headerH, w, headerH);
         writeCentered(cs, PDType1Font.HELVETICA_BOLD, 11, x, y - 15, w, "Consultant Details");
         y -= headerH;
@@ -174,7 +193,7 @@ public class PayslipPdfService {
 
     private float drawEarnings(PDPageContentStream cs, float x, float y, float w, Payslip payslip) throws IOException {
         float headerH = 22;
-        fillRect(cs, x, y - headerH, w, headerH, PEACH);
+        fillRect(cs, x, y - headerH, w, headerH, SECTION_HEADER);
         strokeRect(cs, x, y - headerH, w, headerH);
         writeCentered(cs, PDType1Font.HELVETICA_BOLD, 11, x, y - 15, w, "Earnings & Deductions");
         y -= headerH;
