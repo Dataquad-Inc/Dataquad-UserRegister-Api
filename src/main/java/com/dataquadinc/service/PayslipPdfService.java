@@ -26,8 +26,8 @@ import java.util.Locale;
 @Service
 public class PayslipPdfService {
 
-    /** Section header fill — light blue from brand screenshot (#BDD7EE). */
-    private static final Color SECTION_HEADER = new Color(0xBD, 0xD7, 0xEE);
+    private static final Color ADROIT_SECTION = new Color(0xF5, 0xC4, 0xA0);
+    private static final Color DATAQUAD_SECTION = new Color(0xBD, 0xD7, 0xEE);
     private static final Color LIGHT_GRAY = new Color(0xEE, 0xEE, 0xEE);
     private static final Color ROW_ALT = new Color(0xF7, 0xF7, 0xF7);
     private static final DateTimeFormatter SHORT_DATE = DateTimeFormatter.ofPattern("dd-MMM-yy", Locale.ENGLISH);
@@ -39,7 +39,56 @@ public class PayslipPdfService {
         MONEY.setMaximumFractionDigits(2);
     }
 
+    private enum Brand {
+        ADROIT(
+                "ADROIT INNOVATIVE SOLUTIONS INDIA PVT LTD",
+                "www.adroitinnovative.com",
+                "+91-8367643824",
+                ADROIT_SECTION,
+                new String[]{"static/adroit-logo.png", "static/adroit-logo.jpg", "static/adroit-logo.jpeg"}
+        ),
+        DATAQUAD(
+                "DATAQUAD IT SOLUTIONS PRIVATE LIMITED",
+                "https://dataqinc.com/",
+                "Phone: +91 89794 77577",
+                DATAQUAD_SECTION,
+                new String[]{
+                        "static/dataquad-logo.png",
+                        "static/dataquad-logo.png.png",
+                        "static/dataquad-logo.jpg",
+                        "static/dataquad-logo.jpeg"
+                }
+        );
+
+        final String legalName;
+        final String website;
+        final String phone;
+        final Color sectionHeader;
+        final String[] logoCandidates;
+
+        Brand(String legalName, String website, String phone, Color sectionHeader, String[] logoCandidates) {
+            this.legalName = legalName;
+            this.website = website;
+            this.phone = phone;
+            this.sectionHeader = sectionHeader;
+            this.logoCandidates = logoCandidates;
+        }
+    }
+
+    static Brand resolveBrand(String company) {
+        String c = company == null ? "" : company.trim().toLowerCase(Locale.ENGLISH);
+        if (c.contains("adroit")) {
+            return Brand.ADROIT;
+        }
+        return Brand.DATAQUAD;
+    }
+
     public byte[] generate(UserDetails user, Payslip payslip) throws IOException {
+        return generate(user, payslip, null);
+    }
+
+    public byte[] generate(UserDetails user, Payslip payslip, String company) throws IOException {
+        Brand brand = resolveBrand(company);
         try (PDDocument doc = new PDDocument(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             PDPage page = new PDPage(PDRectangle.A4);
             doc.addPage(page);
@@ -50,11 +99,11 @@ public class PayslipPdfService {
             float y = page.getMediaBox().getHeight() - margin;
 
             try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
-                y = drawHeader(doc, cs, margin, y, contentW);
+                y = drawHeader(doc, cs, margin, y, contentW, brand);
                 y -= 18;
-                y = drawConsultantDetails(cs, margin, y, contentW, user, payslip);
+                y = drawConsultantDetails(cs, margin, y, contentW, user, payslip, brand);
                 y -= 22;
-                y = drawEarnings(cs, margin, y, contentW, payslip);
+                y = drawEarnings(cs, margin, y, contentW, payslip, brand);
                 y -= 28;
                 drawFooter(cs, margin, y, contentW);
             }
@@ -64,23 +113,16 @@ public class PayslipPdfService {
         }
     }
 
-    private float drawHeader(PDDocument doc, PDPageContentStream cs, float x, float y, float contentW) throws IOException {
+    private float drawHeader(PDDocument doc, PDPageContentStream cs, float x, float y, float contentW, Brand brand)
+            throws IOException {
         float headerTop = y;
 
-        // Logo top-right, aligned with company name (same placement as sample)
         float logoW = 130f;
         float logoH = 40f;
         float logoX = x + contentW - logoW;
         float logoBottom = headerTop - logoH + 6;
         boolean logoDrawn = false;
-        // Prefer the real brand mark; also accept accidental double-extension uploads.
-        String[] logoCandidates = {
-                "static/dataquad-logo.png",
-                "static/dataquad-logo.png.png",
-                "static/dataquad-logo.jpg",
-                "static/dataquad-logo.jpeg"
-        };
-        for (String candidate : logoCandidates) {
+        for (String candidate : brand.logoCandidates) {
             try {
                 ClassPathResource logoRes = new ClassPathResource(candidate);
                 if (!logoRes.exists()) {
@@ -89,7 +131,6 @@ public class PayslipPdfService {
                 try (InputStream in = logoRes.getInputStream()) {
                     PDImageXObject img = PDImageXObject.createFromByteArray(doc, in.readAllBytes(), "logo");
                     logoH = logoW * img.getHeight() / (float) Math.max(1, img.getWidth());
-                    // Cap height so header stays balanced
                     if (logoH > 48f) {
                         float scale = 48f / logoH;
                         logoH = 48f;
@@ -106,25 +147,38 @@ public class PayslipPdfService {
             }
         }
         if (!logoDrawn) {
-            drawTextLogo(cs, logoX, headerTop - 8);
+            drawTextLogo(cs, logoX, headerTop - 8, brand);
         }
 
-        writeText(cs, PDType1Font.HELVETICA_BOLD, 12, x, y, "DATAQUAD IT SOLUTIONS PRIVATE LIMITED");
+        writeText(cs, PDType1Font.HELVETICA_BOLD, brand == Brand.ADROIT ? 13 : 12, x, y, brand.legalName);
         y -= 14;
         writeText(cs, PDType1Font.HELVETICA, 9, x, y, "Level 2, Block D, CYBER GATEWAY, Wing 1/B,");
         y -= 12;
         writeText(cs, PDType1Font.HELVETICA, 9, x, y, "HITEC City, Hyderabad, Telangana 500081.");
         y -= 12;
-        writeText(cs, PDType1Font.HELVETICA, 9, x, y, "https://dataqinc.com/");
+        writeText(cs, PDType1Font.HELVETICA, 9, x, y, brand.website);
         y -= 12;
-        writeText(cs, PDType1Font.HELVETICA, 9, x, y, "Phone: +91 89794 77577");
+        writeText(cs, PDType1Font.HELVETICA, 9, x, y, brand.phone);
 
-        // Keep content below whichever is lower: address block or logo
         return Math.min(y, logoBottom) - 10;
     }
 
-    private void drawTextLogo(PDPageContentStream cs, float x, float topY) throws IOException {
-        // Fallback vector mark: large orange D + grey DATAQUAD / IT SOLUTIONS
+    private void drawTextLogo(PDPageContentStream cs, float x, float topY, Brand brand) throws IOException {
+        if (brand == Brand.ADROIT) {
+            Color orange = new Color(0xED, 0x7D, 0x31);
+            Color grey = new Color(0x5A, 0x5A, 0x5A);
+            cs.setNonStrokingColor(orange);
+            cs.beginText();
+            cs.setFont(PDType1Font.HELVETICA_BOLD, 36);
+            cs.newLineAtOffset(x, topY - 30);
+            cs.showText("A");
+            cs.endText();
+            cs.setNonStrokingColor(grey);
+            writeText(cs, PDType1Font.HELVETICA_BOLD, 11, x + 30, topY - 12, "ADROIT");
+            writeText(cs, PDType1Font.HELVETICA, 8, x + 30, topY - 26, "INNOVATIVE");
+            cs.setNonStrokingColor(Color.BLACK);
+            return;
+        }
         Color orange = new Color(0xED, 0x7D, 0x31);
         Color grey = new Color(0x5A, 0x5A, 0x5A);
         cs.setNonStrokingColor(orange);
@@ -140,16 +194,15 @@ public class PayslipPdfService {
     }
 
     private float drawConsultantDetails(PDPageContentStream cs, float x, float y, float w,
-                                        UserDetails user, Payslip payslip) throws IOException {
+                                        UserDetails user, Payslip payslip, Brand brand) throws IOException {
         float headerH = 22;
-        fillRect(cs, x, y - headerH, w, headerH, SECTION_HEADER);
+        fillRect(cs, x, y - headerH, w, headerH, brand.sectionHeader);
         strokeRect(cs, x, y - headerH, w, headerH);
         writeCentered(cs, PDType1Font.HELVETICA_BOLD, 11, x, y - 15, w, "Consultant Details");
         y -= headerH;
 
         float colW = w / 4f;
         float subH = 18;
-        // sub headers
         fillRect(cs, x, y - subH, w, subH, Color.WHITE);
         strokeRect(cs, x, y - subH, w, subH);
         drawVLine(cs, x + colW, y, y - subH);
@@ -191,15 +244,15 @@ public class PayslipPdfService {
         return y;
     }
 
-    private float drawEarnings(PDPageContentStream cs, float x, float y, float w, Payslip payslip) throws IOException {
+    private float drawEarnings(PDPageContentStream cs, float x, float y, float w, Payslip payslip, Brand brand)
+            throws IOException {
         float headerH = 22;
-        fillRect(cs, x, y - headerH, w, headerH, SECTION_HEADER);
+        fillRect(cs, x, y - headerH, w, headerH, brand.sectionHeader);
         strokeRect(cs, x, y - headerH, w, headerH);
         writeCentered(cs, PDType1Font.HELVETICA_BOLD, 11, x, y - 15, w, "Earnings & Deductions");
         y -= headerH;
 
         float descW = w * 0.65f;
-        float amtW = w - descW;
         float subH = 18;
         fillRect(cs, x, y - subH, w, subH, Color.WHITE);
         strokeRect(cs, x, y - subH, w, subH);
@@ -328,7 +381,6 @@ public class PayslipPdfService {
 
     private static String sanitize(String text) {
         if (text == null) return "";
-        // WinAnsi does not support ₹; keep ASCII-friendly amount label already using (Rs) in header cell
         return text.replace("₹", "Rs.").replace("…", "...");
     }
 

@@ -59,7 +59,7 @@ public class PayslipService {
         payslip.setCreatedBy(request.getCreatedBy());
 
         try {
-            payslip.setPdfBytes(payslipPdfService.generate(user, payslip));
+            payslip.setPdfBytes(payslipPdfService.generate(user, payslip, request.getCompany()));
         } catch (Exception e) {
             throw new IllegalStateException("Failed to generate payslip PDF: " + e.getMessage(), e);
         }

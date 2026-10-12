@@ -34,6 +34,9 @@ public class PayslipGenerateRequest {
 
     private String createdBy;
 
+    /** Placement company name, e.g. Adroit / Dataquad — selects PDF branding. */
+    private String company;
+
     public String getUserId() {
         return userId;
     }
@@ -80,5 +83,13 @@ public class PayslipGenerateRequest {
 
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public String getCompany() {
+        return company;
+    }
+
+    public void setCompany(String company) {
+        this.company = company;
     }
 }
