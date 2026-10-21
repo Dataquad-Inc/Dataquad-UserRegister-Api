@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.Locale;
 
 @Service
 public class LoginService {
@@ -35,11 +36,20 @@ public class LoginService {
             throw new UserNotFoundException("User not found with email: " + loginDTO.getEmail());
         }
 
-        // Check if the user is active
-        // Allow only ACTIVE and ISOLATED users to log in
+      // Validate user status based on employee type
         String status = userDetails.getStatus();
-        if (status == null || (!status.equalsIgnoreCase("ACTIVE") && !status.equalsIgnoreCase("ISOLATED"))) {
-            throw new UserInactiveException("User is inactive and cannot log in.");
+        String email = userDetails.getEmail();
+
+        boolean isInternalEmployee = email != null && email.trim().toLowerCase(Locale.ROOT).endsWith("@adroitinnovative.com");
+        boolean isAllowedStatus;
+        if (isInternalEmployee) {
+            // Internal employees can log in only when ACTIVE
+            isAllowedStatus = "ACTIVE".equalsIgnoreCase(status);
+        } else {
+            // External employees can log in when ACTIVE or ISOLATED
+            isAllowedStatus = "ACTIVE".equalsIgnoreCase(status) || "ISOLATED".equalsIgnoreCase(status);
+        }
+        if (!isAllowedStatus) {throw new UserInactiveException("User is inactive or not authorized to log in.");
         }
 
         // Validate password
