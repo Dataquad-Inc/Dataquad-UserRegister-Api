@@ -36,8 +36,9 @@ public class LoginService {
         }
 
         // Check if the user is active
-        if (userDetails.getStatus() == null || !userDetails.getStatus().equals("ACTIVE")) {
-            // If user is not active, throw a UserInactiveException
+        // Allow only ACTIVE and ISOLATED users to log in
+        String status = userDetails.getStatus();
+        if (status == null || (!status.equalsIgnoreCase("ACTIVE") && !status.equalsIgnoreCase("ISOLATED"))) {
             throw new UserInactiveException("User is inactive and cannot log in.");
         }
 
