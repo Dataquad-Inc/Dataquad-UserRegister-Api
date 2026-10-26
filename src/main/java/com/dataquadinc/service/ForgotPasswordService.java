@@ -311,7 +311,7 @@ public class ForgotPasswordService {
             // Set recipient, subject, and sender
             helper.setTo(email);
             helper.setSubject("Your OTP for password reset");
-            helper.setFrom("alerts@adroitinnovative.com"); // 👈 force sender
+            helper.setFrom("notifications@adroitinnovative.com"); // 👈 force sender
 
             // Build the HTML content
             String emailContent = "<html>" +
@@ -383,7 +383,7 @@ public class ForgotPasswordService {
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
         helper.setTo(email);
         helper.setSubject("Password Updated Successfully");
-        helper.setFrom("alerts@adroitinnovative.com");
+        helper.setFrom("notifications@adroitinnovative.com");
         helper.setText(
             "<p>Your password has been updated.</p><p>If this wasn't you, please contact support immediately.</p>",
             true // HTML content
