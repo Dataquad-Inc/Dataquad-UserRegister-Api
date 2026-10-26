@@ -26,7 +26,7 @@ public class EmailService {
     private UserDao userDao;
 
 
-    private static final String FROM_EMAIL = "notifications@adroitinnovative.com";
+    private static final String FROM_EMAIL = "alerts@adroitinnovative.com";
     private static final String ADMIN_EMAIL = "sasaank9110@gmail.com";
 
 
@@ -104,7 +104,7 @@ public class EmailService {
 
             String subject = "Welcome to MyMulya! Here Are Your Login Details";
             String htmlBody = buildHtmlPasswordEmailBody(userName, password, to);
-            helper.setFrom("notifications@adroitinnovative.com");
+            helper.setFrom("alerts@adroitinnovative.com");
 
             helper.setTo(to);
             helper.setSubject(subject);
