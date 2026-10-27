@@ -3390,18 +3390,30 @@ public class UserService {
         }
 
         try {
+            logger.info(
+                    "Calling Candidate API for email: {}",
+                    user.getEmail()
+            );
 
             PlacementApiResponse response =
                     placementFeignClient.getPlacementsByEmail(
                             user.getEmail().trim()
                     );
 
-            return fetchEndDateFromPlacements(response, user);
+            logger.info(
+                    "Candidate API response success: {}",
+                    response != null && response.isSuccess()
+            );
+
+            LocalDate endDate = fetchEndDateFromPlacements(response, user);
+
+            logger.info("Candidate placement endDate: {}", endDate);
+
+            return endDate;
 
         } catch (Exception ex) {
-
             logger.error(
-                    "Error fetching placement endDate for email: {}",
+                    "Error fetching endDate for employee: {}",
                     user.getEmail(),
                     ex
             );
@@ -3469,30 +3481,44 @@ public class UserService {
                 .map(role -> role.getName().name())
                 .collect(Collectors.joining(", "));
 
+        logger.info("========== PLACEMENT SYNC START ==========");
+        logger.info("User ID: {}", user.getUserId());
+        logger.info("Email: {}", user.getEmail());
+        logger.info("Existing lastWorkingDay: {}", user.getLastWorkingDay());
+
         LocalDate placementEndDate = fetchLastWorkingDay(user);
 
-        logger.info(
-                "Employee: {}, Fetched placementEndDate: {}",
-                user.getEmail(),
-                placementEndDate
-        );
+        logger.info("Fetched placementEndDate: {}", placementEndDate);
 
-        if (placementEndDate != null
-                && !placementEndDate.equals(user.getLastWorkingDay())) {
+        if (placementEndDate != null) {
 
-            user.setLastWorkingDay(placementEndDate);
+            if (!placementEndDate.equals(user.getLastWorkingDay())) {
 
-            UserDetails savedUser = userDao.saveAndFlush(user);
+                logger.info("Updating lastWorkingDay in user_details");
 
-            logger.info(
-                    "Successfully flushed lastWorkingDay: {} for employee: {}",
-                    savedUser.getLastWorkingDay(),
-                    savedUser.getEmail()
+                user.setLastWorkingDay(placementEndDate);
+
+                UserDetails savedUser = userDao.saveAndFlush(user);
+
+                logger.info(
+                        "Saved lastWorkingDay: {}",
+                        savedUser.getLastWorkingDay()
+                );
+
+                user = savedUser;
+
+            } else {
+                logger.info("LastWorkingDay already matches placement endDate");
+            }
+
+        } else {
+            logger.warn(
+                    "Placement endDate is NULL for employee: {}",
+                    user.getEmail()
             );
-
-            user = savedUser;
         }
 
+        logger.info("========== PLACEMENT SYNC END ==========");
+
         return EmployeeWithRole.fromUserDetails(user, rolesString);
-    }
-}
+    }}
