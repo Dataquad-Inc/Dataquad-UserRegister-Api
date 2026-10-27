@@ -20,7 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.Locale;
+
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,26 +35,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.MultiValueMap;
 import org.springframework.scheduling.annotation.Scheduled;
 import java.time.LocalDate;
-import java.util.List;
-
 import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.stream.Collectors;
-import java.util.List;
-import java.util.ArrayList;
+
 import com.dataquadinc.client.PlacementFeignClient;
-import com.dataquadinc.dto.EmployeeWithRole;
+
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.dataquadinc.model.UserDetails;
-import com.dataquadinc.dto.PlacementApiResponse;
-import com.dataquadinc.dto.PlacementLookupDto;
 import com.dataquadinc.client.PlacementFeignClient;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -3422,103 +3414,58 @@ public class UserService {
         }
     }
 
-    private LocalDate fetchEndDateFromPlacements(
-            PlacementApiResponse response,
-            UserDetails user) {
+private LocalDate fetchEndDateFromPlacements(
+        PlacementApiResponse response,
+        UserDetails user) {
 
-        if (response == null
-                || !response.isSuccess()
-                || response.getData() == null
-                || user.getEmail() == null
-                || user.getEmail().isBlank()) {
-
-            logger.warn("Invalid placement response for user: {}",
-                    user.getUserId());
-
-            return null;
-        }
-
-        String employeeEmail = user.getEmail().trim();
-
-        List<PlacementLookupDto> matchingPlacements =
-                response.getData().stream()
-                        .filter(Objects::nonNull)
-                        .filter(p -> p.getCandidateEmailId() != null)
-                        .filter(p ->
-                                p.getCandidateEmailId().trim()
-                                        .equalsIgnoreCase(employeeEmail))
-                        .filter(p -> p.getEndDate() != null)
-                        .collect(Collectors.toList());
-
-        if (matchingPlacements.isEmpty()) {
-
-            logger.warn(
-                    "No placement with valid endDate found for email: {}",
-                    employeeEmail
-            );
-
-            return null;
-        }
-
-        // Select the latest non-null endDate for this email.
-        LocalDate endDate = matchingPlacements.stream()
-                .map(PlacementLookupDto::getEndDate)
-                .max(LocalDate::compareTo)
-                .orElse(null);
-
-        logger.info(
-                "Matched placement endDate: {} for email: {}",
-                endDate,
-                employeeEmail
-        );
-
-        return endDate;
+    if (response == null
+            || !response.isSuccess()
+            || response.getData() == null
+            || user.getEmail() == null) {
+        return null;
     }
 
-    private EmployeeWithRole toEmployeeWithPlacementEndDate(UserDetails user) {
+    String employeeEmail = user.getEmail().trim();
 
-        String rolesString = user.getRoles().stream()
-                .map(role -> role.getName().name())
-                .collect(Collectors.joining(", "));
+    return response.getData().stream()
+            .filter(Objects::nonNull)
+            .filter(p -> p.getCandidateEmailId() != null)
+            .filter(p -> p.getCandidateEmailId().trim()
+                    .equalsIgnoreCase(employeeEmail))
+            .map(PlacementLookupDto::getEndDate)
+            .filter(Objects::nonNull)
+            .max(LocalDate::compareTo)
+            .orElse(null);
+}
 
-        logger.info("========== PLACEMENT SYNC START ==========");
-        logger.info("User ID: {}", user.getUserId());
-        logger.info("Email: {}", user.getEmail());
-        logger.info("Existing lastWorkingDay: {}", user.getLastWorkingDay());
+private EmployeeWithRole toEmployeeWithPlacementEndDate(UserDetails user) {
 
-        LocalDate placementEndDate = fetchLastWorkingDay(user);
+    String rolesString = user.getRoles().stream()
+            .map(role -> role.getName().name())
+            .collect(Collectors.joining(", "));
 
-        logger.info("Fetched placementEndDate: {}", placementEndDate);
+    logger.info("Processing User ID: {}", user.getUserId());
+    logger.info("Processing Email: {}", user.getEmail());
 
-        if (placementEndDate != null) {
+    LocalDate placementEndDate = fetchLastWorkingDay(user);
 
-            if (!placementEndDate.equals(user.getLastWorkingDay())) {
+    logger.info("Fetched Placement End Date: {}", placementEndDate);
 
-                logger.info("Updating lastWorkingDay in user_details");
+    if (placementEndDate != null
+            && !placementEndDate.equals(user.getLastWorkingDay())) {
 
-                user.setLastWorkingDay(placementEndDate);
+        user.setLastWorkingDay(placementEndDate);
 
-                UserDetails savedUser = userDao.saveAndFlush(user);
+        UserDetails savedUser = userDao.saveAndFlush(user);
 
-                logger.info(
-                        "Saved lastWorkingDay: {}",
-                        savedUser.getLastWorkingDay()
-                );
+        logger.info(
+                "Saved lastWorkingDay={} for userId={}",
+                savedUser.getLastWorkingDay(),
+                savedUser.getUserId()
+        );
 
-                user = savedUser;
+        user = savedUser;
+    }
 
-            } else {
-                logger.info("LastWorkingDay already matches placement endDate");
-            }
-
-        } else {
-            logger.warn(
-                    "Placement endDate is NULL for employee: {}",
-                    user.getEmail()
-            );
-        }
-
-        logger.info("========== PLACEMENT SYNC END ==========");
-
-        return EmployeeWithRole.fromUserDetails(user, rolesString);
-    }}
+    return EmployeeWithRole.fromUserDetails(user, rolesString);
+}}
