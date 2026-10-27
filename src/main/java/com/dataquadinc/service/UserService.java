@@ -3384,22 +3384,28 @@ public class UserService {
     }
 
     private LocalDate fetchLastWorkingDay(UserDetails user) {
+
         if (user.getEmail() == null || user.getEmail().isBlank()) {
             return null;
         }
 
         try {
+
             PlacementApiResponse response =
-                    placementFeignClient.getPlacementsByEmail(user.getEmail().trim());
+                    placementFeignClient.getPlacementsByEmail(
+                            user.getEmail().trim()
+                    );
 
             return fetchEndDateFromPlacements(response, user);
 
         } catch (Exception ex) {
+
             logger.error(
-                    "Failed to fetch placement end date for email: {}",
+                    "Error fetching placement endDate for email: {}",
                     user.getEmail(),
                     ex
             );
+
             return null;
         }
     }
@@ -3411,7 +3417,12 @@ public class UserService {
         if (response == null
                 || !response.isSuccess()
                 || response.getData() == null
-                || user.getEmail() == null) {
+                || user.getEmail() == null
+                || user.getEmail().isBlank()) {
+
+            logger.warn("Invalid placement response for user: {}",
+                    user.getUserId());
+
             return null;
         }
 
@@ -3421,31 +3432,35 @@ public class UserService {
                 response.getData().stream()
                         .filter(Objects::nonNull)
                         .filter(p -> p.getCandidateEmailId() != null)
-                        .filter(p -> p.getCandidateEmailId()
-                                .trim()
-                                .equalsIgnoreCase(employeeEmail))
+                        .filter(p ->
+                                p.getCandidateEmailId().trim()
+                                        .equalsIgnoreCase(employeeEmail))
                         .filter(p -> p.getEndDate() != null)
                         .collect(Collectors.toList());
 
         if (matchingPlacements.isEmpty()) {
+
+            logger.warn(
+                    "No placement with valid endDate found for email: {}",
+                    employeeEmail
+            );
+
             return null;
         }
 
-        if (user.getPlacementId() != null
-                && !user.getPlacementId().isBlank()) {
-
-            return matchingPlacements.stream()
-                    .filter(p -> user.getPlacementId()
-                            .equalsIgnoreCase(p.getId()))
-                    .map(PlacementLookupDto::getEndDate)
-                    .findFirst()
-                    .orElse(null);
-        }
-
-        return matchingPlacements.stream()
+        // Select the latest non-null endDate for this email.
+        LocalDate endDate = matchingPlacements.stream()
                 .map(PlacementLookupDto::getEndDate)
                 .max(LocalDate::compareTo)
                 .orElse(null);
+
+        logger.info(
+                "Matched placement endDate: {} for email: {}",
+                endDate,
+                employeeEmail
+        );
+
+        return endDate;
     }
 
     private EmployeeWithRole toEmployeeWithPlacementEndDate(UserDetails user) {
@@ -3454,18 +3469,30 @@ public class UserService {
                 .map(role -> role.getName().name())
                 .collect(Collectors.joining(", "));
 
-        // Fetch the placement end date using the employee's email.
         LocalDate placementEndDate = fetchLastWorkingDay(user);
 
-        // Update and persist the date when a valid, different date is returned.
+        logger.info(
+                "Employee: {}, Fetched placementEndDate: {}",
+                user.getEmail(),
+                placementEndDate
+        );
+
         if (placementEndDate != null
                 && !placementEndDate.equals(user.getLastWorkingDay())) {
 
             user.setLastWorkingDay(placementEndDate);
-            userDao.save(user);
+
+            UserDetails savedUser = userDao.saveAndFlush(user);
+
+            logger.info(
+                    "Successfully flushed lastWorkingDay: {} for employee: {}",
+                    savedUser.getLastWorkingDay(),
+                    savedUser.getEmail()
+            );
+
+            user = savedUser;
         }
 
-        // Map the updated entity to the response DTO.
         return EmployeeWithRole.fromUserDetails(user, rolesString);
     }
 }
