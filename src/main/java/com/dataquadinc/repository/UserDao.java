@@ -9,9 +9,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -511,4 +514,15 @@ public interface UserDao extends JpaRepository<UserDetails, String>, JpaSpecific
             """)
     List<Object[]> getEmployeeCountByDepartmentWithSearch(
             @Param("search") String search);
+            @Modifying(clearAutomatically = true, flushAutomatically = true)
+@Transactional
+@Query("""
+    UPDATE UserDetails u
+    SET u.lastWorkingDay = :endDate
+    WHERE u.userId = :userId
+    """)
+int updateLastWorkingDay(
+        @Param("userId") String userId,
+        @Param("endDate") LocalDate endDate
+);
 }
