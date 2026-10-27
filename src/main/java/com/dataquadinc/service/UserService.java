@@ -3375,44 +3375,38 @@ public class UserService {
         );
     }
 
-    private LocalDate fetchLastWorkingDay(UserDetails user) {
+private LocalDate fetchLastWorkingDay(UserDetails user) {
 
-        if (user.getEmail() == null || user.getEmail().isBlank()) {
-            return null;
-        }
-
-        try {
-            logger.info(
-                    "Calling Candidate API for email: {}",
-                    user.getEmail()
-            );
-
-            PlacementApiResponse response =
-                    placementFeignClient.getPlacementsByEmail(
-                            user.getEmail().trim()
-                    );
-
-            logger.info(
-                    "Candidate API response success: {}",
-                    response != null && response.isSuccess()
-            );
-
-            LocalDate endDate = fetchEndDateFromPlacements(response, user);
-
-            logger.info("Candidate placement endDate: {}", endDate);
-
-            return endDate;
-
-        } catch (Exception ex) {
-            logger.error(
-                    "Error fetching endDate for employee: {}",
-                    user.getEmail(),
-                    ex
-            );
-
-            return null;
-        }
+    if (user.getEmail() == null || user.getEmail().isBlank()) {
+        return null;
     }
+
+    try {
+        PlacementApiResponse response =
+                placementFeignClient.getPlacementsByEmail(
+                        user.getEmail().trim()
+                );
+
+        if (response == null || response.getData() == null) {
+            logger.warn("No placement response for userId={}",
+                    user.getUserId());
+            return null;
+        }
+
+        logger.info("Placements returned: {}",
+                response.getData().size());
+
+        return fetchEndDateFromPlacements(response, user);
+
+    } catch (Exception ex) {
+        logger.error(
+                "Candidate API lookup failed for userId={}",
+                user.getUserId(),
+                ex
+        );
+        return null;
+    }
+}
 
 private LocalDate fetchEndDateFromPlacements(
         PlacementApiResponse response,
