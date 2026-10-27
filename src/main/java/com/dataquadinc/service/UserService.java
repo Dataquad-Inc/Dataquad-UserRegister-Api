@@ -318,6 +318,7 @@ public class UserService {
         logger.info("Returning {} employee records in response", employeeRoles.size());
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
+
     public ResponseEntity<List<EmployeeWithRole>> findAllInActiveInternal(String entity) {
 
         List<UserDetails> users = userDao.findAllInActiveNotExternalUser(entity);
@@ -347,6 +348,7 @@ public class UserService {
         logger.info("Returning {} employee records in response", employeeRoles.size());
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
+
     public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedInternal(String entity) {
 
         List<UserDetails> users = userDao.findAllIsolatedInternalUser(entity);
@@ -358,7 +360,7 @@ public class UserService {
         logger.info("Returning {} isolated internal employee records in response", employeeRoles.size());
 
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
-       }
+    }
 
     public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedExternal(String entity) {
 
@@ -1749,11 +1751,11 @@ public class UserService {
         List<EmployeeAttendance> attendanceList = approvedAttendanceList == null ? Collections.emptyList() : approvedAttendanceList;
 
         Map<LocalDate, EmployeeAttendance> attendanceMap = attendanceList.stream()
-                        .filter(Objects::nonNull)
-                        .filter(a -> "APPROVED".equalsIgnoreCase(a.getApprovalStatus()))
-                        .filter(a -> a.getAttendanceDate() != null)
-                        .collect(Collectors.toMap(EmployeeAttendance::getAttendanceDate,
-                                a -> a, (a, b) -> a));
+                .filter(Objects::nonNull)
+                .filter(a -> "APPROVED".equalsIgnoreCase(a.getApprovalStatus()))
+                .filter(a -> a.getAttendanceDate() != null)
+                .collect(Collectors.toMap(EmployeeAttendance::getAttendanceDate,
+                        a -> a, (a, b) -> a));
 
         int totalDaysInMonth = (int) ChronoUnit.DAYS.between(monthConfig.getFromDate(), monthConfig.getToDate()) + 1;
 
@@ -1778,9 +1780,11 @@ public class UserService {
             }
             String attendanceStatus;
 
-            if (isPublicHoliday) { attendanceStatus = "PH";
+            if (isPublicHoliday) {
+                attendanceStatus = "PH";
 
-            } else if (isWeekend) { attendanceStatus = "WO";
+            } else if (isWeekend) {
+                attendanceStatus = "WO";
 
             } else if (attendance != null && attendance.getAttendanceStatus() != null) {
                 attendanceStatus = attendance.getAttendanceStatus();
@@ -2039,8 +2043,8 @@ public class UserService {
                 }
 
                 boolean afterLastWorkingDay = employee.getLastWorkingDay() != null
-                                && dto.getAttendanceDate()
-                                .isAfter(employee.getLastWorkingDay());
+                        && dto.getAttendanceDate()
+                        .isAfter(employee.getLastWorkingDay());
 
 
                 EmployeeAttendance attendance =
@@ -2137,13 +2141,14 @@ public class UserService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
     @Transactional
     public String editAttendanceMonth(AttendanceMonthSetupDto dto, String entity) {
 
         try {
             AttendanceMonthConfig config = attendanceMonthConfigRepository.findByAttendanceMonthAndAttendanceYearAndEntity(
-                                    dto.getMonth(), dto.getYear(), entity)
-                            .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
+                            dto.getMonth(), dto.getYear(), entity)
+                    .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
             LocalDate fromDate = LocalDate.of(dto.getYear(), dto.getMonth(), 1).minusMonths(1).withDayOfMonth(26);
 
             LocalDate toDate = LocalDate.of(dto.getYear(), dto.getMonth(), 25);
@@ -2167,15 +2172,15 @@ public class UserService {
             List<EmployeeAttendance> existingAttendance = attendanceRepository.findMonthAttendance(dto.getMonth(), dto.getYear(), entity);
 
             Map<String, EmployeeAttendance> attendanceMap = existingAttendance.stream().collect(Collectors.toMap(
-                                    a -> a.getEmployeeId() + "_" + a.getAttendanceDate(),
-                                    a -> a,
-                                    (a, b) -> a));
+                    a -> a.getEmployeeId() + "_" + a.getAttendanceDate(),
+                    a -> a,
+                    (a, b) -> a));
 
             Set<Integer> protectedWeeks = existingAttendance.stream()
-                            .filter(a -> "SUBMITTED".equalsIgnoreCase(
-                                    a.getApprovalStatus()) || "APPROVED".equalsIgnoreCase(a.getApprovalStatus()))
-                            .map(EmployeeAttendance::getWeekNumber).filter(Objects::nonNull)
-                            .collect(Collectors.toSet());
+                    .filter(a -> "SUBMITTED".equalsIgnoreCase(
+                            a.getApprovalStatus()) || "APPROVED".equalsIgnoreCase(a.getApprovalStatus()))
+                    .map(EmployeeAttendance::getWeekNumber).filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
 
             List<EmployeeAttendance> saveList = new ArrayList<>();
             List<LocalDate> dates = cycleDates(config);
@@ -2245,16 +2250,13 @@ public class UserService {
                             existing.setIsWeekend(false);
                             existing.setIsPaid(true);
 
-                        }
-                        else if ("WO".equalsIgnoreCase(status)) {
+                        } else if ("WO".equalsIgnoreCase(status)) {
 
                             existing.setIsPublicHoliday(false);
                             existing.setIsWeekend(true);
                             existing.setIsPaid(true);
 
-                        }
-
-                        else {
+                        } else {
                             existing.setIsPublicHoliday(false);
                             existing.setIsWeekend(false);
                             existing.setIsPaid(!"LOP".equalsIgnoreCase(status));
@@ -2280,7 +2282,8 @@ public class UserService {
             }
             return "Attendance month updated successfully.";
 
-        } catch (Exception e) {e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
     }
@@ -2666,9 +2669,9 @@ public class UserService {
 
             String attendanceStatus = "";
 
-            if (beforeJoiningDate || afterLastWorkingDay) {attendanceStatus = "";
-            }
-            else if (isPublicHoliday) {
+            if (beforeJoiningDate || afterLastWorkingDay) {
+                attendanceStatus = "";
+            } else if (isPublicHoliday) {
                 attendanceStatus = "PH";
 
             } else if (isWeekend) {
@@ -2760,16 +2763,16 @@ public class UserService {
                         entity)
                 .orElseThrow(() -> new RuntimeException("Attendance month not configured"));
 
-        List<EmployeeAttendance> submittedAttendance =attendanceRepository.findSubmittedMonthAttendance(
-                        month,
-                        year,
-                        entity);
+        List<EmployeeAttendance> submittedAttendance = attendanceRepository.findSubmittedMonthAttendance(
+                month,
+                year,
+                entity);
 
 
         Map<String, List<EmployeeAttendance>> employeeAttendanceMap = submittedAttendance.stream().collect(Collectors.groupingBy(
-                                EmployeeAttendance::getEmployeeId,
-                                LinkedHashMap::new,
-                                Collectors.toList()));
+                EmployeeAttendance::getEmployeeId,
+                LinkedHashMap::new,
+                Collectors.toList()));
 
         List<UserDetails> employees = userDao.findAllAttendanceEmployeesByEntity(entity);
 
@@ -3131,11 +3134,12 @@ public class UserService {
     private static final Pattern TIME_PATTERN = Pattern.compile("\\b(?:[01]?\\d|2[0-3]):[0-5]\\d\\b");
 
     private static final Pattern DATE_PATTERN = Pattern.compile(
-                    "\\b\\d{1,2}\\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{4}\\b",
-                    Pattern.CASE_INSENSITIVE);
+            "\\b\\d{1,2}\\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+\\d{4}\\b",
+            Pattern.CASE_INSENSITIVE);
 
     private static final DateTimeFormatter PDF_DATE_FORMAT = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH);
     private LocalDate attendanceDate;
+
     public List<EmployeeLog> parseAttendancePdf(InputStream inputStream) {
         List<EmployeeLog> employeeLogs = new ArrayList<>();
         attendanceDate = null;
@@ -3195,13 +3199,10 @@ public class UserService {
                     }
                     currentEmp.setDepartment("Default");
                     currentLogs.addAll(extractedTimes);
-                }
-
-                else if (currentEmp != null) {
+                } else if (currentEmp != null) {
                     if (!extractedTimes.isEmpty()) {
                         currentLogs.addAll(extractedTimes);
-                    }
-                    else if (!isNonEmployeeLine(line) && !line.equalsIgnoreCase("Default")) {
+                    } else if (!isNonEmployeeLine(line) && !line.equalsIgnoreCase("Default")) {
                         String oldName = currentEmp.getEmpName();
                         if (oldName == null || oldName.trim().isEmpty()) {
                             currentEmp.setEmpName(line);
@@ -3225,7 +3226,8 @@ public class UserService {
     private List<String> extractTimesFromLine(String line) {
         List<String> times = new ArrayList<>();
         Matcher matcher = TIME_PATTERN.matcher(line);
-        while (matcher.find()) {times.add(matcher.group());
+        while (matcher.find()) {
+            times.add(matcher.group());
         }
         return times;
     }
@@ -3269,6 +3271,7 @@ public class UserService {
                 "^Aug\\s+\\d{1,2}\\s+\\d{4}\\s+To.*"
         );
     }
+
     private boolean isNonEmployeeLine(String line) {
         String value = line.trim();
         return value.equalsIgnoreCase("Default")
@@ -3281,6 +3284,7 @@ public class UserService {
                 || value.startsWith("Daily Log Report")
                 || value.startsWith("Emp Code");
     }
+
     private void setLogTimes(EmployeeLog emp, List<String> logs) {
         emp.setRawLogs(new ArrayList<>(logs));
         if (logs == null || logs.isEmpty()) {
@@ -3318,6 +3322,7 @@ public class UserService {
         }
         return attendanceDailyLogRepository.saveAll(dailyLogs);
     }
+
     public List<AttendanceDailyLog> getAllAttendanceLogs() {
         return attendanceDailyLogRepository.findAllByOrderByAttendanceDateDesc();
     }
@@ -3379,28 +3384,24 @@ public class UserService {
     }
 
     private LocalDate fetchLastWorkingDay(UserDetails user) {
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            return null;
+        }
 
         try {
-            if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            PlacementApiResponse response =
+                    placementFeignClient.getPlacementsByEmail(user.getEmail().trim());
 
-                PlacementApiResponse response =
-                        placementFeignClient.getPlacementsByEmail(
-                                user.getEmail().trim()
-                        );
-
-                return fetchEndDateFromPlacements(response, user);
-            }
+            return fetchEndDateFromPlacements(response, user);
 
         } catch (Exception ex) {
             logger.error(
-                    "Failed to fetch placement end date for userId: {}, email: {}",
-                    user.getUserId(),
+                    "Failed to fetch placement end date for email: {}",
                     user.getEmail(),
                     ex
             );
+            return null;
         }
-
-        return null;
     }
 
     private LocalDate fetchEndDateFromPlacements(
@@ -3410,8 +3411,7 @@ public class UserService {
         if (response == null
                 || !response.isSuccess()
                 || response.getData() == null
-                || user.getEmail() == null
-                || user.getEmail().isBlank()) {
+                || user.getEmail() == null) {
             return null;
         }
 
@@ -3420,32 +3420,28 @@ public class UserService {
         List<PlacementLookupDto> matchingPlacements =
                 response.getData().stream()
                         .filter(Objects::nonNull)
-                        .filter(placement ->
-                                placement.getCandidateEmailId() != null
-                                        && placement.getCandidateEmailId()
-                                        .equalsIgnoreCase(employeeEmail))
-                        .filter(placement -> placement.getEndDate() != null)
+                        .filter(p -> p.getCandidateEmailId() != null)
+                        .filter(p -> p.getCandidateEmailId()
+                                .trim()
+                                .equalsIgnoreCase(employeeEmail))
+                        .filter(p -> p.getEndDate() != null)
                         .collect(Collectors.toList());
 
         if (matchingPlacements.isEmpty()) {
             return null;
         }
 
-        // Prefer the placement explicitly associated with this employee.
         if (user.getPlacementId() != null
                 && !user.getPlacementId().isBlank()) {
 
             return matchingPlacements.stream()
-                    .filter(placement ->
-                            user.getPlacementId().equalsIgnoreCase(
-                                    placement.getId()
-                            ))
+                    .filter(p -> user.getPlacementId()
+                            .equalsIgnoreCase(p.getId()))
                     .map(PlacementLookupDto::getEndDate)
                     .findFirst()
                     .orElse(null);
         }
 
-        // If no placementId exists, return the latest non-null end date.
         return matchingPlacements.stream()
                 .map(PlacementLookupDto::getEndDate)
                 .max(LocalDate::compareTo)
@@ -3458,19 +3454,18 @@ public class UserService {
                 .map(role -> role.getName().name())
                 .collect(Collectors.joining(", "));
 
-        EmployeeWithRole employee =
-                EmployeeWithRole.fromUserDetails(user, rolesString);
-
+        // Fetch the placement end date using the employee's email.
         LocalDate placementEndDate = fetchLastWorkingDay(user);
 
-        if (placementEndDate != null) {
-            employee.setLastWorkingDay(placementEndDate);
+        // Update and persist the date when a valid, different date is returned.
+        if (placementEndDate != null
+                && !placementEndDate.equals(user.getLastWorkingDay())) {
+
+            user.setLastWorkingDay(placementEndDate);
+            userDao.save(user);
         }
 
-        return employee;
+        // Map the updated entity to the response DTO.
+        return EmployeeWithRole.fromUserDetails(user, rolesString);
     }
 }
-
-
-
-
