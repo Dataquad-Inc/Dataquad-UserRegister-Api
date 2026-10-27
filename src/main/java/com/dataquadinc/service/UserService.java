@@ -47,6 +47,10 @@ import java.util.List;
 import java.util.ArrayList;
 import com.dataquadinc.client.PlacementFeignClient;
 import com.dataquadinc.dto.EmployeeWithRole;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import com.dataquadinc.model.UserDetails;
 import com.dataquadinc.dto.PlacementApiResponse;
@@ -3377,79 +3381,57 @@ public class UserService {
     private LocalDate fetchLastWorkingDay(UserDetails user) {
 
         try {
-            if (user.getUserId() != null && !user.getUserId().isBlank()) {
-                LocalDate endDate = fetchEndDateFromPlacements(
-                        placementFeignClient.getPlacementsByUserId(
-                                user.getUserId()
-                        ),
-                        user
-                );
-
-                if (endDate != null) {
-                    return endDate;
-                }
-            }
-
-            if (user.getPersonalemail() != null
-                    && !user.getPersonalemail().isBlank()) {
-                LocalDate endDate = fetchEndDateFromPlacements(
-                        placementFeignClient.getPlacementsByEmail(
-                                user.getPersonalemail()
-                        ),
-                        user
-                );
-
-                if (endDate != null) {
-                    return endDate;
-                }
-            }
-
             if (user.getEmail() != null && !user.getEmail().isBlank()) {
-                return fetchEndDateFromPlacements(
+
+                PlacementApiResponse response =
                         placementFeignClient.getPlacementsByEmail(
-                                user.getEmail()
-                        ),
-                        user
-                );
+                                user.getEmail().trim()
+                        );
+
+                return fetchEndDateFromPlacements(response, user);
             }
 
         } catch (Exception ex) {
             logger.error(
-                    "Failed to fetch placement end date for userId: {}",
+                    "Failed to fetch placement end date for userId: {}, email: {}",
                     user.getUserId(),
+                    user.getEmail(),
                     ex
             );
         }
 
         return null;
     }
+
     private LocalDate fetchEndDateFromPlacements(
             PlacementApiResponse response,
             UserDetails user) {
 
         if (response == null
                 || !response.isSuccess()
-                || response.getData() == null) {
+                || response.getData() == null
+                || user.getEmail() == null
+                || user.getEmail().isBlank()) {
             return null;
         }
 
+        String employeeEmail = user.getEmail().trim();
+
         List<PlacementLookupDto> matchingPlacements =
                 response.getData().stream()
-                        .filter(placement -> placement != null)
-                        .filter(placement -> placement.getEndDate() != null)
+                        .filter(Objects::nonNull)
                         .filter(placement ->
-                                placement.getUserId() != null
-                                        && user.getUserId() != null
-                                        && placement.getUserId().equalsIgnoreCase(
-                                        user.getUserId()
-                                ))
+                                placement.getCandidateEmailId() != null
+                                        && placement.getCandidateEmailId()
+                                        .equalsIgnoreCase(employeeEmail))
+                        .filter(placement -> placement.getEndDate() != null)
                         .collect(Collectors.toList());
 
         if (matchingPlacements.isEmpty()) {
             return null;
         }
 
-        // Prefer the placement explicitly associated with this user.
+        // Prefer the placement explicitly associated with this employee.
         if (user.getPlacementId() != null
                 && !user.getPlacementId().isBlank()) {
 
@@ -3463,12 +3445,13 @@ public class UserService {
                     .orElse(null);
         }
 
-        // Otherwise, select the latest non-null end date.
+        // If no placementId exists, return the latest non-null end date.
         return matchingPlacements.stream()
                 .map(PlacementLookupDto::getEndDate)
                 .max(LocalDate::compareTo)
                 .orElse(null);
     }
+
     private EmployeeWithRole toEmployeeWithPlacementEndDate(UserDetails user) {
 
         String rolesString = user.getRoles().stream()
