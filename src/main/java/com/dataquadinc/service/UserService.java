@@ -45,6 +45,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.stream.Collectors;
 import java.util.List;
 import java.util.ArrayList;
+import com.dataquadinc.client.PlacementFeignClient;
+import com.dataquadinc.dto.EmployeeWithRole;
+
+import com.dataquadinc.model.UserDetails;
+import com.dataquadinc.dto.PlacementApiResponse;
+import com.dataquadinc.dto.PlacementLookupDto;
+import com.dataquadinc.client.PlacementFeignClient;
+import org.springframework.beans.factory.annotation.Autowired;
+
 
 @Service
 public class UserService {
@@ -71,6 +80,9 @@ public class UserService {
 
     @Autowired
     private AttendanceMonthConfigRepository attendanceMonthConfigRepository;
+
+    @Autowired
+    private PlacementFeignClient placementFeignClient;
 
     @Autowired
     private AttendanceDailyLogRepository attendanceDailyLogRepository;
@@ -296,19 +308,12 @@ public class UserService {
         List<UserDetails> users = userDao.findAllActiveExternalUser(entity);
 
         List<EmployeeWithRole> employeeRoles = users.stream()
-                .map(user -> {
-                    String rolesString = user.getRoles().stream()
-                            .map(role -> role.getName().name())
-                            .collect(Collectors.joining(", "));
-
-                    return EmployeeWithRole.fromUserDetails(user, rolesString);
-                })
+                .map(this::toEmployeeWithPlacementEndDate)
                 .collect(Collectors.toList());
 
         logger.info("Returning {} employee records in response", employeeRoles.size());
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
-
     public ResponseEntity<List<EmployeeWithRole>> findAllInActiveInternal(String entity) {
 
         List<UserDetails> users = userDao.findAllInActiveNotExternalUser(entity);
@@ -332,39 +337,24 @@ public class UserService {
         List<UserDetails> users = userDao.findAllInActiveExternalUser(entity);
 
         List<EmployeeWithRole> employeeRoles = users.stream()
-                .map(user -> {
-                    String rolesString = user.getRoles().stream()
-                            .map(role -> role.getName().name())
-                            .collect(Collectors.joining(", "));
-
-                    return EmployeeWithRole.fromUserDetails(user, rolesString);
-                })
+                .map(this::toEmployeeWithPlacementEndDate)
                 .collect(Collectors.toList());
 
         logger.info("Returning {} employee records in response", employeeRoles.size());
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
     }
-
     public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedInternal(String entity) {
 
         List<UserDetails> users = userDao.findAllIsolatedInternalUser(entity);
 
         List<EmployeeWithRole> employeeRoles = users.stream()
-                .map(user -> {
-                    String rolesString = user.getRoles().stream()
-                            .map(role -> role.getName().name())
-                            .collect(Collectors.joining(", "));
-
-                    return EmployeeWithRole.fromUserDetails(user, rolesString);
-                })
+                .map(this::toEmployeeWithPlacementEndDate)
                 .collect(Collectors.toList());
 
-        logger.info("Returning {} isolated internal employee records in response",
-                employeeRoles.size());
+        logger.info("Returning {} isolated internal employee records in response", employeeRoles.size());
 
         return new ResponseEntity<>(employeeRoles, HttpStatus.OK);
-    }
-
+       }
 
     public ResponseEntity<List<EmployeeWithRole>> findAllIsolatedExternal(String entity) {
 
@@ -3382,6 +3372,119 @@ public class UserService {
                 "Probation status check completed. {} employees updated.",
                 updatedCount
         );
+    }
+
+    private LocalDate fetchLastWorkingDay(UserDetails user) {
+
+        try {
+            if (user.getUserId() != null && !user.getUserId().isBlank()) {
+                LocalDate endDate = fetchEndDateFromPlacements(
+                        placementFeignClient.getPlacementsByUserId(
+                                user.getUserId()
+                        ),
+                        user
+                );
+
+                if (endDate != null) {
+                    return endDate;
+                }
+            }
+
+            if (user.getPersonalemail() != null
+                    && !user.getPersonalemail().isBlank()) {
+                LocalDate endDate = fetchEndDateFromPlacements(
+                        placementFeignClient.getPlacementsByEmail(
+                                user.getPersonalemail()
+                        ),
+                        user
+                );
+
+                if (endDate != null) {
+                    return endDate;
+                }
+            }
+
+            if (user.getEmail() != null && !user.getEmail().isBlank()) {
+                return fetchEndDateFromPlacements(
+                        placementFeignClient.getPlacementsByEmail(
+                                user.getEmail()
+                        ),
+                        user
+                );
+            }
+
+        } catch (Exception ex) {
+            logger.error(
+                    "Failed to fetch placement end date for userId: {}",
+                    user.getUserId(),
+                    ex
+            );
+        }
+
+        return null;
+    }
+    private LocalDate fetchEndDateFromPlacements(
+            PlacementApiResponse response,
+            UserDetails user) {
+
+        if (response == null
+                || !response.isSuccess()
+                || response.getData() == null) {
+            return null;
+        }
+
+        List<PlacementLookupDto> matchingPlacements =
+                response.getData().stream()
+                        .filter(placement -> placement != null)
+                        .filter(placement -> placement.getEndDate() != null)
+                        .filter(placement ->
+                                placement.getUserId() != null
+                                        && user.getUserId() != null
+                                        && placement.getUserId().equalsIgnoreCase(
+                                        user.getUserId()
+                                ))
+                        .collect(Collectors.toList());
+
+        if (matchingPlacements.isEmpty()) {
+            return null;
+        }
+
+        // Prefer the placement explicitly associated with this user.
+        if (user.getPlacementId() != null
+                && !user.getPlacementId().isBlank()) {
+
+            return matchingPlacements.stream()
+                    .filter(placement ->
+                            user.getPlacementId().equalsIgnoreCase(
+                                    placement.getId()
+                            ))
+                    .map(PlacementLookupDto::getEndDate)
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        // Otherwise, select the latest non-null end date.
+        return matchingPlacements.stream()
+                .map(PlacementLookupDto::getEndDate)
+                .max(LocalDate::compareTo)
+                .orElse(null);
+    }
+    private EmployeeWithRole toEmployeeWithPlacementEndDate(UserDetails user) {
+
+        String rolesString = user.getRoles().stream()
+                .map(role -> role.getName().name())
+                .collect(Collectors.joining(", "));
+
+        EmployeeWithRole employee =
+                EmployeeWithRole.fromUserDetails(user, rolesString);
+
+        LocalDate placementEndDate = fetchLastWorkingDay(user);
+
+        if (placementEndDate != null) {
+            employee.setLastWorkingDay(placementEndDate);
+        }
+
+        return employee;
     }
 }
 
