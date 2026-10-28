@@ -3445,8 +3445,7 @@ private EmployeeWithRole toEmployeeWithPlacementEndDate(UserDetails user) {
 
     logger.info("Fetched Placement End Date: {}", placementEndDate);
 
-    if (placementEndDate != null
-            && !placementEndDate.equals(user.getLastWorkingDay())) {
+    if (!Objects.equals(placementEndDate, user.getLastWorkingDay())) {
 
         user.setLastWorkingDay(placementEndDate);
 
